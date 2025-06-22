@@ -3,7 +3,7 @@ from __future__ import annotations
 
 # base class for all dialects
 class Dialect:
-    pass
+    PREFIX: str
 
 
 # base class for all operations
@@ -16,6 +16,7 @@ class Op:
     def build_from_extract(self, builder: Builder, extract_op: Op):
         raise NotImplementedError
 
+
 class BinaryOp(Op):
     SYMBOL: str
     _left: Op
@@ -24,6 +25,14 @@ class BinaryOp(Op):
     def __init__(self, left: Op, right: Op):
         self._left = left
         self._right = right
+
+
+class UnaryOp(Op):
+    SYMBOL: str
+    _operand: Op
+
+    def __init__(self, operand: Op):
+        self._operand = operand
 
 
 # base class for all builders
@@ -126,6 +135,10 @@ class BasicDialect(Dialect):
             self._clock = clock
             self._data = data
 
+        def build(self, builder: Builder):
+            self._clock.build(builder)
+            self._data.build(builder)
+
 
 class LogicDialect(Dialect):
     # bitwise logic operations
@@ -134,30 +147,26 @@ class LogicDialect(Dialect):
     def __init__(self):
         super().__init__()
 
-    class AndOp(Op):
+    class AndOp(BinaryOp):
         MNEMONIC = "and"
-        _left: Op
-        _right: Op
+        SYMBOL = "&"
 
         def __init__(self, left: Op, right: Op):
-            self._left = left
-            self._right = right
+            super().__init__(left, right)
 
-    class OrOp(Op):
+    class OrOp(BinaryOp):
         MNEMONIC = "or"
-        _left: Op
-        _right: Op
+        SYMBOL = "|"
 
         def __init__(self, left: Op, right: Op):
-            self._left = left
-            self._right = right
+            super().__init__(left, right)
 
-    class NotOp(Op):
+    class NotOp(UnaryOp):
         MNEMONIC = "not"
-        _operand: Op
+        SYMBOL = "~"
 
         def __init__(self, operand: Op):
-            self._operand = operand
+            super().__init__(operand)
 
 
 class ArithDialect(Dialect):
@@ -219,18 +228,24 @@ class ArithDialect(Dialect):
 class BehavioralVerilogBuilder(Builder):
     # only used to build modules
     _wires: dict[Op, tuple[str, int]]   # op to (name, width)
+    _regs: dict[Op, tuple[str, int]]
     _assigns: list[str]
+    _procs: list[str]
     _counter: int
 
     def __init__(self):
         super().__init__()
         self._wires = {}
+        self._regs = {}
         self._assigns = []
+        self._procs = []
         self._counter = 0
 
     def clear(self):
         self._wires.clear()
+        self._regs.clear()
         self._assigns.clear()
+        self._procs.clear()
         self._counter = 0
 
     def add_wire(self, op: Op, name: str | None = None, width: int = 1):

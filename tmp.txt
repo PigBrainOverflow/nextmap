@@ -1,0 +1,15 @@
+lakeroad/bin/lakeroad \
+ --verilog-module-filepath squarediffmult.v \
+ --top-module-name squarediffmult \
+ --architecture xilinx-ultrascale-plus \
+ --template dsp \
+ --pipeline-depth 3 \
+ --verilog-module-out-signal square_out:34 \
+ --clock-name clk \
+ --input-signal 'a:(port a 16):16' \
+ --input-signal 'b:(port b 16):16' \
+ --bitwuzla --stp --yices --cvc5 \
+ --timeout 90 \
+ --extra-cycles 2 \
+ --out-format verilog \
+ --module-name squarediffmult
