@@ -8,7 +8,7 @@ module multiplier (
     // wire declarations
     wire [15:0] wire_0;
 
-    assign wire_0 = a * b;
+    assign wire_0 = a + b;
     assign result = wire_0;
 
 endmodule

@@ -8,15 +8,29 @@ class Dialect:
 
 # base class for all operations
 class Op:
+    MNEMONIC: str
+
     def build(self, builder: Builder):
         raise NotImplementedError
 
     def build_from_extract(self, builder: Builder, extract_op: Op):
         raise NotImplementedError
 
+class BinaryOp(Op):
+    SYMBOL: str
+    _left: Op
+    _right: Op
+
+    def __init__(self, left: Op, right: Op):
+        self._left = left
+        self._right = right
+
 
 # base class for all builders
 class Builder:
+    def clear(self):
+        raise NotImplementedError
+
     def emit(self, *args) -> str:
         raise NotImplementedError
 
@@ -154,44 +168,52 @@ class ArithDialect(Dialect):
     def __init__(self):
         super().__init__()
 
-    class AddOp(Op):
+    @staticmethod
+    def _build_from_extract(op: BinaryOp, builder: Builder, extract_op: Op):
+        if not isinstance(extract_op, BasicDialect.ExtractOp):
+            raise NotImplementedError(f"{op.MNEMONIC} can only be built from BasicDialect.ExtractOp.")
+        if extract_op._low != 0 or extract_op._high < extract_op._low:
+            raise ValueError("Extract operation must cover the full width of the arithmetic result.")
+        op._left.build(builder)
+        op._right.build(builder)
+        left_name = builder.get_wire(op._left)[0]
+        right_name = builder.get_wire(op._right)[0]
+        builder.add_wire(extract_op, name=None, width=extract_op._high + 1)
+        builder.append_assign(f"{builder.get_wire(extract_op)[0]} = {left_name} {op.SYMBOL} {right_name}")
+
+    class AddOp(BinaryOp):
         MNEMONIC = "add"
-        _left: Op
-        _right: Op
+        SYMBOL = "+"
 
         def __init__(self, left: Op, right: Op):
-            self._left = left
-            self._right = right
-
-    class SubOp(Op):
-        MNEMONIC = "sub"
-        _left: Op
-        _right: Op
-
-        def __init__(self, left: Op, right: Op):
-            self._left = left
-            self._right = right
-
-    class MulOp(Op):
-        MNEMONIC = "mul"
-        _left: Op
-        _right: Op
-
-        def __init__(self, left: Op, right: Op):
-            self._left = left
-            self._right = right
+            super().__init__(left, right)
 
         def build_from_extract(self, builder: Builder, extract_op: Op):
-            if not isinstance(extract_op, BasicDialect.ExtractOp):
-                raise NotImplementedError("MulOp can only be built from BasicDialect.ExtractOp.")
-            if extract_op._low != 0 or extract_op._high < extract_op._low:
-                raise ValueError("Extract operation must cover the full width of the multiplication result.")
-            self._left.build(builder)
-            self._right.build(builder)
-            left_name = builder.get_wire(self._left)[0]
-            right_name = builder.get_wire(self._right)[0]
-            builder.add_wire(extract_op, name=None, width=extract_op._high + 1)
-            builder.append_assign(f"{builder.get_wire(extract_op)[0]} = {left_name} * {right_name}")
+            ArithDialect._build_from_extract(self, builder, extract_op)
+
+    class SubOp(BinaryOp):
+        MNEMONIC = "sub"
+        SYMBOL = "-"
+        _left: Op
+        _right: Op
+
+        def __init__(self, left: Op, right: Op):
+            super().__init__(left, right)
+
+        def build_from_extract(self, builder: Builder, extract_op: Op):
+            ArithDialect._build_from_extract(self, builder, extract_op)
+
+    class MulOp(BinaryOp):
+        MNEMONIC = "mul"
+        SYMBOL = "*"
+        _left: Op
+        _right: Op
+
+        def __init__(self, left: Op, right: Op):
+            super().__init__(left, right)
+
+        def build_from_extract(self, builder: Builder, extract_op: Op):
+            ArithDialect._build_from_extract(self, builder, extract_op)
 
 
 class BehavioralVerilogBuilder(Builder):
@@ -204,6 +226,11 @@ class BehavioralVerilogBuilder(Builder):
         super().__init__()
         self._wires = {}
         self._assigns = []
+        self._counter = 0
+
+    def clear(self):
+        self._wires.clear()
+        self._assigns.clear()
         self._counter = 0
 
     def add_wire(self, op: Op, name: str | None = None, width: int = 1):
