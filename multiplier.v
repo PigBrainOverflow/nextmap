@@ -5,9 +5,8 @@ module multiplier (
     output [15:0] result
 );
 
-    // wire declarations
+    // declarations
     wire [15:0] wire_0;
-
     assign wire_0 = a * b;
     assign result = wire_0;
 

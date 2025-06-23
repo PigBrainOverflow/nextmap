@@ -49,7 +49,16 @@ class Builder:
     def get_wire(self, op: Op) -> tuple[str, int]:
         raise NotImplementedError
 
+    def has_wire(self, op: Op) -> bool:
+        raise NotImplementedError
+
+    def add_reg(self, width: int) -> str:
+        raise NotImplementedError
+
     def append_assign(self, assign: str):
+        raise NotImplementedError
+
+    def append_proc(self, proc: str):
         raise NotImplementedError
 
 
@@ -69,6 +78,8 @@ class BasicDialect(Dialect):
             self._width = width
 
         def build(self, builder: Builder):
+            if builder.has_wire(self):
+                return
             builder.add_wire(self, f"{self._name}", self._width)
 
     class OutputOp(Op):
@@ -81,6 +92,8 @@ class BasicDialect(Dialect):
             self._data = data
 
         def build(self, builder: Builder):
+            if builder.has_wire(self):
+                return
             self._data.build(builder)
             dname, dwidth = builder.get_wire(self._data)
             builder.add_wire(self, f"{self._name}", dwidth)
@@ -114,6 +127,8 @@ class BasicDialect(Dialect):
             self._low = low
 
         def build(self, builder: Builder):
+            if builder.has_wire(self):
+                return
             try:    # try build_from_extract first
                 self._data.build_from_extract(builder, self)
             except NotImplementedError:
@@ -127,6 +142,7 @@ class BasicDialect(Dialect):
     class DelayOp(Op):
         # this will generate a flip-flop without reset
         # always @ (posedge clock)
+        # expressive enough to build any synchronous (re)set flip-flop
         MNEMONIC = "delay"
         _clock: Op
         _data: Op
@@ -136,8 +152,26 @@ class BasicDialect(Dialect):
             self._data = data
 
         def build(self, builder: Builder):
+            if builder.has_wire(self):
+                return
             self._clock.build(builder)
             self._data.build(builder)
+            dname, dwidth = builder.get_wire(self._data)
+            rname = builder.add_reg(dwidth)
+            builder.add_wire(self, name=None, width=dwidth)
+            builder.append_assign(f"{builder.get_wire(self)[0]} = {rname}")
+            builder.append_proc(f"{rname} <= {dname}")
+
+    class MuxOp(Op):
+        MNEMONIC = "mux"
+        _selector: Op
+        _true_case: Op
+        _false_case: Op
+
+        def __init__(self, selector: Op, true_case: Op, false_case: Op):
+            self._selector = selector
+            self._true_case = true_case
+            self._false_case = false_case
 
 
 class LogicDialect(Dialect):
@@ -228,7 +262,7 @@ class ArithDialect(Dialect):
 class BehavioralVerilogBuilder(Builder):
     # only used to build modules
     _wires: dict[Op, tuple[str, int]]   # op to (name, width)
-    _regs: dict[Op, tuple[str, int]]
+    _regs: list[tuple[str, int]]  # (name, width)
     _assigns: list[str]
     _procs: list[str]
     _counter: int
@@ -236,7 +270,7 @@ class BehavioralVerilogBuilder(Builder):
     def __init__(self):
         super().__init__()
         self._wires = {}
-        self._regs = {}
+        self._regs = []
         self._assigns = []
         self._procs = []
         self._counter = 0
@@ -259,47 +293,76 @@ class BehavioralVerilogBuilder(Builder):
             raise ValueError(f"Wire for {op} does not exist.")
         return self._wires[op]
 
+    def has_wire(self, op: Op) -> bool:
+        return op in self._wires
+
+    def add_reg(self, width: int) -> str:
+        name = f"reg_{self._counter}"
+        self._regs.append((name, width))
+        self._counter += 1
+        return name
+
     def append_assign(self, assign: str):
         self._assigns.append(assign)
 
-    def emit(self, module_name: str) -> str:
+    def append_proc(self, proc: str):
+        self._procs.append(proc)
+
+    def emit(self, module_name: str, clock_name: str | None = None) -> str:
         code = "/* Generated Module */\n"
 
         # module declaration
         code += f"module {module_name} (\n"
         for op, (name, width) in self._wires.items():
             if isinstance(op, BasicDialect.InputOp):
-                code += f"    input [{width - 1}:0] {name},\n"
+                if clock_name and name == clock_name:
+                    code += f"    input {name},\n"
+                else:
+                    code += f"    input [{width - 1}:0] {name},\n"
             elif isinstance(op, BasicDialect.OutputOp):
                 code += f"    output [{width - 1}:0] {name},\n"
         code = code.rstrip(",\n") + "\n);\n\n"
 
         # wire declarations
-        code += "    // wire declarations\n"
+        code += "    // declarations\n"
         for op, (name, width) in self._wires.items():
             if isinstance(op, BasicDialect.InputOp) or isinstance(op, BasicDialect.OutputOp):
                 continue
             code += f"    wire [{width - 1}:0] {name};\n"
-        code += "\n"
+
+        # reg declarations
+        for name, width in self._regs:
+            code += f"    reg [{width - 1}:0] {name};\n"
 
         # assign statements
         for assign in self._assigns:
             code += f"    assign {assign};\n"
+        code += "\n"
 
-        code += "\nendmodule\n"
+        # proc blocks
+        if self._procs:
+            if not clock_name:
+                raise ValueError("Clock name must be provided if there are procedural blocks.")
+            code += f"    always @ (posedge {clock_name}) begin\n"
+            for proc in self._procs:
+                code += f"        {proc};\n"
+            code += "    end\n\n"
+
+        code += "endmodule\n"
 
         return code
 
 
 if __name__ == "__main__":
-    input_a = BasicDialect.InputOp("a", 8)
-    input_b = BasicDialect.InputOp("b", 8)
-    a_mul_b = BasicDialect.ExtractOp(ArithDialect.MulOp(input_a, input_b), high=15, low=0)
-    output = BasicDialect.OutputOp("result", a_mul_b)
+    input_a = BasicDialect.InputOp("a", 16)
+    input_b = BasicDialect.InputOp("b", 16)
+    a_mul_b = BasicDialect.ExtractOp(ArithDialect.MulOp(input_a, input_b), high=31, low=0)
+    reg_a_mul_b = BasicDialect.DelayOp(BasicDialect.InputOp("clk", 1), a_mul_b)
+    out = BasicDialect.OutputOp("out", reg_a_mul_b)
 
     builder = BehavioralVerilogBuilder()
-    output.build(builder)
-    code = builder.emit("multiplier")
+    out.build(builder)
+    code = builder.emit("two_stage_multiplier", clock_name="clk")
 
-    with open("multiplier.v", "w") as f:
+    with open("two_stage_multiplier.v", "w") as f:
         f.write(code)
