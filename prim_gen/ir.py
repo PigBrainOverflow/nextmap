@@ -16,6 +16,26 @@ class Op:
     def build_from_extract(self, builder: Builder, extract_op: Op):
         raise NotImplementedError
 
+    def __add__(self, other: Op) -> ArithDialect.AddOp:
+        return ArithDialect.AddOp(self, other)
+
+    def __sub__(self, other: Op) -> ArithDialect.SubOp:
+        return ArithDialect.SubOp(self, other)
+
+    def __mul__(self, other: Op) -> ArithDialect.MulOp:
+        return ArithDialect.MulOp(self, other)
+
+    def __getitem__(self, item: slice) -> BasicDialect.ExtractOp:
+        # inclusive both start and stop
+        # a[0:3] is equivalent to a[3:0] in Verilog
+        if not isinstance(item, slice):
+            raise TypeError("Indexing must be done with a slice.")
+        if item.start is None or item.stop is None:
+            raise ValueError("Slice must have both start and stop defined.")
+        if item.start < 0 or item.stop < item.start:
+            raise ValueError("Invalid slice range.")
+        return BasicDialect.ExtractOp(self, item.stop, item.start)
+
 
 class BinaryOp(Op):
     SYMBOL: str

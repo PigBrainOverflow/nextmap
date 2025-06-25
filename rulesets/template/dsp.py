@@ -12,10 +12,9 @@ if __name__ == "__main__":
     c = pg.BasicDialect.InputOp("c", 48)
     clk = pg.BasicDialect.InputOp("clk", 1)
 
-    a_mul_b = pg.BasicDialect.ExtractOp(pg.ArithDialect.MulOp(a, b), 42, 0)
-    a_mul_b_add_c = pg.BasicDialect.ExtractOp(pg.ArithDialect.AddOp(a_mul_b, c), 47, 0)
-    a_mul_b_add_c_delay_1 = pg.BasicDialect.DelayOp(clk, a_mul_b_add_c)
-    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.ExtractOp(a_mul_b_add_c_delay_1, 47, 0))
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        ((a * b)[0:42] + c)[0:47]
+    ))
 
     prims.append((
         "unsigned_muladd_1_stage_26_17_48_bit",
@@ -29,15 +28,9 @@ if __name__ == "__main__":
     ########################################
     # 1-stage 26-17-48-bit unsigned mulsub #
     ########################################
-    a = pg.BasicDialect.InputOp("a", 26)
-    b = pg.BasicDialect.InputOp("b", 17)
-    c = pg.BasicDialect.InputOp("c", 48)
-    clk = pg.BasicDialect.InputOp("clk", 1)
-
-    a_mul_b = pg.BasicDialect.ExtractOp(pg.ArithDialect.MulOp(a, b), 42, 0)
-    a_mul_b_sub_c = pg.BasicDialect.ExtractOp(pg.ArithDialect.SubOp(a_mul_b, c), 47, 0)
-    a_mul_b_sub_c_delay_1 = pg.BasicDialect.DelayOp(clk, a_mul_b_sub_c)
-    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.ExtractOp(a_mul_b_sub_c_delay_1, 47, 0))
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        ((a * b)[0:42] - c)[0:47]
+    ))
 
     prims.append((
         "unsigned_mulsub_1_stage_26_17_48_bit",
@@ -54,11 +47,9 @@ if __name__ == "__main__":
     a = pg.BasicDialect.InputOp("a", 25)
     d = pg.BasicDialect.InputOp("d", 25)
 
-    a_add_d = pg.BasicDialect.ExtractOp(pg.ArithDialect.AddOp(a, d), 25, 0)
-    a_add_d_mul_b = pg.BasicDialect.ExtractOp(pg.ArithDialect.MulOp(a_add_d, b), 42, 0)
-    a_add_d_mul_b_add_c = pg.BasicDialect.ExtractOp(pg.ArithDialect.AddOp(a_add_d_mul_b, c), 47, 0)
-    a_add_d_mul_b_add_c_delay_1 = pg.BasicDialect.DelayOp(clk, a_add_d_mul_b_add_c)
-    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.ExtractOp(a_add_d_mul_b_add_c_delay_1, 47, 0))
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        (((a + d)[0:25] * b)[0:42] + c[0:47])[0:47]
+    ))
 
     prims.append((
         "unsigned_addmuladd_1_stage_25_17_48_25_bit",
@@ -72,11 +63,9 @@ if __name__ == "__main__":
     ##############################################
     # 1-stage 25-17-48-25-bit unsigned addmulsub #
     ##############################################
-    a_add_d = pg.BasicDialect.ExtractOp(pg.ArithDialect.AddOp(a, d), 25, 0)
-    a_add_d_mul_b = pg.BasicDialect.ExtractOp(pg.ArithDialect.MulOp(a_add_d, b), 42, 0)
-    a_add_d_mul_b_sub_c = pg.BasicDialect.ExtractOp(pg.ArithDialect.SubOp(a_add_d_mul_b, c), 47, 0)
-    a_add_d_mul_b_sub_c_delay_1 = pg.BasicDialect.DelayOp(clk, a_add_d_mul_b_sub_c)
-    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.ExtractOp(a_add_d_mul_b_sub_c_delay_1, 47, 0))
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        (((a + d)[0:25] * b)[0:42] - c[0:47])[0:47]
+    ))
 
     prims.append((
         "unsigned_addmulsub_1_stage_25_17_48_25_bit",
@@ -91,11 +80,9 @@ if __name__ == "__main__":
     ##############################################
     # 1-stage 25-17-48-25-bit unsigned submuladd #
     ##############################################
-    a_sub_d = pg.BasicDialect.ExtractOp(pg.ArithDialect.SubOp(a, d), 25, 0)
-    a_sub_d_mul_b = pg.BasicDialect.ExtractOp(pg.ArithDialect.MulOp(a_sub_d, b), 42, 0)
-    a_sub_d_mul_b_add_c = pg.BasicDialect.ExtractOp(pg.ArithDialect.AddOp(a_sub_d_mul_b, c), 47, 0)
-    a_sub_d_mul_b_add_c_delay_1 = pg.BasicDialect.DelayOp(clk, a_sub_d_mul_b_add_c)
-    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.ExtractOp(a_sub_d_mul_b_add_c_delay_1, 47, 0))
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        (((a - d)[0:25] * b)[0:42] + c[0:47])[0:47]
+    ))
 
     prims.append((
         "unsigned_submuladd_1_stage_25_17_48_25_bit",
@@ -110,11 +97,9 @@ if __name__ == "__main__":
     ##############################################
     # 1-stage 25-17-48-25-bit unsigned submulsub #
     ##############################################
-    a_sub_d = pg.BasicDialect.ExtractOp(pg.ArithDialect.SubOp(a, d), 25, 0)
-    a_sub_d_mul_b = pg.BasicDialect.ExtractOp(pg.ArithDialect.MulOp(a_sub_d, b), 42, 0)
-    a_sub_d_mul_b_sub_c = pg.BasicDialect.ExtractOp(pg.ArithDialect.SubOp(a_sub_d_mul_b, c), 47, 0)
-    a_sub_d_mul_b_sub_c_delay_1 = pg.BasicDialect.DelayOp(clk, a_sub_d_mul_b_sub_c)
-    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.ExtractOp(a_sub_d_mul_b_sub_c_delay_1, 47, 0))
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        (((a - d)[0:25] * b)[0:42] - c[0:47])[0:47]
+    ))
 
     prims.append((
         "unsigned_submulsub_1_stage_25_17_48_25_bit",
