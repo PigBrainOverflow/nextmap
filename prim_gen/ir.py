@@ -77,6 +77,14 @@ class BasicDialect(Dialect):
             self._name = name
             self._width = width
 
+        @property
+        def name(self) -> str:
+            return self._name
+
+        @property
+        def width(self) -> int:
+            return self._width
+
         def build(self, builder: Builder):
             if builder.has_wire(self):
                 return
@@ -86,16 +94,27 @@ class BasicDialect(Dialect):
         MNEMONIC = "output"
         _name: str
         _data: Op
+        _width: int | None
 
         def __init__(self, name: str, data: Op):
             self._name = name
             self._data = data
+            self._width = None  # will be determined during build
+
+        @property
+        def name(self) -> str:
+            return self._name
+
+        @property
+        def width(self) -> int | None:
+            return self._width
 
         def build(self, builder: Builder):
             if builder.has_wire(self):
                 return
             self._data.build(builder)
             dname, dwidth = builder.get_wire(self._data)
+            self._width = dwidth
             builder.add_wire(self, f"{self._name}", dwidth)
             builder.append_assign(f"{self._name} = {dname}")
 
@@ -285,7 +304,9 @@ class BehavioralVerilogBuilder(Builder):
     def add_wire(self, op: Op, name: str | None = None, width: int = 1):
         if op in self._wires:
             raise ValueError(f"Wire for {op} already exists.")
-        name = name or f"wire_{self._counter}"
+        if name is None:
+            name = f"wire_{self._counter}"
+            self._counter += 1
         self._wires[op] = (name, width)
 
     def get_wire(self, op: Op) -> tuple[str, int]:
@@ -351,18 +372,3 @@ class BehavioralVerilogBuilder(Builder):
         code += "endmodule\n"
 
         return code
-
-
-if __name__ == "__main__":
-    input_a = BasicDialect.InputOp("a", 16)
-    input_b = BasicDialect.InputOp("b", 16)
-    a_mul_b = BasicDialect.ExtractOp(ArithDialect.MulOp(input_a, input_b), high=31, low=0)
-    reg_a_mul_b = BasicDialect.DelayOp(BasicDialect.InputOp("clk", 1), a_mul_b)
-    out = BasicDialect.OutputOp("out", reg_a_mul_b)
-
-    builder = BehavioralVerilogBuilder()
-    out.build(builder)
-    code = builder.emit("two_stage_multiplier", clock_name="clk")
-
-    with open("two_stage_multiplier.v", "w") as f:
-        f.write(code)
