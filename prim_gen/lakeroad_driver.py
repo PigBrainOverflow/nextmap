@@ -20,7 +20,7 @@ def generate_all_prims(
     timeout: int = 90,
     extra_cycles: int = 0,
     verbose: bool = False
-) -> list[str | None]:
+) -> list[tuple[str, str | None]]:
     # returns a list of verilog code for each primitive, or None if generation failed
 
     if verbose:
@@ -69,8 +69,10 @@ def generate_all_prims(
             continue
         output = outputs[0]
         output.build(builder)
+        code = builder.emit(name, clk)
+
         with open(tmp_path, "w") as f:
-            f.write(builder.emit(name, clk))
+            f.write(code)
         cmd.append("--verilog-module-out-signal")
         cmd.append(f"{output.name}:{output.width}")
 
@@ -82,16 +84,16 @@ def generate_all_prims(
             if result.returncode != 0:
                 if verbose:
                     print("  Synthesis failed")
-                impls.append(None)
+                impls.append((code, None))
             else:
                 if verbose:
                     print("  Synthesis successful")
                 with open(tmp_path, "r") as f:
-                    impls.append(result.stdout.strip())
+                    impls.append((code, result.stdout.strip()))
         except subprocess.TimeoutExpired:
             if verbose:
                 print("  Synthesis timed out")
-            impls.append(None)
+            impls.append((code, None))
 
     if verbose:
         print(f"{sum(impl is not None for impl in impls)} out of {len(prims)} primitives synthesized successfully.")

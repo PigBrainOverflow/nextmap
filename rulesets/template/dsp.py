@@ -110,17 +110,26 @@ if __name__ == "__main__":
     ))
 
 
+    # 3-stage signed squarediff
+    a = pg.BasicDialect.InputOp("a", 16)
+    d = pg.BasicDialect.InputOp("d", 16)
+    diff = (d - a)[0:16]
+
+
     # generate all primitives
     impls = pg.generate_all_prims(
         arch_name="xilinx-ultrascale-plus",
         tech_name="dsp48e2",
         template="dsp",
-        prims=prims,
+        prims=[prims[-1]],
         lakeroad_path="./lakeroad/bin",
         verbose=True
     )
 
-    with open("dsp48e2_usages.v", "w") as f:
-        for impl in impls:
-            if impl is not None:
-                f.write(impl + "\n\n")
+    with open("dsp48e2_behavioral_usages.v", "w") as f1, open("dsp48e2_structural_usages.v", "w") as f2:
+        for behavioral, structural in impls:
+            if structural is not None:
+                f1.write(behavioral + "\n\n")
+                f2.write(structural + "\n\n")
+            else:
+                f1.write("/*\n" + behavioral + "\n*/\n\n")  # comment out if generation failed

@@ -276,8 +276,6 @@ class ArithDialect(Dialect):
     class SubOp(BinaryOp):
         MNEMONIC = "sub"
         SYMBOL = "-"
-        _left: Op
-        _right: Op
 
         def __init__(self, left: Op, right: Op):
             super().__init__(left, right)
@@ -288,8 +286,6 @@ class ArithDialect(Dialect):
     class MulOp(BinaryOp):
         MNEMONIC = "mul"
         SYMBOL = "*"
-        _left: Op
-        _right: Op
 
         def __init__(self, left: Op, right: Op):
             super().__init__(left, right)
@@ -350,7 +346,7 @@ class BehavioralVerilogBuilder(Builder):
         self._procs.append(proc)
 
     def emit(self, module_name: str, clock_name: str | None = None) -> str:
-        code = "/* Generated Module */\n"
+        code = "// Generated Module\n"
 
         # module declaration
         code += f"module {module_name} (\n"
