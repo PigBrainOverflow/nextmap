@@ -110,10 +110,47 @@ if __name__ == "__main__":
     ))
 
 
-    # 3-stage signed squarediff
-    a = pg.BasicDialect.InputOp("a", 16)
-    d = pg.BasicDialect.InputOp("d", 16)
-    diff = (d - a)[0:16]
+    ################################
+    # 1-stage 27-18-bit signed mul #
+    ################################
+    a = pg.BasicDialect.InputOp("a", 27)
+    b = pg.BasicDialect.InputOp("b", 18)
+
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        (pg.BasicDialect.CastSignedOp(a) * pg.BasicDialect.CastSignedOp(b))[0:44]
+    ))
+
+    prims.append((
+        "signed_mul_1_stage_27_18_bit",
+        [out],
+        [a, b],
+        1,
+        "clk"  # clock for 1-stage
+    ))
+
+
+    ####################################
+    # 3-stage 17-bit signed squarediff #
+    ####################################
+    a = pg.BasicDialect.InputOp("a", 17)
+    d = pg.BasicDialect.InputOp("d", 17)
+
+    diff = pg.BasicDialect.CastSignedOp((d - a)[0:17])
+    out = pg.BasicDialect.OutputOp("out", pg.BasicDialect.DelayOp(clk,
+        pg.BasicDialect.DelayOp(clk,
+            pg.BasicDialect.DelayOp(clk,
+                (diff * diff)[0:35]
+            )
+        )
+    ))
+
+    prims.append((
+        "signed_squarediff_3_stage_17_bit",
+        [out],
+        [a, d],
+        3,
+        "clk"  # clock for 3-stage
+    ))
 
 
     # generate all primitives
@@ -121,7 +158,7 @@ if __name__ == "__main__":
         arch_name="xilinx-ultrascale-plus",
         tech_name="dsp48e2",
         template="dsp",
-        prims=[prims[-1]],
+        prims=prims,
         lakeroad_path="./lakeroad/bin",
         verbose=True
     )

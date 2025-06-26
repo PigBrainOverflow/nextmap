@@ -63,10 +63,10 @@ class Builder:
     def emit(self, *args) -> str:
         raise NotImplementedError
 
-    def add_wire(self, op: Op, name: str | None = None, width: int = 1):
+    def add_wire(self, op: Op, name: str | None = None, width: int = 1, signed: bool = False):
         raise NotImplementedError
 
-    def get_wire(self, op: Op) -> tuple[str, int]:
+    def get_wire(self, op: Op) -> tuple[str, int, bool]:
         raise NotImplementedError
 
     def has_wire(self, op: Op) -> bool:
@@ -133,7 +133,7 @@ class BasicDialect(Dialect):
             if builder.has_wire(self):
                 return
             self._data.build(builder)
-            dname, dwidth = builder.get_wire(self._data)
+            dname, dwidth, _ = builder.get_wire(self._data)
             self._width = dwidth
             builder.add_wire(self, f"{self._name}", dwidth)
             builder.append_assign(f"{self._name} = {dname}")
@@ -195,7 +195,7 @@ class BasicDialect(Dialect):
                 return
             self._clock.build(builder)
             self._data.build(builder)
-            dname, dwidth = builder.get_wire(self._data)
+            dname, dwidth, _ = builder.get_wire(self._data)
             rname = builder.add_reg(dwidth)
             builder.add_wire(self, name=None, width=dwidth)
             builder.append_assign(f"{builder.get_wire(self)[0]} = {rname}")
@@ -211,6 +211,42 @@ class BasicDialect(Dialect):
             self._selector = selector
             self._true_case = true_case
             self._false_case = false_case
+
+    class SignExtOp(Op):
+        # it does not cast the data to signed, it just extends the sign bit
+        MNEMONIC = "sign_ext"
+        _data: Op
+        _width: int
+
+        def __init__(self, data: Op, width: int):
+            self._data = data
+            self._width = width
+
+    class ZeroExtOp(Op):
+        MNEMONIC = "zero_ext"
+        _data: Op
+        _width: int
+
+        def __init__(self, data: Op, width: int):
+            self._data = data
+            self._width = width
+
+    class CastSignedOp(Op):
+        # cast to signed integer
+        # just a marker that treats the data as signed in order to trigger signed arithmetic
+        MNEMONIC = "cast_signed"
+        _data: Op
+
+        def __init__(self, data: Op):
+            self._data = data
+
+        def build(self, builder: Builder):
+            if builder.has_wire(self):
+                return
+            self._data.build(builder)
+            dname, dwidth, _ = builder.get_wire(self._data)
+            builder.add_wire(self, name=None, width=dwidth, signed=True)
+            builder.append_assign(f"{builder.get_wire(self)[0]} = {dname}")
 
 
 class LogicDialect(Dialect):
@@ -244,7 +280,7 @@ class LogicDialect(Dialect):
 
 class ArithDialect(Dialect):
     # unsigned integer arithmetic operations
-    # must be connected to `basic.extract` to determine width
+    # must be connected to `basic.extract` to determine its width
     PREFIX = "arith"
 
     def __init__(self):
@@ -296,7 +332,7 @@ class ArithDialect(Dialect):
 
 class BehavioralVerilogBuilder(Builder):
     # only used to build modules
-    _wires: dict[Op, tuple[str, int]]   # op to (name, width)
+    _wires: dict[Op, tuple[str, int, bool]]   # op to (name, width, signed)
     _regs: list[tuple[str, int]]  # (name, width)
     _assigns: list[str]
     _procs: list[str]
@@ -317,15 +353,15 @@ class BehavioralVerilogBuilder(Builder):
         self._procs.clear()
         self._counter = 0
 
-    def add_wire(self, op: Op, name: str | None = None, width: int = 1):
+    def add_wire(self, op: Op, name: str | None = None, width: int = 1, signed: bool = False):
         if op in self._wires:
             raise ValueError(f"Wire for {op} already exists.")
         if name is None:
             name = f"wire_{self._counter}"
             self._counter += 1
-        self._wires[op] = (name, width)
+        self._wires[op] = (name, width, signed)
 
-    def get_wire(self, op: Op) -> tuple[str, int]:
+    def get_wire(self, op: Op) -> tuple[str, int, bool]:
         if op not in self._wires:
             raise ValueError(f"Wire for {op} does not exist.")
         return self._wires[op]
@@ -350,7 +386,7 @@ class BehavioralVerilogBuilder(Builder):
 
         # module declaration
         code += f"module {module_name} (\n"
-        for op, (name, width) in self._wires.items():
+        for op, (name, width, _) in self._wires.items():
             if isinstance(op, BasicDialect.InputOp):
                 if clock_name and name == clock_name:
                     code += f"    input {name},\n"
@@ -362,10 +398,10 @@ class BehavioralVerilogBuilder(Builder):
 
         # wire declarations
         code += "    // declarations\n"
-        for op, (name, width) in self._wires.items():
+        for op, (name, width, signed) in self._wires.items():
             if isinstance(op, BasicDialect.InputOp) or isinstance(op, BasicDialect.OutputOp):
                 continue
-            code += f"    wire [{width - 1}:0] {name};\n"
+            code += f"    wire {'signed ' if signed else ''}[{width - 1}:0] {name};\n"
 
         # reg declarations
         for name, width in self._regs:

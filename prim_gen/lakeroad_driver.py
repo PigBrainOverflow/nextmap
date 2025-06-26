@@ -96,6 +96,6 @@ def generate_all_prims(
             impls.append((code, None))
 
     if verbose:
-        print(f"{sum(impl is not None for impl in impls)} out of {len(prims)} primitives synthesized successfully.")
+        print(f"{sum(impl is not None for _, impl in impls)} out of {len(prims)} primitives synthesized successfully.")
 
     return impls
