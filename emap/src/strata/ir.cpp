@@ -4,9 +4,19 @@
 namespace emap::strata {
 
 Module::Module(const json11::Json& module_json)
-: name(module_json["name"].string_value()) {
+    : name(module_json["name"].string_value()) {
+    // build instances
+    
+
     std::map<int, void*> id_to_addr;
 
+    // build ops
+    for (const auto& op_json : module_json["ops"].array_items()) {
+        if (!op_json.is_null()) {
+            auto op_id = op_json["id"].int_value();
+            
+        }
+    }
 }
 
 Module::Module(const Yosys::RTLIL::Module* rtlil_module) {}
@@ -16,7 +26,7 @@ Module::~Module() = default;
 json11::Json Module::serialize() const {}
 
 Design::Design(const json11::Json& design_json)
-: name(design_json["name"].string_value()) {
+    : name(design_json["name"].string_value()) {
     for (const auto& module_json : design_json["modules"].array_items()) {
         if (module_json.is_null()) {
             modules.push_back(nullptr);
