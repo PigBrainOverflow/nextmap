@@ -33,9 +33,11 @@ public:
 
     virtual const Dialect* belong_to() const = 0;
     virtual const char* get_mnemonic() const = 0;
+
+    virtual bool operator<(const Op& other) const = 0;
 };
 
-// ops with a width
+// op with a width
 class WireLikeOp : public Op {
 public:
     WireLikeOp() = default;
@@ -48,6 +50,7 @@ public:
  * Basic Dialect
  */
 class InstanceOp : public Op {
+// referred by InputOp and OutputOp
 public:
     InstanceOp() = default;
     InstanceOp(std::string module_name) : module_name(std::move(module_name)) {}
@@ -57,6 +60,8 @@ public:
     const Dialect* belong_to() const override { return InstanceOp::dialect; }
     const char* get_mnemonic() const override { return "instance"; }
 
+    bool operator<(const Op& other) const override;
+
 private:
     std::string module_name; // name of the module this instance belongs to
     static Dialect* dialect;
@@ -64,17 +69,15 @@ private:
 
 class InputOp : public WireLikeOp {
 public:
-    // for external inputs
-    InputOp(int width, std::string port_name)
-        : width(width), instance(nullptr), port_name(std::move(port_name)) {}
-    // for inputs from an instance
-    InputOp(int width, InstanceOp* instance, std::string port_name)
+    InputOp(int width, std::string port_name, InstanceOp* instance = nullptr)
         : width(width), instance(instance), port_name(std::move(port_name)) {}
     ~InputOp() = default;
 
     static void register_to(Dialect* dialect) { InputOp::dialect = dialect; }
     const Dialect* belong_to() const override { return InputOp::dialect; }
     const char* get_mnemonic() const override { return "input"; }
+
+    bool operator<(const Op& other) const override;
 
     int get_width() const override { return width; }
 
@@ -87,17 +90,15 @@ private:
 
 class OutputOp : public WireLikeOp {
 public:
-    // for external outputs
-    OutputOp(WireLikeOp* source, std::string port_name)
-        : source(source), instance(nullptr), port_name(std::move(port_name)) {}
-    // for outputs from an instance
-    OutputOp(WireLikeOp* source, InstanceOp* instance, std::string port_name)
+    OutputOp(WireLikeOp* source, std::string port_name, InstanceOp* instance = nullptr)
         : source(source), instance(instance), port_name(std::move(port_name)) {}
     ~OutputOp() = default;
 
     static void register_to(Dialect* dialect) { OutputOp::dialect = dialect; }
     const Dialect* belong_to() const override { return OutputOp::dialect; }
     const char* get_mnemonic() const override { return "output"; }
+
+    bool operator<(const Op& other) const override;
 
     int get_width() const override { return source->get_width(); }
 
@@ -122,21 +123,20 @@ public:
     const Dialect* belong_to() const override { return ConcatOp::dialect; }
     const char* get_mnemonic() const override { return "concat"; }
 
+    bool operator<(const Op& other) const override;
+
     int get_width() const override;
 
 private:
-    int width;        // -1 if not determined
-    WireLikeOp* high; // msb
-    WireLikeOp* low;  // lsb
+    mutable int width; // -1 if not determined
+    WireLikeOp* high;  // msb
+    WireLikeOp* low;   // lsb
     static Dialect* dialect;
 };
 
 class ExtractOp : public WireLikeOp {
 public:
-    // partial constructor
-    ExtractOp()
-        : data(nullptr), range(0, 0) {}
-    ExtractOp(WireLikeOp* data, int low, int high)
+    ExtractOp(WireLikeOp* data = nullptr, int low = 0, int high = 0)
         : data(data), range(low, high) {}
     ~ExtractOp() = default;
 
@@ -144,92 +144,181 @@ public:
     const Dialect* belong_to() const override { return ExtractOp::dialect; }
     const char* get_mnemonic() const override { return "extract"; }
 
+    bool operator<(const Op& other) const override;
+
     int get_width() const override { return range.second - range.first + 1; }
 
 private:
     // no need to buffer the width
     WireLikeOp* data;
-    std::pair<int, int> range;  // (low, high) inclusive
+    std::pair<int, int> range; // (low, high) inclusive
     static Dialect* dialect;
 };
 
 class ConstOp : public WireLikeOp {
 public:
     ConstOp() = default;
-    ConstOp
+    // construct from a bit
+    ConstOp(Yosys::RTLIL::State bit) : bits{bit} {}
+    // construct from an integer
+    ConstOp(long long val, int width = 32);
+    ~ConstOp() = default;
+
+    static void register_to(Dialect* dialect) { ConstOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return ConstOp::dialect; }
+    const char* get_mnemonic() const override { return "const"; }
+
+    bool operator<(const Op& other) const override;
 
     int get_width() const override { return bits.size(); }
 
 private:
     // no need to buffer the width
     std::vector<Yosys::RTLIL::State> bits;
+    static Dialect* dialect;
 };
 
 /*
  * Logic Dialect
  */
-class AndOp : public Op {
+class MuxOp : public WireLikeOp {
 public:
-    AndOp() = default;
-    ~AndOp() = default;
+    // partial constructor
+    MuxOp(int width = -1)
+        : width(width), selector(nullptr), true_case(nullptr), false_case(nullptr) {}
+    MuxOp(WireLikeOp* selector, WireLikeOp* true_case, WireLikeOp* false_case)
+        : width(true_case->get_width()), selector(selector), true_case(true_case), false_case(false_case) {}
+    ~MuxOp() = default;
+
+    static void register_to(Dialect* dialect) { MuxOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return MuxOp::dialect; }
+    const char* get_mnemonic() const override { return "mux"; }
+
+    bool operator<(const Op& other) const override;
+
+    int get_width() const override;
+
+private:
+    mutable int width;
+    WireLikeOp* selector;
+    WireLikeOp* true_case;
+    WireLikeOp* false_case;
+    static Dialect* dialect;
+};
+
+class AndOp : public WireLikeOp {
+public:
+    // partial constructor
+    AndOp(int width = -1)
+        : width(width), left(nullptr), right(nullptr) {}
+    AndOp(WireLikeOp* left, WireLikeOp* right)
+        : width(left->get_width()), left(left), right(right) {}
 
     static void register_to(Dialect* dialect) { AndOp::dialect = dialect; }
     const Dialect* belong_to() const override { return AndOp::dialect; }
     const char* get_mnemonic() const override { return "and"; }
 
+    bool operator<(const Op& other) const override;
+
+    int get_width() const override;
+
 private:
+    mutable int width;
+    WireLikeOp* left;  // left operand
+    WireLikeOp* right; // right operand
     static Dialect* dialect;
 };
 
-class OrOp : public Op {
+/*
+ * Arith Dialect
+ */
+class AddOp : public WireLikeOp {
+// NOTE: width is forced not to be inferred
 public:
-    OrOp() = default;
-    ~OrOp() = default;
+    AddOp(int width, WireLikeOp* left = nullptr, WireLikeOp* right = nullptr)
+        : width(width), left(left), right(right) {}
+    ~AddOp() = default;
 
-    static void register_to(Dialect* dialect) { OrOp::dialect = dialect; }
-    const Dialect* belong_to() const override { return OrOp::dialect; }
-    const char* get_mnemonic() const override { return "or"; }
+    static void register_to(Dialect* dialect) { AddOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return AddOp::dialect; }
+    const char* get_mnemonic() const override { return "add"; }
+
+    bool operator<(const Op& other) const override;
+
+    int get_width() const override { return width; }
 
 private:
+    int width;
+    WireLikeOp* left;  // left operand
+    WireLikeOp* right; // right operand
     static Dialect* dialect;
 };
 
-class Instance : public Serializable<json11::Json> {
+class SubOp : public WireLikeOp {
+// NOTE: width is forced not to be inferred
 public:
-    Instance(std::string module_name) : module_name(std::move(module_name)) {}
+    SubOp(int width, WireLikeOp* left = nullptr, WireLikeOp* right = nullptr)
+        : width(width), left(left), right(right) {}
+    ~SubOp() = default;
+
+    static void register_to(Dialect* dialect) { SubOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return SubOp::dialect; }
+    const char* get_mnemonic() const override { return "sub"; }
+
+    bool operator<(const Op& other) const override;
+
+    int get_width() const override { return width; }
 
 private:
-    std::string module_name;
+    int width;
+    WireLikeOp* left;  // left operand
+    WireLikeOp* right; // right operand
+    static Dialect* dialect;
 };
 
+class MulOp : public WireLikeOp {
+// NOTE: width is forced not to be inferred
+public:
+    MulOp(int width, WireLikeOp* left = nullptr, WireLikeOp* right = nullptr)
+        : width(width), left(left), right(right) {}
+    ~MulOp() = default;
+
+    static void register_to(Dialect* dialect) { MulOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return MulOp::dialect; }
+    const char* get_mnemonic() const override { return "mul"; }
+
+    bool operator<(const Op& other) const override;
+
+    int get_width() const override { return width; }
+
+private:
+    int width;
+    WireLikeOp* left;  // left operand
+    WireLikeOp* right; // right operand
+    static Dialect* dialect;
+};
+
+/*
+ * Module
+ */
 class Module : public Serializable<json11::Json> {
 public:
-    Module(std::string name) : name(std::move(name)) {}
-    Module(const json11::Json& module_json);          // build from JSON
     Module(const Yosys::RTLIL::Module* rtlil_module); // build from RTLIL
-    ~Module();
+    ~Module() = default;
 
     json11::Json serialize() const override;
 
 private:
-    std::string name;                         // module name
-    std::map<std::string, InputOp*> inputs;   // port name -> input
-    std::map<std::string, OutputOp*> outputs; // port name -> output
-    std::set<std::unique_ptr<Op>> ops;        // set of ops in this module
-};
+    Op* get_op(std::unique_ptr<Op> op); // build op if not exists
 
-class Design : public Serializable<json11::Json> {
-public:
-    Design(std::string name) : name(std::move(name)) {}
-    Design(const json11::Json& design_json);
-    ~Design() = default;
+    struct OpPtrLess {
+        bool operator()(const std::unique_ptr<Op>& lhs, const std::unique_ptr<Op>& rhs) const;
+    };
 
-    json11::Json serialize() const override;
-    void add_module(std::unique_ptr<Module> module);
-
-private:
-    std::string name;
-    std::vector<std::unique_ptr<Module>> modules; // list of modules
+    std::string name;                             // module name
+    std::map<std::string, InputOp*> inputs;       // port name -> input
+    std::map<std::string, OutputOp*> outputs;     // port name -> output
+    std::set<std::unique_ptr<Op>, OpPtrLess> ops; // set of ops in this module
 };
 
 }
