@@ -82,6 +82,7 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return width; }
+    bool is_external() const { return !instance; }
 
     json11::Json serialize() const override;
 
@@ -94,7 +95,7 @@ private:
 
 class OutputOp : public WireLikeOp {
 public:
-    OutputOp(WireLikeOp* source, std::string port_name, InstanceOp* instance = nullptr)
+    OutputOp(std::string port_name, WireLikeOp* source = nullptr, InstanceOp* instance = nullptr)
         : source(source), instance(instance), port_name(std::move(port_name)) {}
     ~OutputOp() = default;
 
@@ -105,6 +106,7 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return source->get_width(); }
+    bool is_external() const { return !instance; }
 
     json11::Json serialize() const override;
 
@@ -388,6 +390,12 @@ private:
     std::map<std::string, InputOp*> inputs;       // port name -> input
     std::map<std::string, OutputOp*> outputs;     // port name -> output
     std::set<std::unique_ptr<Op>, OpPtrLess> ops; // set of ops in this module
+
+    // dispatch table for building cells
+    using CellBuilderFunc = void (Module::*)(const Yosys::RTLIL::Cell* cell);
+    std::map<const char*, CellBuilderFunc> cell_builders;
+
+    void build_from_dff(const Yosys::RTLIL::Cell* cell);
 };
 
 }

@@ -157,7 +157,7 @@ int RegOp::get_width() const {
 json11::Json InstanceOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "instance"},
+        {"mnemonic", get_mnemonic()},
         {"module_name", module_name}
     };
 }
@@ -165,7 +165,7 @@ json11::Json InstanceOp::serialize() const {
 json11::Json InputOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "input"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"port_name", port_name},
         {"instance", ptr_to_hexstr(instance)}
@@ -175,7 +175,7 @@ json11::Json InputOp::serialize() const {
 json11::Json OutputOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "output"},
+        {"mnemonic", get_mnemonic()},
         {"port_name", port_name},
         {"instance", ptr_to_hexstr(instance)},
         {"source", ptr_to_hexstr(source)}
@@ -185,7 +185,7 @@ json11::Json OutputOp::serialize() const {
 json11::Json ConcatOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "concat"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"high", ptr_to_hexstr(high)},
         {"low", ptr_to_hexstr(low)}
@@ -195,7 +195,7 @@ json11::Json ConcatOp::serialize() const {
 json11::Json ExtractOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "extract"},
+        {"mnemonic", get_mnemonic()},
         {"data", ptr_to_hexstr(data)},
         {"range", json11::Json::array{range.first, range.second}}
     };
@@ -204,7 +204,7 @@ json11::Json ExtractOp::serialize() const {
 json11::Json ConstOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "const"},
+        {"mnemonic", get_mnemonic()},
         {"bits", json11::Json(bits)}
     };
 }
@@ -212,7 +212,7 @@ json11::Json ConstOp::serialize() const {
 json11::Json MuxOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "mux"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"selector", ptr_to_hexstr(selector)},
         {"true_case", ptr_to_hexstr(true_case)},
@@ -223,7 +223,7 @@ json11::Json MuxOp::serialize() const {
 json11::Json AndOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "and"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"left", ptr_to_hexstr(left)},
         {"right", ptr_to_hexstr(right)}
@@ -233,7 +233,7 @@ json11::Json AndOp::serialize() const {
 json11::Json AddOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "add"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"left", ptr_to_hexstr(left)},
         {"right", ptr_to_hexstr(right)}
@@ -243,7 +243,7 @@ json11::Json AddOp::serialize() const {
 json11::Json SubOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "sub"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"left", ptr_to_hexstr(left)},
         {"right", ptr_to_hexstr(right)}
@@ -253,7 +253,7 @@ json11::Json SubOp::serialize() const {
 json11::Json MulOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "mul"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"left", ptr_to_hexstr(left)},
         {"right", ptr_to_hexstr(right)}
@@ -263,7 +263,7 @@ json11::Json MulOp::serialize() const {
 json11::Json ToClockOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "to_clock"},
+        {"mnemonic", get_mnemonic()},
         {"signal", ptr_to_hexstr(signal)}
     };
 }
@@ -271,7 +271,7 @@ json11::Json ToClockOp::serialize() const {
 json11::Json RegOp::serialize() const {
     return json11::Json::object{
         {"address", ptr_to_hexstr(this)},
-        {"mnemonic", "reg"},
+        {"mnemonic", get_mnemonic()},
         {"width", width},
         {"clock", ptr_to_hexstr(clock)},
         {"data", ptr_to_hexstr(data)}
@@ -337,15 +337,20 @@ Module::Module(const Yosys::RTLIL::Module* rtlil_module) {
         assert(wire->port_input && wire->port_output &&
             "Wires must be either input or output in the RTLIL module");
         if (wire->port_input) {
-            inputs.insert({name.str(), get_op(std::make_unique<InputOp>(this, name, wire->width))});
+            inputs.insert({name.str(), static_cast<InputOp*>(get_op(std::make_unique<InputOp>(wire->width, wire->name.str())))});
         }
         else if (wire->port_output) {
-            outputs.insert({name, get_op(std::make_unique<OutputOp>(this, name, wire->width))});
+            outputs.insert({name.str(), static_cast<OutputOp*>(get_op(std::make_unique<OutputOp>(wire->name.str())))});
         }
     }
 
-    for (const auto& cell : rtlil_module->cells_) {
-
+    // build ops
+    for (const auto& [name, cell] : rtlil_module->cells_) {
+        auto type = cell->type.str();
+        if (type == "$dff") {
+            auto raw_clock = cell->getPort("\\CLK");
+            
+        }
     }
 }
 
