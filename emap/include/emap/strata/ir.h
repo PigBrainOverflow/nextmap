@@ -299,6 +299,49 @@ private:
 };
 
 /*
+ * Seq Dialect
+ */
+class ToClockOp : public Op {
+// cast a wire signal to a clock signal
+public:
+    ToClockOp(WireLikeOp* signal = nullptr) : signal(signal) {}
+
+    static void register_to(Dialect* dialect) { ToClockOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return ToClockOp::dialect; }
+    const char* get_mnemonic() const override { return "to_clock"; }
+
+    bool operator<(const Op& other) const override;
+
+private:
+    WireLikeOp* signal;
+    static Dialect* dialect;
+};
+
+class RegOp : public WireLikeOp {
+public:
+    // partial constructor
+    RegOp(int width = -1)
+        : width(width), clock(nullptr), data(nullptr) {}
+    RegOp(ToClockOp* clock, WireLikeOp* data)
+        : width(data->get_width()), clock(clock), data(data) {}
+    ~RegOp() = default;
+
+    static void register_to(Dialect* dialect) { RegOp::dialect = dialect; }
+    const Dialect* belong_to() const override { return RegOp::dialect; }
+    const char* get_mnemonic() const override { return "reg"; }
+
+    bool operator<(const Op& other) const override;
+
+    int get_width() const override;
+
+private:
+    mutable int width;
+    ToClockOp* clock;
+    WireLikeOp* data;
+    static Dialect* dialect;
+};
+
+/*
  * Module
  */
 class Module : public Serializable<json11::Json> {

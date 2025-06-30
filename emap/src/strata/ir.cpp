@@ -112,6 +112,14 @@ bool MulOp::operator<(const Op& other) const {
     return std::tie(left, right) < std::tie(other_mul.left, other_mul.right);
 }
 
+bool ToClockOp::operator<(const Op &other) const {
+    if (typeid(*this) != typeid(other)) {
+        return typeid(*this).before(typeid(other));
+    }
+    // same type, compare by fields
+    return signal < static_cast<const ToClockOp&>(other).signal;
+}
+
 int ConcatOp::get_width() const {
     if (width < 0 && high && low) {
         width = high->get_width() + low->get_width();
@@ -136,6 +144,14 @@ int AndOp::get_width() const {
     return width;
 }
 
+int RegOp::get_width() const {
+    if (width < 0 && data) {
+        width = data->get_width();
+    }
+    assert(width >= 0 && "Width of RegOp should be determined");
+    return width;
+}
+
 /*
  * Module
  */
@@ -143,7 +159,7 @@ json11::Json Module::serialize() const {
     json11::Json::object obj;
     obj["name"] = name;
 
-    // Serialize inputs
+    // serialize inputs
     json11::Json::array inputs_array;
     for (const auto& [port_name, input] : inputs) {
         inputs_array.push_back(json11::Json::object{
@@ -153,7 +169,7 @@ json11::Json Module::serialize() const {
     }
     obj["inputs"] = inputs_array;
 
-    // Serialize outputs
+    // serialize outputs
     json11::Json::array outputs_array;
     for (const auto& [port_name, output] : outputs) {
         outputs_array.push_back(json11::Json::object{
@@ -163,7 +179,26 @@ json11::Json Module::serialize() const {
     }
     obj["outputs"] = outputs_array;
 
+    // TODO: serialize ops
+
     return json11::Json(obj);
+}
+
+Op* Module::get_op(std::unique_ptr<Op> op) {
+    assert(op && "Cannot get null Op");
+    auto it = ops.find(op);
+    if (it != ops.end()) {
+        return it->get();
+    }
+    // not found
+    auto ret = op.get();
+    ops.insert(std::move(op));
+    return ret;
+}
+
+bool Module::OpPtrLess::operator()(const std::unique_ptr<Op>& lhs, const std::unique_ptr<Op>& rhs) const {
+    assert(lhs && rhs && "Cannot compare null Op pointers");
+    return *lhs < *rhs;
 }
 
 Module::Module(const Yosys::RTLIL::Module* rtlil_module) {
@@ -171,11 +206,8 @@ Module::Module(const Yosys::RTLIL::Module* rtlil_module) {
 
     name = rtlil_module->name.str();
 
-}
+    // build netlist
 
-bool Module::OpPtrLess::operator()(const std::unique_ptr<Op>& lhs, const std::unique_ptr<Op>& rhs) const {
-    assert(lhs && rhs && "Cannot compare null Op pointers");
-    return *lhs < *rhs;
 }
 
 }
