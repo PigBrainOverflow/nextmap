@@ -1,6 +1,8 @@
 #include <cassert>
 
+#include "emap/utils.h"
 #include "emap/strata/ir.h"
+#include "libs/json11/json11.hpp"
 
 
 namespace emap::strata {
@@ -152,6 +154,130 @@ int RegOp::get_width() const {
     return width;
 }
 
+json11::Json InstanceOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "instance"},
+        {"module_name", module_name}
+    };
+}
+
+json11::Json InputOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "input"},
+        {"width", width},
+        {"port_name", port_name},
+        {"instance", ptr_to_hexstr(instance)}
+    };
+}
+
+json11::Json OutputOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "output"},
+        {"port_name", port_name},
+        {"instance", ptr_to_hexstr(instance)},
+        {"source", ptr_to_hexstr(source)}
+    };
+}
+
+json11::Json ConcatOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "concat"},
+        {"width", width},
+        {"high", ptr_to_hexstr(high)},
+        {"low", ptr_to_hexstr(low)}
+    };
+}
+
+json11::Json ExtractOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "extract"},
+        {"data", ptr_to_hexstr(data)},
+        {"range", json11::Json::array{range.first, range.second}}
+    };
+}
+
+json11::Json ConstOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "const"},
+        {"bits", json11::Json(bits)}
+    };
+}
+
+json11::Json MuxOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "mux"},
+        {"width", width},
+        {"selector", ptr_to_hexstr(selector)},
+        {"true_case", ptr_to_hexstr(true_case)},
+        {"false_case", ptr_to_hexstr(false_case)}
+    };
+}
+
+json11::Json AndOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "and"},
+        {"width", width},
+        {"left", ptr_to_hexstr(left)},
+        {"right", ptr_to_hexstr(right)}
+    };
+}
+
+json11::Json AddOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "add"},
+        {"width", width},
+        {"left", ptr_to_hexstr(left)},
+        {"right", ptr_to_hexstr(right)}
+    };
+}
+
+json11::Json SubOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "sub"},
+        {"width", width},
+        {"left", ptr_to_hexstr(left)},
+        {"right", ptr_to_hexstr(right)}
+    };
+}
+
+json11::Json MulOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "mul"},
+        {"width", width},
+        {"left", ptr_to_hexstr(left)},
+        {"right", ptr_to_hexstr(right)}
+    };
+}
+
+json11::Json ToClockOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "to_clock"},
+        {"signal", ptr_to_hexstr(signal)}
+    };
+}
+
+json11::Json RegOp::serialize() const {
+    return json11::Json::object{
+        {"address", ptr_to_hexstr(this)},
+        {"mnemonic", "reg"},
+        {"width", width},
+        {"clock", ptr_to_hexstr(clock)},
+        {"data", ptr_to_hexstr(data)}
+    };
+}
+
 /*
  * Module
  */
@@ -206,8 +332,21 @@ Module::Module(const Yosys::RTLIL::Module* rtlil_module) {
 
     name = rtlil_module->name.str();
 
-    // build netlist
+    // build inputs & outputs
+    for (const auto& [name, wire] : rtlil_module->wires_) {
+        assert(wire->port_input && wire->port_output &&
+            "Wires must be either input or output in the RTLIL module");
+        if (wire->port_input) {
+            inputs.insert({name.str(), get_op(std::make_unique<InputOp>(this, name, wire->width))});
+        }
+        else if (wire->port_output) {
+            outputs.insert({name, get_op(std::make_unique<OutputOp>(this, name, wire->width))});
+        }
+    }
 
+    for (const auto& cell : rtlil_module->cells_) {
+
+    }
 }
 
 }

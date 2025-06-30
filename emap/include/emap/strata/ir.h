@@ -62,6 +62,8 @@ public:
 
     bool operator<(const Op& other) const override;
 
+    json11::Json serialize() const override;
+
 private:
     std::string module_name; // name of the module this instance belongs to
     static Dialect* dialect;
@@ -80,6 +82,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return width; }
+
+    json11::Json serialize() const override;
 
 private:
     int width;
@@ -101,6 +105,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return source->get_width(); }
+
+    json11::Json serialize() const override;
 
 private:
     // no need to buffer the width
@@ -127,6 +133,8 @@ public:
 
     int get_width() const override;
 
+    json11::Json serialize() const override;
+
 private:
     mutable int width; // -1 if not determined
     WireLikeOp* high;  // msb
@@ -147,6 +155,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return range.second - range.first + 1; }
+
+    json11::Json serialize() const override;
 
 private:
     // no need to buffer the width
@@ -171,6 +181,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return bits.size(); }
+
+    json11::Json serialize() const override;
 
 private:
     // no need to buffer the width
@@ -198,6 +210,8 @@ public:
 
     int get_width() const override;
 
+    json11::Json serialize() const override;
+
 private:
     mutable int width;
     WireLikeOp* selector;
@@ -221,6 +235,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override;
+
+    json11::Json serialize() const override;
 
 private:
     mutable int width;
@@ -247,6 +263,8 @@ public:
 
     int get_width() const override { return width; }
 
+    json11::Json serialize() const override;
+
 private:
     int width;
     WireLikeOp* left;  // left operand
@@ -268,6 +286,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override { return width; }
+
+    json11::Json serialize() const override;
 
 private:
     int width;
@@ -291,6 +311,8 @@ public:
 
     int get_width() const override { return width; }
 
+    json11::Json serialize() const override;
+
 private:
     int width;
     WireLikeOp* left;  // left operand
@@ -311,6 +333,8 @@ public:
     const char* get_mnemonic() const override { return "to_clock"; }
 
     bool operator<(const Op& other) const override;
+
+    json11::Json serialize() const override;
 
 private:
     WireLikeOp* signal;
@@ -333,6 +357,8 @@ public:
     bool operator<(const Op& other) const override;
 
     int get_width() const override;
+
+    json11::Json serialize() const override;
 
 private:
     mutable int width;
