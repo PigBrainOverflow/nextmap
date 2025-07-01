@@ -6,13 +6,10 @@
 #endif
 
 
+namespace emap::utils {
 
 
-
-
-
-
-
+}
 
 
 #endif
