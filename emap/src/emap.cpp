@@ -1,12 +1,43 @@
+#include <iostream>
 #include <kernel/yosys.h>
 #include <kernel/yosys_common.h>
 #include <kernel/functional.h>
 
-#include <iostream>
+#include "emap/utils.h"
 
-#ifndef UNUSED
-#define UNUSED(x) (void)(x)
-#endif
+
+namespace Yosys {
+
+struct WriteFunctionalPass : public Pass {
+public:
+    WriteFunctionalPass() : Pass("write_functional", "convert module to Functional IR and write to file") {}
+
+    void execute(std::vector<std::string> args, RTLIL::Design *design) override {
+        if (args.size() < 2 || args.size() > 3) {
+            log_error("Usage: write_functional <module_name> [<filename>]\n");
+        }
+
+        bool to_file = args.size() == 3;
+        std::ostream* output_stream = to_file ? new std::ofstream(args[2]) : &std::cout;
+        if (!output_stream->good()) {
+            log_error("Could not open output stream.\n");
+        }
+        else {
+            auto module = design->module(args[1]);
+            if (!module) {
+                log_error("Module '%s' not found in design.\n", args[1].c_str());
+            }
+            else {
+                
+            }
+        }
+        if (to_file) {
+            delete output_stream;
+        }
+    }
+};
+
+}
 
 
 USING_YOSYS_NAMESPACE
@@ -19,7 +50,7 @@ public:
         os << "Node: " << self.to_string() << std::endl;
     }
     virtual void buf(Functional::Node self, Functional::Node) override {
-        os << "Buf: " << self.to_string() << std::endl;
+        os << "Buf: " << self.to_string() << self.name().c_str() << self.width() << std::endl;
     }
 
 private:
@@ -48,46 +79,6 @@ struct MyPass : public Pass {
         }
     }
 } MyPass;
-
-// struct FunctionalIRDumpPass : public Pass {
-//     FunctionalIRDumpPass() 
-
-// struct DumpPass : public Pass {
-//     DumpPass() : Pass("oda_dump", "dump the design by Odaviv") {}
-
-//     void log_help() const {
-//         log("\n");
-//         log("    dump [<filename>]\n");
-//         log("\n");
-//         log("Dump the current design in JSON format.\n");
-//         log("If <filename> is not specified, the output is printed to stdout.\n");
-//         log("\n");
-//     }
-
-//     void execute(std::vector<std::string> args, RTLIL::Design* design) override {
-//         if (args.size() == 1) { // output to stdout
-//             auto design_json = Odaviv::to_json(design);
-//             log("RTLIL in JSON:\n%s\n", design_json.dump().c_str());
-//         }
-//         else if (args.size() == 2) { // output to file
-//             const auto& filename = args[1];
-//             auto design_json = Odaviv::to_json(design);
-//             std::ofstream file(args[1]);
-//             if (file.is_open()) {
-//                 file << design_json.dump();
-//                 file.close();
-//                 log("Design dumped to %s\n", filename.c_str());
-//             }
-//             else {
-//                 log_error("Could not open file %s for writing.\n", filename.c_str());
-//             }
-//         }
-//         else {  // invalid number of arguments
-//             log_error("Invalid number of arguments.\n");
-//             log_help();
-//         }
-//     }
-// } dump_pass;
 
 
 PRIVATE_NAMESPACE_END
