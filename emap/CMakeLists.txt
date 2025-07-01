@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 project(emap VERSION 0.0.0)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)   # generate compile_commands.json
-set(CMAKE_CXX_STANDARD 17)
+# set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 set(YOSYS_BUILD_DIR "~/yosys/build")
@@ -22,10 +22,10 @@ include_directories(
     "${YOSYS_INCLUDE_DIR}"
 )
 
-file(GLOB_RECURSE SOURCES "src/*.cpp")
-file(GLOB_RECURSE YOSYS_OBJS "${YOSYS_BUILD_DIR}/kernel/*.o")
+file(GLOB_RECURSE SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
+file(GLOB YOSYS_OBJS "${YOSYS_BUILD_DIR}/kernel/*.o")
 
-add_library(emap SHARED "${SOURCES}")
+add_library(emap SHARED "${SRCS}")
 target_compile_options(emap PRIVATE "${YOSYS_CXXFLAGS}")
 target_link_libraries(
     emap PRIVATE

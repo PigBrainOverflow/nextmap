@@ -1,6 +1,8 @@
-#include "kernel/yosys.h"
+#include <kernel/yosys.h>
 #include <kernel/yosys_common.h>
 #include <kernel/functional.h>
+
+#include <iostream>
 
 #ifndef UNUSED
 #define UNUSED(x) (void)(x)
@@ -10,14 +12,39 @@
 USING_YOSYS_NAMESPACE
 PRIVATE_NAMESPACE_BEGIN
 
+class PrintVisitor : public Functional::DefaultVisitor<void> {
+public:
+    PrintVisitor(std::ostream &os) : os(os) {}
+    virtual void default_handler(Functional::Node self) override {
+        os << "Node: " << self.to_string() << std::endl;
+    }
+    virtual void buf(Functional::Node self, Functional::Node) override {
+        os << "Buf: " << self.to_string() << std::endl;
+    }
+
+private:
+    std::ostream &os;
+};
+
 struct MyPass : public Pass {
     MyPass() : Pass("my_cmd", "just a simple test") { }
     void execute(std::vector<std::string> args, RTLIL::Design *design) override
     {
         UNUSED(args);
+        Functional::Writer writer(std::cout);
+        PrintVisitor visitor(std::cout);
         for (auto mod : design->modules()) {
+            std::cout << "Module: " << mod->name.c_str() << std::endl;
             auto fmod = Functional::IR::from_module(mod);
-            fmod.
+            for (const auto& node : fmod) {
+                node.visit(visitor);
+            }
+            for (const auto& input : fmod.all_inputs()) {
+                writer.print("Input: %s (%s)\n", input->name.c_str(), input->kind.c_str());
+            }
+            for (const auto& output : fmod.all_outputs()) {
+                writer.print("Output: %s (%s)\n", output->name.c_str(), output->kind.c_str());
+            }
         }
     }
 } MyPass;
