@@ -36,11 +36,11 @@ class NetlistDB(sqlite3.Connection):
         for cell in cells.values():
             type_: str = cell["type"]
             params: dict = cell["parameters"]
-            if type_ in {"$add", "$sub", "$mul"}:
+            if type_ in {"$and", "$or", "$xor", "$add", "$sub", "$mul"}:
                 type_ += "s" if int(params["A_SIGNED"], base=2) and int(params["B_SIGNED"], base=2) else "u"
                 a, b, y = NetlistDB.to_str(cell["connections"]["A"]), NetlistDB.to_str(cell["connections"]["B"]), NetlistDB.to_str(cell["connections"]["Y"])
                 self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
-            elif type_ in {"$dff"}:
+            elif type_ == "$dff":
                 if not int(params["CLK_POLARITY"], base=2):
                     raise ValueError("$dff with negative clock polarity is not supported")
                 d, clk, q = NetlistDB.to_str(cell["connections"]["D"]), NetlistDB.to_str(cell["connections"]["CLK"]), NetlistDB.to_str(cell["connections"]["Q"])

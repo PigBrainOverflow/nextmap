@@ -1,4 +1,5 @@
-from emap.db import NetlistDB
+from emap import NetlistDB
+from emap.rewrites import *
 import argparse
 import json
 
@@ -18,4 +19,11 @@ if __name__ == "__main__":
     db.build_from_json(mod["modules"][args.top])
     cur = db.execute("SELECT * FROM aby_cells")
     for type_, a, b, y in cur:
-        print(f"Cell: {type_}, A: {a}, B: {b}, Y: {y}")
+        print(f"Cell: {type_}, A: {a[:8]}, B: {b[:8]}, Y: {y[:8]}")
+
+    rewrite_comm(db, ["$adds", "$addu", "$muls", "$mulu"])
+    rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
+
+    cur = db.execute("SELECT * FROM aby_cells")
+    for type_, a, b, y in cur:
+        print(f"Rewritten Cell: {type_}, A: {a[:8]}, B: {b[:8]}, Y: {y[:8]}")
