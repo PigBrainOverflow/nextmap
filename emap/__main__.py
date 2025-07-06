@@ -17,11 +17,18 @@ if __name__ == "__main__":
     with open(args.design, "r") as f:
         mod = json.load(f)
 
+    with open(f"{args.rules}/dsp.json", "r") as f:
+        dsp_rules = json.load(f)
+
+    create_dsp_tables(db, dsp_rules)
     db.build_from_json(mod["modules"][args.top])
 
+    rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
+    rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
     rewrite_comm(db, ["$adds", "$addu", "$muls", "$mulu"])
     rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
-    rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
+
+    rewrite_dsp(db, dsp_rules[0])
 
     with open("out.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)
