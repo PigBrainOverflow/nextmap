@@ -1,5 +1,6 @@
 from emap import NetlistDB
 from emap.rewrites import *
+from emap.extracts import *
 import argparse
 import json
 
@@ -29,6 +30,8 @@ if __name__ == "__main__":
     rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
 
     rewrite_dsp(db, dsp_rules[0])
+
+    print(greedy_fix_one_dsp(db, "dsp48e2"))
 
     with open("out.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)

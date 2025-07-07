@@ -14,6 +14,10 @@ class NetlistDB(sqlite3.Connection):
     def width_of(s: str) -> int:
         return s.count(",") + 1 if s else 0
 
+    def tables_startswith(self, prefix: str) -> list[str]:
+        cur = self.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?;", (prefix + "%",))
+        return [row[0] for row in cur.fetchall()]
+
     def next_wire(self) -> str:
         self.cnt += 1
         return f"tmp{self.cnt}"
