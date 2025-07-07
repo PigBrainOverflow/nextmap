@@ -1,6 +1,6 @@
 [
     {
-        "name": "dsp48e2_unsigned_mul1add1_1_stage_26_17_48_bit",
+        "name": "dsp48e2_unsigned_muladd_1_stage_26_17_48_bit",
         "description": "out <= a * b + c",
         "ports": [
             {
