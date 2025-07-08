@@ -1,6 +1,6 @@
 from emap import NetlistDB
 from emap.rewrites import *
-from emap.extracts import *
+from emap.extracts import greedy
 import argparse
 import json
 
@@ -31,7 +31,12 @@ if __name__ == "__main__":
 
     rewrite_dsp(db, dsp_rules[0])
 
-    print(greedy_fix_one_dsp(db, "dsp48e2"))
+    greedy.fix_dsps(db, "dsp48e2", 3)
+    greedy.extract_dsps_bottom_up(
+        db,
+        "dsp48e2",
+        cost_model=lambda _: 1.0    # placeholder
+    )
 
     with open("out.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)

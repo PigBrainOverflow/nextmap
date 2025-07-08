@@ -3,5 +3,6 @@
 __pycache__
 /lakeroad
 /churchroad
+/extraction-gym
 /emap/build
 tmp*
