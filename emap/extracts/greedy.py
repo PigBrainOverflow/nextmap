@@ -57,6 +57,9 @@ def fix_dsps(db: NetlistDB, name: str, count: int = 1) -> list[int]:
             break
     return fixed_values
 
+def db_to_json() -> dict:
+    pass
+
 def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model) -> dict:
     """
     Return the JSON format of the module.
@@ -96,7 +99,33 @@ def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model) -> dict:
 
     res: list = []
     while not targets:  # while there are still targets to reach
-        # first, try to make heuristically biggest progress by adding a cell
+        # try to make heuristically biggest progress by adding a cell
+        choice = (float("inf"), None)   # (cost_per_progress, cell)
         for cell in cells:
             if cell.inputs <= reachable:    # reachable
-                
+                cost_per_progress = float(cell.cost) / len(cell.outputs - reachable)
+                if cost_per_progress < choice[0]:   # update choice
+                    choice = (cost_per_progress, cell)
+        if choice[1] is None:   # cells cannot make progress, consider DFFs
+            choice = (float("inf"), None)   # (cost_per_progress, dff)
+            for dff in dffs:
+                cost_per_progress = float(dff.cost) * len(dff.d - reachable - dff.q) / len(dff.q - reachable)   # cost * (inputs not reachable) / (outputs not reachable)
+                if cost_per_progress < choice[0]:   # update choice
+                    choice = (cost_per_progress, dff)
+            if choice[1] is None:   # no DFFs can make progress
+                raise ValueError("No more cells or DFFs can make progress towards the targets.")
+            else:
+                # add DFF outputs to reachable
+                reachable.update(choice[1].q)
+                # add DFF inputs to targets
+                targets.update(choice[1].d - reachable - dff.q)
+                res.append(choice[1])
+                dffs.remove(choice[1])
+        else:
+            # add the cell to reachable
+            reachable.update(choice[1].outputs)
+            res.append(choice[1])
+            cells.remove(choice[1])
+            targets -= choice[1].outputs
+
+    return db_to_json(res)
