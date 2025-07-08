@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument("--top", type=str, help="Name of the top module")
     parser.add_argument("--rules", type=str, help="Path to the directory of ruleset files")
     args = parser.parse_args()
-    db = NetlistDB(schema_file=args.schema, db_file=args.db)
+    db = NetlistDB(schema_file=args.schema, db_file=args.db, cnt=1000)
 
     with open(args.design, "r") as f:
         mod = json.load(f)
@@ -31,8 +31,8 @@ if __name__ == "__main__":
 
     rewrite_dsp(db, dsp_rules[0])
 
-    greedy.fix_dsps(db, "dsp48e2", 3)
-    greedy.extract_dsps_bottom_up(
+    greedy.fix_dsps(db, "dsp48e2", 1)
+    new_design = greedy.extract_dsps_bottom_up(
         db,
         "dsp48e2",
         cost_model=lambda _: 1.0    # placeholder
@@ -40,3 +40,6 @@ if __name__ == "__main__":
 
     with open("out.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)
+
+    with open("out_design.json", "w") as f:
+        json.dump(new_design, f, indent=2)

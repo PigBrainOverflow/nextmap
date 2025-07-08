@@ -14,22 +14,32 @@ class NetlistDB(sqlite3.Connection):
     def width_of(s: str) -> int:
         return s.count(",") + 1 if s else 0
 
+    @staticmethod
+    def to_bits(s: str) -> list[int | str]:
+        return [x if x in {"0", "1", "x"} else int(x) for x in s.split(",")]
+
     def tables_startswith(self, prefix: str) -> list[str]:
         cur = self.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?;", (prefix + "%",))
         return [row[0] for row in cur.fetchall()]
 
     def next_wire(self) -> str:
         self.cnt += 1
-        return f"tmp{self.cnt}"
+        return str(self.cnt)
 
     def next_wires(self, n: int) -> str:
         return ",".join(self.next_wire() for _ in range(n))
 
-    def __init__(self, schema_file: str, db_file: str):
+    def __init__(self, schema_file: str, db_file: str, cnt: int = 0):
+        """
+        Arguments:
+        - `schema_file`: Path to the SQL schema file.
+        - `db_file`: Path to the SQLite database file. Use ":memory:" for an in-memory database.
+        - `cnt`: Initial count for wire generation. Defaults to 0.
+        """
         super().__init__(db_file)
         with open(schema_file, "r") as f:
             self.executescript(f.read())
-        self.cnt = 0
+        self.cnt = cnt
         self.create_function("width_of", 1, NetlistDB.width_of)
 
     def build_from_json(self, mod: dict):
