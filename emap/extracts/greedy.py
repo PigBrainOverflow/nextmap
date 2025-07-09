@@ -227,13 +227,19 @@ def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model) -> dict:
         choice = (float("inf"), None)   # (cost_per_progress, cell)
         for cell in cells:
             if cell.inputs <= reachable:    # reachable
-                cost_per_progress = float(cell.cost) / len(cell.outputs - reachable)
+                diff = len(cell.outputs - reachable)  # how many outputs can be reached
+                if diff == 0:   # no progress can be made
+                    continue
+                cost_per_progress = float(cell.cost) / diff
                 if cost_per_progress < choice[0]:   # update choice
                     choice = (cost_per_progress, cell)
         if choice[1] is None:   # cells cannot make progress, consider DFFs
             choice = (float("inf"), None)   # (cost_per_progress, dff)
             for dff in dffs:
-                cost_per_progress = float(dff.cost) * len(dff.d - reachable - dff.q) / len(dff.q - reachable)   # cost * (inputs not reachable) / (outputs not reachable)
+                diff = len(dff.q - reachable)
+                if diff == 0:
+                    continue
+                cost_per_progress = float(dff.cost) * len(dff.d - reachable - dff.q) / diff # cost * (inputs not reachable) / (outputs not reachable)
                 if cost_per_progress < choice[0]:   # update choice
                     choice = (cost_per_progress, dff)
             if choice[1] is None:   # no DFFs can make progress
@@ -242,7 +248,9 @@ def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model) -> dict:
                 # add DFF outputs to reachable
                 reachable.update(choice[1].q)
                 # add DFF inputs to targets
-                targets.update(choice[1].d - reachable - dff.q)
+                targets.update(choice[1].d - reachable)
+                # remove DFF outputs from targets
+                targets -= choice[1].q
                 res.append(choice[1])
                 dffs.remove(choice[1])
         else:

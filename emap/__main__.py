@@ -24,14 +24,14 @@ if __name__ == "__main__":
     create_dsp_tables(db, dsp_rules)
     db.build_from_json(mod["modules"][args.top])
 
-    rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
-    rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
-    rewrite_comm(db, ["$adds", "$addu", "$muls", "$mulu"])
-    rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
+    # rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
+    # rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
+    # rewrite_comm(db, ["$adds", "$addu", "$muls", "$mulu"])
+    # rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
 
-    rewrite_dsp(db, dsp_rules[0])
+    # rewrite_dsp(db, dsp_rules[0])
 
-    greedy.fix_dsps(db, "dsp48e2", 1)
+    # greedy.fix_dsps(db, "dsp48e2", 1)
     new_design = greedy.extract_dsps_bottom_up(
         db,
         "dsp48e2",

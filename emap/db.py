@@ -18,6 +18,10 @@ class NetlistDB(sqlite3.Connection):
     def to_bits(s: str) -> list[int | str]:
         return [x if x in {"0", "1", "x"} else int(x) for x in s.split(",")]
 
+    @staticmethod
+    def to_int(x: str | int) -> int:
+        return x if isinstance(x, int) else int(x, base=2)
+
     def tables_startswith(self, prefix: str) -> list[str]:
         cur = self.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?;", (prefix + "%",))
         return [row[0] for row in cur.fetchall()]
@@ -56,11 +60,11 @@ class NetlistDB(sqlite3.Connection):
             params: dict = cell["parameters"]
             conns: dict = cell["connections"]
             if type_ in {"$and", "$or", "$xor", "$add", "$sub", "$mul"}:
-                type_ += "s" if int(params["A_SIGNED"], base=2) and int(params["B_SIGNED"], base=2) else "u"
+                type_ += "s" if NetlistDB.to_int(params["A_SIGNED"]) and NetlistDB.to_int(params["B_SIGNED"]) else "u"
                 a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
                 self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
             elif type_ == "$dff":
-                if not int(params["CLK_POLARITY"], base=2):
+                if not NetlistDB.to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
                 d, clk, q = NetlistDB.to_str(conns["D"]), NetlistDB.to_str(conns["CLK"]), NetlistDB.to_str(conns["Q"])
                 self.execute("INSERT OR IGNORE INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
