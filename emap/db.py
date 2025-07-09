@@ -22,6 +22,32 @@ class NetlistDB(sqlite3.Connection):
     def to_int(x: str | int) -> int:
         return x if isinstance(x, int) else int(x, base=2)
 
+    def find_or_create_aby_cell(self, width: int, type_: str, a: str, b: str) -> str:
+        """
+        Return wire y
+        """
+        cur = self.execute("SELECT y FROM aby_cells WHERE type = ? AND a = ? AND b = ?", (type_, a, b))
+        res = cur.fetchone()
+        if res is None:  # not exists
+            y = self.next_wires(width)
+            self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
+            return y
+        else:
+            return res[0]
+
+    def find_or_create_dff(self, width: int, d: str, clk: str) -> str:
+        """
+        Return wire q
+        """
+        cur = self.execute("SELECT q FROM dffs WHERE d = ? AND clk = ?", (d, clk))
+        res = cur.fetchone()
+        if res is None:
+            q = self.next_wires(width)
+            self.execute("INSERT INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
+            return q
+        else:
+            return res[0]
+
     def tables_startswith(self, prefix: str) -> list[str]:
         cur = self.execute("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE ?;", (prefix + "%",))
         return [row[0] for row in cur.fetchall()]

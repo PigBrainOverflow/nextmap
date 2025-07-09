@@ -261,4 +261,19 @@ def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model) -> dict:
             # remove the cell's outputs from targets
             targets -= choice[1].outputs
 
+    # NOTE: alternatively, call yosys command `clean -purge` to do this for you
+    # at the end, we need to prune some wires that are not used and driven more than once
+    # changed = True
+    # while changed:
+    #     changed = False
+    #     used = set()
+    #     for cell in res:
+    #         if isinstance(cell, Cell):
+    #             used.update(cell.inputs if isinstance(cell, Cell) else cell.d)
+    #     for cell in res:
+    #         if isinstance(cell, Cell):
+    #             if not (cell.outputs & used):
+    #                 res.remove(cell)
+    #                 changed = True
+
     return _db_to_json(db, res, name)

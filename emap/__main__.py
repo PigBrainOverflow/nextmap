@@ -28,18 +28,23 @@ if __name__ == "__main__":
     # rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
     # rewrite_comm(db, ["$adds", "$addu", "$muls", "$mulu"])
     # rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
+    rewrite_complex_mul(db)
+    rewrite_dff_backward_aby_cell(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"])
 
-    # rewrite_dsp(db, dsp_rules[0])
+    print(rewrite_dsp(db, dsp_rules[-2]))
 
-    # greedy.fix_dsps(db, "dsp48e2", 1)
+    greedy.fix_dsps(db, "dsp48e2", 3)
     new_design = greedy.extract_dsps_bottom_up(
         db,
         "dsp48e2",
-        cost_model=lambda _: 1.0    # placeholder
+        cost_model=lambda x: 100 if x[0] == "$muls" else 1
     )
 
     with open("out.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)
 
     with open("out_design.json", "w") as f:
-        json.dump(new_design, f, indent=2)
+        json.dump(
+            {"creator": "nextmap", "modules": {args.top: new_design}},
+            f, indent=2
+        )

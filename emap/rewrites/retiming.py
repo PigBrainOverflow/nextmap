@@ -40,3 +40,31 @@ def rewrite_dff_forward_aby_cell(db: NetlistDB, target_types: list[str], subsume
     db.commit()
 
     return cur.rowcount
+
+def rewrite_dff_backward_aby_cell(db: NetlistDB, target_types: list[str], subsume: bool = False) -> int:
+    """
+    FROM
+    -> aby_cell -> dff ->
+    ->
+    TO
+    -> dff -> aby_cell ->
+    -> dff ->
+    """
+    assert not subsume, "Subsumption is not supported for retiming rewrites"
+
+    cur = db.execute("""
+        SELECT cell.type, dff.clk, cell.a, cell.b, dff.q
+        FROM dffs AS dff JOIN aby_cells as cell ON dff.d = cell.y
+        WHERE cell.type IN ({})
+        """.format(",".join("?" * len(target_types))),
+        target_types
+    )
+    newrows = []
+    for type_, clk, a, b, y in cur.fetchall():
+        dffa = db.find_or_create_dff(NetlistDB.width_of(a), a, clk)
+        dffb = db.find_or_create_dff(NetlistDB.width_of(b), b, clk)
+        newrows.append((type_, dffa, dffb, y))
+    cur.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
+    db.commit()
+
+    return cur.rowcount
