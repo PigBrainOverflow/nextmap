@@ -2,5 +2,6 @@
 .cache
 __pycache__
 /lakeroad
+/churchroad
 /emap/build
 tmp*

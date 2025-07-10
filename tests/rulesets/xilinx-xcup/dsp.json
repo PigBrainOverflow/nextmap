@@ -1,0 +1,162 @@
+[
+    {
+        "name": "dsp48e2_unsigned_muladd_1_stage_26_17_48_bit",
+        "description": "out <= a * b + c",
+        "ports": [
+            {
+                "name": "clk",
+                "width": 1,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "a",
+                "width": 26,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "b",
+                "width": 17,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "c",
+                "width": 48,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": false
+            }
+        ],
+        "match_sql": "SELECT width_of(mul1.a) * width_of(mul1.b) + width_of(add1.b) + 5 * width_of(dff1.q) AS value, dff1.clk, mul1.a, mul1.b, add1.b, dff1.q FROM dffs AS dff1 JOIN aby_cells AS mul1 JOIN aby_cells AS add1 ON dff1.d = add1.y AND mul1.y = add1.a WHERE mul1.type = '$mulu' AND add1.type = '$addu' AND width_of(mul1.a) <= 26 AND width_of(mul1.b) <= 17 AND width_of(add1.b) <= 48 AND width_of(dff1.q) <= 48"
+    },
+    {
+        "name": "dsp48e2_unsigned_addmuladd_1_stage_25_17_48_25_bit",
+        "description": "out <= (a + d) * b + c",
+        "ports": [
+            {
+                "name": "clk",
+                "width": 1,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "a",
+                "width": 25,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "d",
+                "width": 25,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "b",
+                "width": 17,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "c",
+                "width": 48,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": false
+            }
+        ],
+        "match_sql": "SELECT width_of(add2.a) + width_of(add2.b) + width_of(mul1.a) * width_of(mul1.b) + width_of(add1.b) + 5 * width_of(dff1.q) AS value, dff1.clk, add2.a, add2.b, mul1.b, add1.b, dff1.q FROM dffs AS dff1 JOIN aby_cells AS add2 JOIN aby_cells AS mul1 JOIN aby_cells AS add1 ON dff1.d = add1.y AND add2.y = mul1.a AND mul1.y = add1.a WHERE add2.type = '$addu' AND mul1.type = '$mulu' AND add1.type = '$addu' AND width_of(add2.a) <= 25 AND width_of(add2.b) <= 25 AND width_of(mul1.b) <= 17 AND width_of(add1.b) <= 48 AND width_of(dff1.q) <= 48"
+    },
+    {
+        "name": "dsp48e2_signed_submul_1_stage_27_18_48_bit",
+        "description": "out <= (d - a) * b",
+        "ports": [
+            {
+                "name": "clk",
+                "width": 1,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "d",
+                "width": 27,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "a",
+                "width": 27,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "b",
+                "width": 18,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": true
+            }
+        ],
+        "match_sql": "SELECT width_of(sub1.a) + width_of(sub1.b) + width_of(mul1.a) * width_of(mul1.b) + 5 * width_of(dff1.q) AS value, dff1.clk, sub1.a, sub1.b, mul1.b, dff1.q FROM dffs AS dff1 JOIN aby_cells AS sub1 JOIN aby_cells AS mul1 ON dff1.d = mul1.y AND sub1.y = mul1.a WHERE sub1.type = '$subs' AND mul1.type = '$muls' AND width_of(sub1.a) <= 27 AND width_of(sub1.b) <= 27 AND width_of(mul1.b) <= 18 AND width_of(dff1.q) <= 48"
+    },
+    {
+        "name": "dsp48e2_signed_submuladd_1_stage_26_18_48_26_bit",
+        "description": "out <= (d - a) * b + c",
+        "ports": [
+            {
+                "name": "clk",
+                "width": 1,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "d",
+                "width": 26,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "a",
+                "width": 26,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "b",
+                "width": 18,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "c",
+                "width": 48,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": true
+            }
+        ],
+        "match_sql": "SELECT width_of(sub1.a) + width_of(sub1.b) + width_of(mul1.a) * width_of(mul1.b) + width_of(add1.b) + 5 * width_of(dff1.q) AS value, dff1.clk, sub1.a, sub1.b, mul1.b, add1.b, dff1.q FROM dffs AS dff1 JOIN aby_cells AS sub1 JOIN aby_cells AS mul1 JOIN aby_cells AS add1 ON dff1.d = add1.y AND sub1.y = mul1.a AND mul1.y = add1.a WHERE sub1.type = '$subs' AND mul1.type = '$muls' AND add1.type = '$addu' AND width_of(sub1.a) <= 26 AND width_of(sub1.b) <= 26 AND width_of(mul1.b) <= 18 AND width_of(add1.b) <= 48 AND width_of(dff1.q) <= 48"
+    }
+]
