@@ -1,6 +1,6 @@
 from emap import NetlistDB
 from emap.rewrites import *
-from emap.extracts import greedy
+from emap.extracts import greedy, ilp
 import argparse
 import json
 
@@ -33,8 +33,13 @@ if __name__ == "__main__":
 
     print(rewrite_dsp(db, dsp_rules[-2]))
 
-    greedy.fix_dsps(db, "dsp48e2", 3)
-    new_design = greedy.extract_dsps_bottom_up(
+    greedy.fix_dsps(db, "dsp48e2", 2)
+    # new_design = greedy.extract_dsps_bottom_up(
+    #     db,
+    #     "dsp48e2",
+    #     cost_model=lambda x: 100 if x[0] == "$muls" else 1
+    # )
+    new_design = ilp.extract_dsps(
         db,
         "dsp48e2",
         cost_model=lambda x: 100 if x[0] == "$muls" else 1
