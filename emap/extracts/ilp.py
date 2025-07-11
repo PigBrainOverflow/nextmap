@@ -59,23 +59,54 @@ def extract_dsps(db: NetlistDB, name: str, cost_model) -> dict:
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
     groups = list(_group_wires(bundles))
-    # print(groups)
     print(input, output, cells, dffs)
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
     x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x") # choices of wires
     y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y") # choices of cells
-    z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z") # choices of DFFs
+    z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z") # choices of dffs
 
-    # ilp_model.addConstr()
+    def gname_to_index(name: str) -> int:
+        return int(name[5:])
 
-    # ilp_model.setObjective(
-    #     grb.quicksum(y[i] * cells[i].cost for i in range(len(cells))) +
-    #     grb.quicksum(z[i] * dffs[i].cost for i in range(len(dffs))),
-    #     grb.GRB.MINIMIZE
-    # )   # minimize the total cost
+    # output constraints
+    for group in output:
+        ilp_model.addConstr(x[gname_to_index(group)] >= 1, f"output_{group}_constraint")
 
-    # ilp_model.optimize()
+    # wire constraints
+    for group in groups:
+        if group not in input:  # if the wire is not an input, it can be chosen or not
+            # if the wire is chosen, at least one of the cells or dffs must be chosen
+            ilp_model.addConstr(grb.quicksum(y[i] for i in range(len(cells)) if group in cells[i].outputs) + grb.quicksum(z[i] for i in range(len(dffs)) if group in dffs[i].q) >= x[gname_to_index(group)], f"wire_{group}_constraint")
+
+    # cell constraints
+    for i, cell in enumerate(cells):
+        for group in cell.inputs:
+            ilp_model.addConstr(x[gname_to_index(group)] >= y[i], f"cell_{i}_input_{group}_constraint")    # if the cell is chosen, all its inputs must be chosen
+
+    # dff constraints
+    for i, dff in enumerate(dffs):
+        for group in dff.d:
+            ilp_model.addConstr(x[gname_to_index(group)] >= z[i], f"dff_{i}_input_{group}_constraint")  # if the dff is chosen, all its inputs must be chosen
+        for group in dff.clk:
+            ilp_model.addConstr(x[gname_to_index(group)] >= z[i], f"dff_{i}_clk_{group}_constraint")    # if the dff is chosen, all its clocks must be chosen
+
+    ilp_model.setObjective(
+        grb.quicksum(y[i] * cells[i].cost for i in range(len(cells))) +
+        grb.quicksum(z[i] * dffs[i].cost for i in range(len(dffs))),
+        grb.GRB.MINIMIZE
+    )   # minimize the total cost
+
+    ilp_model.write("egraph_extraction.lp")
+    ilp_model.optimize()
+
+    if ilp_model.status != grb.GRB.OPTIMAL:
+        raise ValueError("ILP model could not find an optimal solution.")
+    if ilp_model.status == grb.GRB.INFEASIBLE:
+        raise ValueError("ILP model is infeasible, no solution found.")
+    if ilp_model.status == grb.GRB.UNBOUNDED:
+        raise ValueError("ILP model is unbounded, no solution found.")
+    print(f"ILP model solved with objective value: {ilp_model.objVal}")
 
     return {}
