@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     print(rewrite_dsp(db, dsp_rules[-2]))
 
-    greedy.fix_dsps(db, "dsp48e2", 3)
+    greedy.fix_dsps(db, "dsp48e2", 2)
     # new_design = greedy.extract_dsps_bottom_up(
     #     db,
     #     "dsp48e2",

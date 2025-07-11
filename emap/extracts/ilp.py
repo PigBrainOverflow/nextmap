@@ -1,6 +1,6 @@
 from ..db import NetlistDB
-from .utils import Cell, DFF, db_to_normalized
-from typing import Iterable
+from .utils import Cell, DFF, db_to_normalized, db_to_json
+from typing import Iterable, Callable
 import gurobipy as grb
 
 
@@ -34,7 +34,7 @@ def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
 
     return groups
 
-def extract_dsps(db: NetlistDB, name: str, cost_model) -> dict:
+def extract_dsps(db: NetlistDB, name: str, cost_model: Callable) -> dict:
     cells, dffs = db_to_normalized(db, cost_model)
 
     # it's also possible to let users define the cost model for DSPs
@@ -58,11 +58,12 @@ def extract_dsps(db: NetlistDB, name: str, cost_model) -> dict:
     bundles += [dff.d for dff in dffs]
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
-    groups = list(_group_wires(bundles))
-    print(input, output, cells, dffs)
+    groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
+    # print(input, output, cells, dffs)
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
+    ilp_model.setParam("OutputFlag", 0)
     x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x") # choices of wires
     y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y") # choices of cells
     z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z") # choices of dffs
@@ -98,7 +99,7 @@ def extract_dsps(db: NetlistDB, name: str, cost_model) -> dict:
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    ilp_model.write("egraph_extraction.lp")
+    # ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:
@@ -109,4 +110,13 @@ def extract_dsps(db: NetlistDB, name: str, cost_model) -> dict:
         raise ValueError("ILP model is unbounded, no solution found.")
     print(f"ILP model solved with objective value: {ilp_model.objVal}")
 
-    return {}
+    # extract the solution
+    res: list[Cell | DFF] = []
+    for i, yvar in y.items():
+        if yvar.X > 0.5:
+            res.append(cells[i])
+    for i, zvar in z.items():
+        if zvar.X > 0.5:
+            res.append(dffs[i])
+
+    return db_to_json(db, res, name)

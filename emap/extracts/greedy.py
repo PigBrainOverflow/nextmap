@@ -1,5 +1,6 @@
 from ..db import NetlistDB
 from .utils import Cell, DFF, db_to_normalized, db_to_json
+from typing import Callable
 
 
 def _delete_subset_rows(db: NetlistDB, table: str, output: str, wires: set[str]):
@@ -57,7 +58,7 @@ def fix_dsps(db: NetlistDB, name: str, count: int = 1) -> list[int]:
             break
     return fixed_values
 
-def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model) -> dict:
+def extract_dsps_bottom_up(db: NetlistDB, name: str, cost_model: Callable) -> dict:
     """
     Return the JSON format of the module.
     Simple bottom-up extraction algorithm.
