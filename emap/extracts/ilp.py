@@ -1,9 +1,10 @@
 from ..db import NetlistDB
 from .utils import Cell, DFF, db_to_normalized
-import gurobipy
+from typing import Iterable
+import gurobipy as grb
 
 
-def _group_wires(bundles: list[set]) -> dict[str, set]:
+def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
     """
     Return a dictionary mapping each wire group to its corresponding set of wires.
     Modifies the input list of wires in place.
@@ -40,11 +41,41 @@ def extract_dsps(db: NetlistDB, name: str, cost_model) -> dict:
     # for simplicity, we only consider the DSPs that are already fixed
     dsp_tables = db.tables_startswith(name)
     for dsp_table in dsp_tables:
-        cur.execute(f"SELECT rowid, * FROM {dsp_table} WHERE value = 0")
+        cur = db.execute(f"SELECT rowid, * FROM {dsp_table} WHERE value = 0")
         cells.update(Cell(table=dsp_table, rowid=row[0], inputs=set(",".join(row[2:-1]).split(",")), outputs=set(row[-1].split(",")), cost=0) for row in cur)
 
+    cells, dffs = list(cells), list(dffs)
+    input, output = set(), set()
+    cur.execute("SELECT wire FROM ports WHERE direction = 'input'")
+    for (wire,) in cur.fetchall():
+        input.update(wire.split(","))
+    cur.execute("SELECT wire FROM ports WHERE direction = 'output'")
+    for (wire,) in cur.fetchall():
+        output.update(wire.split(","))
+    bundles = [input, output]
+    bundles += [cell.inputs for cell in cells]
+    bundles += [cell.outputs for cell in cells]
+    bundles += [dff.d for dff in dffs]
+    bundles += [dff.clk for dff in dffs]
+    bundles += [dff.q for dff in dffs]
+    groups = list(_group_wires(bundles))
+    # print(groups)
+    print(input, output, cells, dffs)
+
     # call gurobi to solve it
-    ilp_model = gurobipy.Model("egraph_extraction")
-    x = ilp_model.addVars()
+    ilp_model = grb.Model("egraph_extraction")
+    x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x") # choices of wires
+    y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y") # choices of cells
+    z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z") # choices of DFFs
+
+    # ilp_model.addConstr()
+
+    # ilp_model.setObjective(
+    #     grb.quicksum(y[i] * cells[i].cost for i in range(len(cells))) +
+    #     grb.quicksum(z[i] * dffs[i].cost for i in range(len(dffs))),
+    #     grb.GRB.MINIMIZE
+    # )   # minimize the total cost
+
+    # ilp_model.optimize()
 
     return {}

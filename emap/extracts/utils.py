@@ -43,7 +43,7 @@ def db_to_normalized(db: NetlistDB, cost_model) -> tuple[set[Cell], set[DFF]]:
     cells.update(Cell(table="absy_cells", rowid=rowid, inputs=set(",".join((a, b, s)).split(",")), outputs=set(y.split(",")), cost=cost_model((type_, a, b, s, y))) for rowid, type_, a, b, s, y in cur)
 
     cur.execute("SELECT rowid, d, clk, q FROM dffs")
-    dffs: set[DFF] = {DFF(rowid=rowid, d=set(d.split(",")), clk=clk, q=set(q.split(",")), cost=cost_model(("$dff", d, clk, q))) for rowid, d, clk, q in cur}
+    dffs: set[DFF] = {DFF(rowid=rowid, d=set(d.split(",")), clk={clk}, q=set(q.split(",")), cost=cost_model(("$dff", d, clk, q))) for rowid, d, clk, q in cur}
 
     return cells, dffs
 
