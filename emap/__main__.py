@@ -5,6 +5,26 @@ import argparse
 import json
 
 
+def test_greedy_extract_dsps(db: NetlistDB, top: str):
+    # use no more than 2 DSPs
+    # NOTE: call `clean -purge` in yosys
+    greedy.fix_dsps(db, "dsp48e2", 2)
+    new_design = greedy.extract_dsps_bottom_up(db, "dsp48e2", cost_model=lambda x: 10 if x[0] == "$muls" else 1)
+    with open("out_greedy.json", "w") as f:
+        json.dump(
+            {"creator": "nextmap", "modules": {top: new_design}},
+            f, indent=2
+        )
+
+def test_ilp_extract_dsps_by_count(db: NetlistDB, top: str):
+    # extract DSPs by a fixed count
+    new_design = ilp.extract_dsps_by_count(db, "dsp48e2", count=2, cost_model=lambda x: 10 if x[0] == "$muls" else 1)
+    with open("out_ilp_count.json", "w") as f:
+        json.dump(
+            {"creator": "nextmap", "modules": {top: new_design}},
+            f, indent=2
+        )
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--schema", nargs="?", type=str, default="emap/schema.sql", help="Path to the schema file")
@@ -33,23 +53,5 @@ if __name__ == "__main__":
 
     print(rewrite_dsp(db, dsp_rules[-2]))
 
-    greedy.fix_dsps(db, "dsp48e2", 2)
-    # new_design = greedy.extract_dsps_bottom_up(
-    #     db,
-    #     "dsp48e2",
-    #     cost_model=lambda x: 100 if x[0] == "$muls" else 1
-    # )
-    new_design = ilp.extract_dsps(
-        db,
-        "dsp48e2",
-        cost_model=lambda x: 100 if x[0] == "$muls" else 1
-    )
-
-    with open("out.json", "w") as f:
-        json.dump(db.dump_tables(), f, indent=2)
-
-    with open("out_design.json", "w") as f:
-        json.dump(
-            {"creator": "nextmap", "modules": {args.top: new_design}},
-            f, indent=2
-        )
+    test_greedy_extract_dsps(db, args.top)
+    test_ilp_extract_dsps_by_count(db, args.top)
