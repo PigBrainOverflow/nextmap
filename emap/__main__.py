@@ -1,6 +1,6 @@
 from emap import NetlistDB
 from emap.rewrites import *
-from emap.extracts import greedy, ilp
+from emap.extracts import greedy, ilp, utils
 import argparse
 import json
 
@@ -18,7 +18,14 @@ def test_greedy_extract_dsps(db: NetlistDB, top: str):
 
 def test_ilp_extract_dsps_by_count(db: NetlistDB, top: str):
     # extract DSPs by a fixed count
-    new_design = ilp.extract_dsps_by_count(db, "dsp48e2", count=2, cost_model=lambda x: 10 if x[0] == "$muls" else 1)
+    def cost_model(x: tuple) -> float:
+        if x[0] == "$muls":
+            return NetlistDB.width_of(x[1]) * NetlistDB.width_of(x[2]) * 1.0
+        elif x[0] == "$dff":
+            return NetlistDB.width_of(x[1]) * 0.5
+        else:
+            return NetlistDB.width_of(x[1]) + NetlistDB.width_of(x[2]) * 1.0
+    new_design = ilp.extract_dsps_by_count(db, "dsp48e2", count=3, cost_model=cost_model)
     with open("out_ilp_count.json", "w") as f:
         json.dump(
             {"creator": "nextmap", "modules": {top: new_design}},
@@ -44,14 +51,16 @@ if __name__ == "__main__":
     create_dsp_tables(db, dsp_rules)
     db.build_from_json(mod["modules"][args.top])
 
-    # rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
-    # rewrite_dff_forward_aby_cell(db, ["$adds", "$addu", "$muls", "$mulu"])
-    # rewrite_comm(db, ["$adds", "$addu", "$muls", "$mulu"])
-    # rewrite_assoc_to_right(db, ["$adds", "$addu", "$muls", "$mulu"])
     rewrite_complex_mul(db)
-    rewrite_dff_backward_aby_cell(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"])
+    while rewrite_dff_backward_aby_cell(db, ["$adds", "$subs", "$muls"]) > 0:
+        pass
+    rewrite_comm(db, ["$adds", "$muls"])
 
-    print(rewrite_dsp(db, dsp_rules[-2]))
+    for rule in dsp_rules:
+        rewrite_dsp(db, rule)
 
-    test_greedy_extract_dsps(db, args.top)
+    with open("out_rewrite.json", "w") as f:
+        json.dump(db.dump_tables(), f, indent=2)
+
+    # test_greedy_extract_dsps(db, args.top)
     test_ilp_extract_dsps_by_count(db, args.top)

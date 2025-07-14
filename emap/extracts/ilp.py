@@ -149,11 +149,11 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
     groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
-    # print(input, output, cells, dffs)
+    print(input, output, cells, dffs)
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
-    ilp_model.setParam("OutputFlag", 0)
+    # ilp_model.setParam("OutputFlag", 0)
     x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x") # choices of wires
     y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y") # choices of cells
     z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z") # choices of dffs
@@ -192,7 +192,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    # ilp_model.write("egraph_extraction.lp")
+    ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:
