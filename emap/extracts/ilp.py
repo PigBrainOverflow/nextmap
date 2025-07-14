@@ -192,7 +192,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    ilp_model.write("egraph_extraction.lp")
+    # ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:
