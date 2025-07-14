@@ -1,6 +1,6 @@
 from emap import NetlistDB
 from emap.rewrites import *
-from emap.extracts import greedy, ilp, utils
+from emap.extracts import greedy, ilp
 import argparse
 import json
 
