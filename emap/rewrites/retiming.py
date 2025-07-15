@@ -68,3 +68,22 @@ def rewrite_dff_backward_aby_cell(db: NetlistDB, target_types: list[str], subsum
     db.commit()
 
     return cur.rowcount
+
+def rewrite_split_wide_dff(db: NetlistDB, width: int, subsume: bool = False) -> int:
+    """
+    Split dff into two dffs if the width is larger than `width`
+    """
+    assert not subsume, "Subsumption is not supported for split dff rewrites"
+
+    cur = db.execute("SELECT d, clk, q FROM dffs WHERE width_of(d) > ?", (width,))
+
+    cnt = 0
+    for d, clk, q in cur.fetchall():
+        d1, d2 = d.split(",")[:width], d.split(",")[width:]
+        q1, q2 = q.split(",")[:width], q.split(",")[width:]
+        cur.execute("INSERT OR IGNORE INTO dffs (d, clk, q) VALUES (?, ?, ?)", (",".join(d1), clk, ",".join(q1)))
+        cur.execute("INSERT OR IGNORE INTO dffs (d, clk, q) VALUES (?, ?, ?)", (",".join(d2), clk, ",".join(q2)))
+        cnt += cur.rowcount > 0
+
+    db.commit()
+    return cnt

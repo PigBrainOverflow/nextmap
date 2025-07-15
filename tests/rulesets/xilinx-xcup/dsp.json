@@ -1,5 +1,36 @@
 [
     {
+        "name": "dsp48e2_unsigned_mul_1_stage_26_17_48_bit",
+        "description": "out <= a * b",
+        "ports": [
+            {
+                "name": "clk",
+                "width": 1,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "a",
+                "width": 26,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "b",
+                "width": 17,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": false
+            }
+        ],
+        "match_sql": "SELECT width_of(mul1.a) * width_of(mul1.b) + 5 * width_of(dff1.q) AS value, dff1.clk, mul1.a, mul1.b, dff1.q FROM dffs AS dff1 JOIN aby_cells AS mul1 ON dff1.d = mul1.y WHERE mul1.type = '$mulu' AND width_of(mul1.a) <= 26 AND width_of(mul1.b) <= 17 AND width_of(dff1.q) <= 48"
+    },
+    {
         "name": "dsp48e2_unsigned_muladd_1_stage_26_17_48_bit",
         "description": "out <= a * b + c",
         "ports": [

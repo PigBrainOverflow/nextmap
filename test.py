@@ -94,6 +94,24 @@ def test_unsigned_mac(dsp_rules: list, cost_model: Callable):
     with open("./tests/out/handcrafted/unsigned_mac.json", "w") as f:
         json.dump({"creator": "nextmap", "modules": {"top": design}}, f, indent=2)
 
+def test_wide_multiplier(dsp_rules: list, cost_model: Callable):
+    print("Testing wide multiplier...")
+    db = import_design("./tests/out/handcrafted/wide_multiplier_orignal.json")
+    rewrites.create_dsp_tables(db, dsp_rules)
+    # rewrite
+    rewrites.rewrite_split_wide_mul(db, a_width=17, b_width=26)   # maximum width of unsigned multiplication
+    rewrites.rewrite_split_wide_dff(db, width=17)
+    while rewrites.rewrite_dff_backward_aby_cell(db, ["$addu", "$mulu"]) > 0:
+        pass
+    # rewrites.rewrite_comm(db, ["$addu", "$mulu"])
+    [rewrites.rewrite_dsp(db, rule) for rule in dsp_rules]
+    with open("out.json", "w") as f:
+        json.dump(db.dump_tables(), f, indent=2)
+    # extract
+    design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=1, cost_model=cost_model)
+    with open("./tests/out/handcrafted/wide_multiplier.json", "w") as f:
+        json.dump({"creator": "nextmap", "modules": {"top": design}}, f, indent=2)
+
 def test_handcrafted():
     # NOTE: all designs only have one module named "top"
     design_path = "./tests/designs/handcrafted"
@@ -112,7 +130,7 @@ def test_handcrafted():
         dsp_rules = json.load(f)
 
     def simple_cost_model(x: tuple) -> float:
-        if x[0] == "$muls":
+        if x[0] in {"$muls", "$mulu"}:
             return NetlistDB.width_of(x[1]) * NetlistDB.width_of(x[2]) * 1.0
         elif x[0] == "$dff":
             return NetlistDB.width_of(x[1]) * 0.5
@@ -125,6 +143,7 @@ def test_handcrafted():
     test_square_diff(dsp_rules, simple_cost_model)
     test_signed_mac(dsp_rules, simple_cost_model)
     test_unsigned_mac(dsp_rules, simple_cost_model)
+    test_wide_multiplier(dsp_rules, simple_cost_model)
 
 if __name__ == "__main__":
     test_handcrafted()
