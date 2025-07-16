@@ -34,6 +34,23 @@ def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
 
     return groups
 
+def _prune_cells(cells: list[Cell]):
+    """
+    Prune the cells that are dominated by other cells.
+    """
+    modified = True
+    while modified:
+        modified = False
+        for i in range(len(cells)):
+            for j in range(len(cells)):
+                if i != j and cells[i].cost >= cells[j].cost and cells[i].inputs >= cells[j].inputs and cells[i].outputs <= cells[j].outputs:
+                    # cell i is dominated by cell j
+                    cells.pop(i)
+                    modified = True
+                    break
+            if modified:
+                break
+
 def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict:
     cells, dffs = db_to_normalized(db, cost_model)
 
@@ -59,7 +76,7 @@ def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
     groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
-    # print(input, output, cells, dffs)
+    _prune_cells(cells)
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
@@ -149,7 +166,9 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
     groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
-    # print(input, output, cells, dffs)
+    before = len(cells)
+    _prune_cells(cells)
+    print(f"Pruned {before - len(cells)} cells, remaining {len(cells)} cells after pruning.")
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
