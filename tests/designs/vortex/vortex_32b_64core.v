@@ -143,371 +143,6 @@ module VX_serial_div (
 	// Trace: src/VX_serial_div.sv:70:5
 	assign busy = busy_r;
 endmodule
-module VX_fcvt_unit (
-	clk,
-	reset,
-	enable,
-	frm,
-	is_itof,
-	is_signed,
-	dataa,
-	result,
-	fflags
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fcvt_unit.sv:2:15
-	parameter LATENCY = 1;
-	// Trace: src/VX_fcvt_unit.sv:3:15
-	parameter INT_WIDTH = 32;
-	// Trace: src/VX_fcvt_unit.sv:4:15
-	parameter MAN_BITS = 23;
-	// Trace: src/VX_fcvt_unit.sv:5:15
-	parameter EXP_BITS = 8;
-	// Trace: src/VX_fcvt_unit.sv:6:15
-	parameter OUT_REG = 0;
-	// Trace: src/VX_fcvt_unit.sv:8:5
-	input wire clk;
-	// Trace: src/VX_fcvt_unit.sv:9:5
-	input wire reset;
-	// Trace: src/VX_fcvt_unit.sv:10:5
-	input wire enable;
-	// Trace: src/VX_fcvt_unit.sv:11:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fcvt_unit.sv:12:5
-	input wire is_itof;
-	// Trace: src/VX_fcvt_unit.sv:13:5
-	input wire is_signed;
-	// Trace: src/VX_fcvt_unit.sv:14:5
-	input wire [31:0] dataa;
-	// Trace: src/VX_fcvt_unit.sv:15:5
-	output wire [31:0] result;
-	// Trace: src/VX_fcvt_unit.sv:16:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fcvt_unit.sv:18:5
-	localparam EXP_BIAS = (2 ** (EXP_BITS - 1)) - 1;
-	// Trace: src/VX_fcvt_unit.sv:19:5
-	localparam S_MAN_WIDTH = ((1 + MAN_BITS) > INT_WIDTH ? 1 + MAN_BITS : INT_WIDTH);
-	// Trace: src/VX_fcvt_unit.sv:20:5
-	localparam LZC_RESULT_WIDTH = $clog2(S_MAN_WIDTH);
-	// Trace: src/VX_fcvt_unit.sv:21:5
-	localparam S_EXP_WIDTH = ($clog2(INT_WIDTH) > (EXP_BITS > $clog2(EXP_BIAS + MAN_BITS) ? EXP_BITS : $clog2(EXP_BIAS + MAN_BITS)) ? $clog2(INT_WIDTH) : (EXP_BITS > $clog2(EXP_BIAS + MAN_BITS) ? EXP_BITS : $clog2(EXP_BIAS + MAN_BITS))) + 1;
-	// Trace: src/VX_fcvt_unit.sv:22:5
-	localparam FMT_SHIFT_COMPENSATION = (S_MAN_WIDTH - 1) - MAN_BITS;
-	// Trace: src/VX_fcvt_unit.sv:23:5
-	localparam NUM_FP_STICKY = ((2 * S_MAN_WIDTH) - MAN_BITS) - 1;
-	// Trace: src/VX_fcvt_unit.sv:24:5
-	localparam NUM_INT_STICKY = (2 * S_MAN_WIDTH) - INT_WIDTH;
-	// Trace: src/VX_fcvt_unit.sv:25:5
-	// removed localparam type VX_fpu_pkg_fclass_t
-	wire [6:0] fclass;
-	// Trace: src/VX_fcvt_unit.sv:26:5
-	VX_fp_classifier #(
-		.EXP_BITS(EXP_BITS),
-		.MAN_BITS(MAN_BITS)
-	) fp_classifier(
-		.exp_i(dataa[INT_WIDTH - 2:MAN_BITS]),
-		.man_i(dataa[MAN_BITS - 1:0]),
-		.clss_o(fclass)
-	);
-	// Trace: src/VX_fcvt_unit.sv:34:5
-	wire [S_MAN_WIDTH - 1:0] input_mant;
-	// Trace: src/VX_fcvt_unit.sv:35:5
-	wire [S_EXP_WIDTH - 1:0] input_exp;
-	// Trace: src/VX_fcvt_unit.sv:36:5
-	wire input_sign;
-	// Trace: src/VX_fcvt_unit.sv:37:5
-	wire i2f_sign = dataa[INT_WIDTH - 1];
-	// Trace: src/VX_fcvt_unit.sv:38:5
-	wire f2i_sign = dataa[INT_WIDTH - 1] && is_signed;
-	// Trace: src/VX_fcvt_unit.sv:39:5
-	wire [S_MAN_WIDTH - 1:0] f2i_mantissa = (f2i_sign ? -dataa : dataa);
-	// Trace: src/VX_fcvt_unit.sv:40:5
-	function automatic [S_MAN_WIDTH - 1:0] sv2v_cast_E5A8A;
-		input reg [S_MAN_WIDTH - 1:0] inp;
-		sv2v_cast_E5A8A = inp;
-	endfunction
-	wire [S_MAN_WIDTH - 1:0] i2f_mantissa = sv2v_cast_E5A8A({fclass[6], dataa[MAN_BITS - 1:0]});
-	// Trace: src/VX_fcvt_unit.sv:41:5
-	function automatic [S_EXP_WIDTH - 1:0] sv2v_cast_7A655;
-		input reg [S_EXP_WIDTH - 1:0] inp;
-		sv2v_cast_7A655 = inp;
-	endfunction
-	assign input_exp = {1'b0, dataa[MAN_BITS+:EXP_BITS]} + sv2v_cast_7A655({1'b0, fclass[4]});
-	// Trace: src/VX_fcvt_unit.sv:42:5
-	assign input_mant = (is_itof ? f2i_mantissa : i2f_mantissa);
-	// Trace: src/VX_fcvt_unit.sv:43:5
-	assign input_sign = (is_itof ? f2i_sign : i2f_sign);
-	// Trace: src/VX_fcvt_unit.sv:44:5
-	wire is_itof_s0;
-	// Trace: src/VX_fcvt_unit.sv:45:5
-	wire is_signed_s0;
-	// Trace: src/VX_fcvt_unit.sv:46:5
-	wire [2:0] rnd_mode_s0;
-	// Trace: src/VX_fcvt_unit.sv:47:5
-	wire [6:0] fclass_s0;
-	// Trace: src/VX_fcvt_unit.sv:48:5
-	wire input_sign_s0;
-	// Trace: src/VX_fcvt_unit.sv:49:5
-	wire [S_EXP_WIDTH - 1:0] fmt_exponent_s0;
-	// Trace: src/VX_fcvt_unit.sv:50:5
-	wire [S_MAN_WIDTH - 1:0] encoded_mant_s0;
-	// Trace: src/VX_fcvt_unit.sv:51:5
-	VX_pipe_register #(
-		.DATAW((13 + S_EXP_WIDTH) + S_MAN_WIDTH),
-		.DEPTH(LATENCY > 1)
-	) pipe_reg0(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({is_itof, is_signed, frm, fclass, input_sign, input_exp, input_mant}),
-		.data_out({is_itof_s0, is_signed_s0, rnd_mode_s0, fclass_s0, input_sign_s0, fmt_exponent_s0, encoded_mant_s0})
-	);
-	// Trace: src/VX_fcvt_unit.sv:61:5
-	wire [LZC_RESULT_WIDTH - 1:0] renorm_shamt_s0;
-	// Trace: src/VX_fcvt_unit.sv:62:5
-	wire mant_is_nonzero_s0;
-	// Trace: src/VX_fcvt_unit.sv:63:5
-	VX_lzc #(.N(S_MAN_WIDTH)) lzc(
-		.data_in(encoded_mant_s0),
-		.data_out(renorm_shamt_s0),
-		.valid_out(mant_is_nonzero_s0)
-	);
-	// Trace: src/VX_fcvt_unit.sv:70:5
-	wire mant_is_zero_s0 = ~mant_is_nonzero_s0;
-	// Trace: src/VX_fcvt_unit.sv:71:5
-	wire [S_MAN_WIDTH - 1:0] input_mant_n_s0;
-	// Trace: src/VX_fcvt_unit.sv:72:5
-	wire [S_EXP_WIDTH - 1:0] input_exp_n_s0;
-	// Trace: src/VX_fcvt_unit.sv:73:5
-	assign input_mant_n_s0 = encoded_mant_s0 << renorm_shamt_s0;
-	// Trace: src/VX_fcvt_unit.sv:74:5
-	function automatic signed [S_EXP_WIDTH - 1:0] sv2v_cast_7A655_signed;
-		input reg signed [S_EXP_WIDTH - 1:0] inp;
-		sv2v_cast_7A655_signed = inp;
-	endfunction
-	wire [S_EXP_WIDTH - 1:0] i2f_input_exp_s0 = (fmt_exponent_s0 + sv2v_cast_7A655_signed(FMT_SHIFT_COMPENSATION - EXP_BIAS)) - sv2v_cast_7A655({1'b0, renorm_shamt_s0});
-	// Trace: src/VX_fcvt_unit.sv:75:5
-	wire [S_EXP_WIDTH - 1:0] f2i_input_exp_s0 = sv2v_cast_7A655_signed(S_MAN_WIDTH - 1) - sv2v_cast_7A655({1'b0, renorm_shamt_s0});
-	// Trace: src/VX_fcvt_unit.sv:76:5
-	assign input_exp_n_s0 = (is_itof_s0 ? f2i_input_exp_s0 : i2f_input_exp_s0);
-	// Trace: src/VX_fcvt_unit.sv:77:5
-	wire is_itof_s1;
-	// Trace: src/VX_fcvt_unit.sv:78:5
-	wire is_signed_s1;
-	// Trace: src/VX_fcvt_unit.sv:79:5
-	wire [2:0] rnd_mode_s1;
-	// Trace: src/VX_fcvt_unit.sv:80:5
-	wire [6:0] fclass_s1;
-	// Trace: src/VX_fcvt_unit.sv:81:5
-	wire input_sign_s1;
-	// Trace: src/VX_fcvt_unit.sv:82:5
-	wire mant_is_zero_s1;
-	// Trace: src/VX_fcvt_unit.sv:83:5
-	wire [S_MAN_WIDTH - 1:0] input_mant_s1;
-	// Trace: src/VX_fcvt_unit.sv:84:5
-	wire [S_EXP_WIDTH - 1:0] input_exp_s1;
-	// Trace: src/VX_fcvt_unit.sv:85:5
-	VX_pipe_register #(
-		.DATAW((14 + S_MAN_WIDTH) + S_EXP_WIDTH),
-		.DEPTH(LATENCY > 2)
-	) pipe_reg1(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({is_itof_s0, is_signed_s0, rnd_mode_s0, fclass_s0, input_sign_s0, mant_is_zero_s0, input_mant_n_s0, input_exp_n_s0}),
-		.data_out({is_itof_s1, is_signed_s1, rnd_mode_s1, fclass_s1, input_sign_s1, mant_is_zero_s1, input_mant_s1, input_exp_s1})
-	);
-	// Trace: src/VX_fcvt_unit.sv:95:5
-	wire [S_EXP_WIDTH - 1:0] denorm_shamt = sv2v_cast_7A655_signed(INT_WIDTH - 1) - input_exp_s1;
-	// Trace: src/VX_fcvt_unit.sv:96:5
-	wire overflow = $signed(denorm_shamt) <= -$signed(sv2v_cast_7A655(!is_signed_s1));
-	// Trace: src/VX_fcvt_unit.sv:97:5
-	wire underflow = $signed(input_exp_s1) < sv2v_cast_7A655_signed($signed(-1));
-	// Trace: src/VX_fcvt_unit.sv:98:5
-	reg [S_EXP_WIDTH - 1:0] denorm_shamt_q;
-	// Trace: src/VX_fcvt_unit.sv:99:5
-	always @(*)
-		// Trace: src/VX_fcvt_unit.sv:100:9
-		if (overflow)
-			// Trace: src/VX_fcvt_unit.sv:101:13
-			denorm_shamt_q = 1'sb0;
-		else if (underflow)
-			// Trace: src/VX_fcvt_unit.sv:103:13
-			denorm_shamt_q = INT_WIDTH + 1;
-		else
-			// Trace: src/VX_fcvt_unit.sv:105:13
-			denorm_shamt_q = denorm_shamt;
-	// Trace: src/VX_fcvt_unit.sv:108:5
-	wire [2 * S_MAN_WIDTH:0] destination_mant_s1 = (is_itof_s1 ? {input_mant_s1, 33'b000000000000000000000000000000000} : {input_mant_s1, 33'b000000000000000000000000000000000} >> denorm_shamt_q);
-	// Trace: src/VX_fcvt_unit.sv:109:5
-	function automatic signed [EXP_BITS - 1:0] sv2v_cast_91364_signed;
-		input reg signed [EXP_BITS - 1:0] inp;
-		sv2v_cast_91364_signed = inp;
-	endfunction
-	wire [EXP_BITS - 1:0] final_exp_s1 = input_exp_s1[EXP_BITS - 1:0] + sv2v_cast_91364_signed(EXP_BIAS);
-	// Trace: src/VX_fcvt_unit.sv:110:5
-	wire of_before_round_s1 = overflow;
-	// Trace: src/VX_fcvt_unit.sv:111:5
-	wire is_itof_s2;
-	// Trace: src/VX_fcvt_unit.sv:112:5
-	wire is_signed_s2;
-	// Trace: src/VX_fcvt_unit.sv:113:5
-	wire [2:0] rnd_mode_s2;
-	// Trace: src/VX_fcvt_unit.sv:114:5
-	wire [6:0] fclass_s2;
-	// Trace: src/VX_fcvt_unit.sv:115:5
-	wire mant_is_zero_s2;
-	// Trace: src/VX_fcvt_unit.sv:116:5
-	wire input_sign_s2;
-	// Trace: src/VX_fcvt_unit.sv:117:5
-	wire [2 * S_MAN_WIDTH:0] destination_mant_s2;
-	// Trace: src/VX_fcvt_unit.sv:118:5
-	wire [EXP_BITS - 1:0] final_exp_s2;
-	// Trace: src/VX_fcvt_unit.sv:119:5
-	wire of_before_round_s2;
-	// Trace: src/VX_fcvt_unit.sv:120:5
-	VX_pipe_register #(
-		.DATAW(((14 + ((2 * S_MAN_WIDTH) + 1)) + EXP_BITS) + 1),
-		.DEPTH(LATENCY > 0)
-	) pipe_reg2(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({is_itof_s1, is_signed_s1, rnd_mode_s1, fclass_s1, mant_is_zero_s1, input_sign_s1, destination_mant_s1, final_exp_s1, of_before_round_s1}),
-		.data_out({is_itof_s2, is_signed_s2, rnd_mode_s2, fclass_s2, mant_is_zero_s2, input_sign_s2, destination_mant_s2, final_exp_s2, of_before_round_s2})
-	);
-	// Trace: src/VX_fcvt_unit.sv:130:5
-	wire [MAN_BITS - 1:0] final_mant_s2;
-	// Trace: src/VX_fcvt_unit.sv:131:5
-	wire [INT_WIDTH - 1:0] final_int_s2;
-	// Trace: src/VX_fcvt_unit.sv:132:5
-	wire [1:0] f2i_round_sticky_bits_s2;
-	wire [1:0] i2f_round_sticky_bits_s2;
-	// Trace: src/VX_fcvt_unit.sv:133:5
-	assign {final_mant_s2, i2f_round_sticky_bits_s2[1]} = destination_mant_s2[(2 * S_MAN_WIDTH) - 1:(((2 * S_MAN_WIDTH) - 1) - (MAN_BITS + 1)) + 1];
-	// Trace: src/VX_fcvt_unit.sv:134:5
-	assign {final_int_s2, f2i_round_sticky_bits_s2[1]} = destination_mant_s2[2 * S_MAN_WIDTH:((2 * S_MAN_WIDTH) - (INT_WIDTH + 1)) + 1];
-	// Trace: src/VX_fcvt_unit.sv:135:5
-	assign i2f_round_sticky_bits_s2[0] = |destination_mant_s2[NUM_FP_STICKY - 1:0];
-	// Trace: src/VX_fcvt_unit.sv:136:5
-	assign f2i_round_sticky_bits_s2[0] = |destination_mant_s2[NUM_INT_STICKY - 1:0];
-	// Trace: src/VX_fcvt_unit.sv:137:5
-	wire i2f_round_has_sticky_s2 = |i2f_round_sticky_bits_s2;
-	// Trace: src/VX_fcvt_unit.sv:138:5
-	wire f2i_round_has_sticky_s2 = |f2i_round_sticky_bits_s2;
-	// Trace: src/VX_fcvt_unit.sv:139:5
-	wire [1:0] round_sticky_bits_s2 = (is_itof_s2 ? i2f_round_sticky_bits_s2 : f2i_round_sticky_bits_s2);
-	// Trace: src/VX_fcvt_unit.sv:140:5
-	wire [INT_WIDTH - 1:0] fmt_pre_round_abs_s2 = {1'b0, final_exp_s2, final_mant_s2[MAN_BITS - 1:0]};
-	// Trace: src/VX_fcvt_unit.sv:141:5
-	wire [INT_WIDTH - 1:0] pre_round_abs_s2 = (is_itof_s2 ? fmt_pre_round_abs_s2 : final_int_s2);
-	// Trace: src/VX_fcvt_unit.sv:142:5
-	wire [INT_WIDTH - 1:0] rounded_abs_s2;
-	// Trace: src/VX_fcvt_unit.sv:143:5
-	wire rounded_sign_s2;
-	// Trace: src/VX_fcvt_unit.sv:144:5
-	VX_fp_rounding #(.DAT_WIDTH(32)) fp_rounding(
-		.abs_value_i(pre_round_abs_s2),
-		.sign_i(input_sign_s2),
-		.round_sticky_bits_i(round_sticky_bits_s2),
-		.rnd_mode_i(rnd_mode_s2),
-		.effective_subtraction_i(1'b0),
-		.abs_rounded_o(rounded_abs_s2),
-		.sign_o(rounded_sign_s2),
-		.exact_zero_o()
-	);
-	// Trace: src/VX_fcvt_unit.sv:156:5
-	wire is_itof_s3;
-	// Trace: src/VX_fcvt_unit.sv:157:5
-	wire is_signed_s3;
-	// Trace: src/VX_fcvt_unit.sv:158:5
-	wire [6:0] fclass_s3;
-	// Trace: src/VX_fcvt_unit.sv:159:5
-	wire mant_is_zero_s3;
-	// Trace: src/VX_fcvt_unit.sv:160:5
-	wire input_sign_s3;
-	// Trace: src/VX_fcvt_unit.sv:161:5
-	wire rounded_sign_s3;
-	// Trace: src/VX_fcvt_unit.sv:162:5
-	wire [INT_WIDTH - 1:0] rounded_abs_s3;
-	// Trace: src/VX_fcvt_unit.sv:163:5
-	wire of_before_round_s3;
-	// Trace: src/VX_fcvt_unit.sv:164:5
-	wire f2i_round_has_sticky_s3;
-	// Trace: src/VX_fcvt_unit.sv:165:5
-	wire i2f_round_has_sticky_s3;
-	// Trace: src/VX_fcvt_unit.sv:166:5
-	VX_pipe_register #(
-		.DATAW(47),
-		.DEPTH(LATENCY > 3)
-	) pipe_reg3(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({is_itof_s2, is_signed_s2, fclass_s2, mant_is_zero_s2, input_sign_s2, rounded_abs_s2, rounded_sign_s2, of_before_round_s2, f2i_round_has_sticky_s2, i2f_round_has_sticky_s2}),
-		.data_out({is_itof_s3, is_signed_s3, fclass_s3, mant_is_zero_s3, input_sign_s3, rounded_abs_s3, rounded_sign_s3, of_before_round_s3, f2i_round_has_sticky_s3, i2f_round_has_sticky_s3})
-	);
-	// Trace: src/VX_fcvt_unit.sv:176:5
-	wire [INT_WIDTH - 1:0] fmt_result_s3 = (mant_is_zero_s3 ? 0 : {rounded_sign_s3, rounded_abs_s3[(EXP_BITS + MAN_BITS) - 1:0]});
-	// Trace: src/VX_fcvt_unit.sv:177:5
-	wire [INT_WIDTH - 1:0] rounded_int_res_s3 = (rounded_sign_s3 ? -rounded_abs_s3 : rounded_abs_s3);
-	// Trace: src/VX_fcvt_unit.sv:178:5
-	wire rounded_int_res_zero_s3 = rounded_int_res_s3 == 0;
-	// Trace: src/VX_fcvt_unit.sv:179:5
-	reg [INT_WIDTH - 1:0] f2i_special_result_s3;
-	// Trace: src/VX_fcvt_unit.sv:180:5
-	always @(*)
-		// Trace: src/VX_fcvt_unit.sv:181:9
-		if (input_sign_s3 && !fclass_s3[2]) begin
-			// Trace: src/VX_fcvt_unit.sv:182:13
-			f2i_special_result_s3[INT_WIDTH - 2:0] = 1'sb0;
-			// Trace: src/VX_fcvt_unit.sv:183:13
-			f2i_special_result_s3[INT_WIDTH - 1] = is_signed_s3;
-		end
-		else begin
-			// Trace: src/VX_fcvt_unit.sv:185:13
-			f2i_special_result_s3[INT_WIDTH - 2:0] = (2 ** (INT_WIDTH - 1)) - 1;
-			// Trace: src/VX_fcvt_unit.sv:186:13
-			f2i_special_result_s3[INT_WIDTH - 1] = ~is_signed_s3;
-		end
-	// Trace: src/VX_fcvt_unit.sv:189:5
-	wire f2i_result_is_special_s3 = ((fclass_s3[2] | fclass_s3[3]) | of_before_round_s3) | ((input_sign_s3 & ~is_signed_s3) & ~rounded_int_res_zero_s3);
-	// Trace: src/VX_fcvt_unit.sv:193:5
-	wire [4:0] f2i_special_status_s3;
-	// Trace: src/VX_fcvt_unit.sv:194:5
-	wire [4:0] i2f_status_s3;
-	wire [4:0] f2i_status_s3;
-	// Trace: src/VX_fcvt_unit.sv:195:5
-	wire [4:0] tmp_fflags_s3;
-	// Trace: src/VX_fcvt_unit.sv:196:5
-	assign f2i_special_status_s3 = 5'h10;
-	// Trace: src/VX_fcvt_unit.sv:197:5
-	assign i2f_status_s3 = {4'h0, i2f_round_has_sticky_s3};
-	// Trace: src/VX_fcvt_unit.sv:198:5
-	assign f2i_status_s3 = (f2i_result_is_special_s3 ? f2i_special_status_s3 : {4'h0, f2i_round_has_sticky_s3});
-	// Trace: src/VX_fcvt_unit.sv:199:5
-	wire [INT_WIDTH - 1:0] i2f_result_s3 = fmt_result_s3;
-	// Trace: src/VX_fcvt_unit.sv:200:5
-	wire [INT_WIDTH - 1:0] f2i_result_s3 = (f2i_result_is_special_s3 ? f2i_special_result_s3 : rounded_int_res_s3);
-	// Trace: src/VX_fcvt_unit.sv:201:5
-	wire [INT_WIDTH - 1:0] tmp_result_s3 = (is_itof_s3 ? i2f_result_s3 : f2i_result_s3);
-	// Trace: src/VX_fcvt_unit.sv:202:5
-	assign tmp_fflags_s3 = (is_itof_s3 ? i2f_status_s3 : f2i_status_s3);
-	// Trace: src/VX_fcvt_unit.sv:203:5
-	VX_pipe_register #(
-		.DATAW(37),
-		.DEPTH(OUT_REG)
-	) pipe_reg4(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({tmp_result_s3, tmp_fflags_s3}),
-		.data_out({result, fflags})
-	);
-endmodule
 module VX_index_buffer (
 	clk,
 	reset,
@@ -576,306 +211,6 @@ module VX_index_buffer (
 		.raddr(read_addr),
 		.rdata(read_data)
 	);
-endmodule
-module VX_fncp_unit (
-	clk,
-	reset,
-	enable,
-	op_type,
-	frm,
-	dataa,
-	datab,
-	result,
-	fflags
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fncp_unit.sv:2:15
-	parameter LATENCY = 1;
-	// Trace: src/VX_fncp_unit.sv:3:15
-	parameter EXP_BITS = 8;
-	// Trace: src/VX_fncp_unit.sv:4:15
-	parameter MAN_BITS = 23;
-	// Trace: src/VX_fncp_unit.sv:5:15
-	parameter OUT_REG = 0;
-	// Trace: src/VX_fncp_unit.sv:7:5
-	input wire clk;
-	// Trace: src/VX_fncp_unit.sv:8:5
-	input wire reset;
-	// Trace: src/VX_fncp_unit.sv:9:5
-	input wire enable;
-	// Trace: src/VX_fncp_unit.sv:10:5
-	localparam VX_gpu_pkg_INST_FPU_BITS = 4;
-	input wire [3:0] op_type;
-	// Trace: src/VX_fncp_unit.sv:11:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fncp_unit.sv:12:5
-	input wire [31:0] dataa;
-	// Trace: src/VX_fncp_unit.sv:13:5
-	input wire [31:0] datab;
-	// Trace: src/VX_fncp_unit.sv:14:5
-	output wire [31:0] result;
-	// Trace: src/VX_fncp_unit.sv:15:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fncp_unit.sv:17:5
-	localparam NEG_INF = 32'h00000001;
-	localparam NEG_NORM = 32'h00000002;
-	localparam NEG_SUBNORM = 32'h00000004;
-	localparam NEG_ZERO = 32'h00000008;
-	localparam POS_ZERO = 32'h00000010;
-	localparam POS_SUBNORM = 32'h00000020;
-	localparam POS_NORM = 32'h00000040;
-	localparam POS_INF = 32'h00000080;
-	localparam QUT_NAN = 32'h00000200;
-	// Trace: src/VX_fncp_unit.sv:26:5
-	wire a_sign;
-	wire b_sign;
-	// Trace: src/VX_fncp_unit.sv:27:5
-	wire [7:0] a_exponent;
-	wire [7:0] b_exponent;
-	// Trace: src/VX_fncp_unit.sv:28:5
-	wire [22:0] a_mantissa;
-	wire [22:0] b_mantissa;
-	// Trace: src/VX_fncp_unit.sv:29:5
-	// removed localparam type VX_fpu_pkg_fclass_t
-	wire [6:0] a_fclass;
-	wire [6:0] b_fclass;
-	// Trace: src/VX_fncp_unit.sv:30:5
-	wire a_smaller;
-	wire ab_equal;
-	// Trace: src/VX_fncp_unit.sv:31:5
-	assign a_sign = dataa[31];
-	// Trace: src/VX_fncp_unit.sv:32:5
-	assign a_exponent = dataa[30:23];
-	// Trace: src/VX_fncp_unit.sv:33:5
-	assign a_mantissa = dataa[22:0];
-	// Trace: src/VX_fncp_unit.sv:34:5
-	assign b_sign = datab[31];
-	// Trace: src/VX_fncp_unit.sv:35:5
-	assign b_exponent = datab[30:23];
-	// Trace: src/VX_fncp_unit.sv:36:5
-	assign b_mantissa = datab[22:0];
-	// Trace: src/VX_fncp_unit.sv:37:5
-	VX_fp_classifier #(
-		.EXP_BITS(EXP_BITS),
-		.MAN_BITS(MAN_BITS)
-	) fp_class_a(
-		.exp_i(a_exponent),
-		.man_i(a_mantissa),
-		.clss_o(a_fclass)
-	);
-	// Trace: src/VX_fncp_unit.sv:45:5
-	VX_fp_classifier #(
-		.EXP_BITS(EXP_BITS),
-		.MAN_BITS(MAN_BITS)
-	) fp_class_b(
-		.exp_i(b_exponent),
-		.man_i(b_mantissa),
-		.clss_o(b_fclass)
-	);
-	// Trace: src/VX_fncp_unit.sv:53:5
-	assign a_smaller = (dataa < datab) ^ (a_sign || b_sign);
-	// Trace: src/VX_fncp_unit.sv:54:5
-	assign ab_equal = (dataa == datab) || (a_fclass[5] && b_fclass[5]);
-	// Trace: src/VX_fncp_unit.sv:56:5
-	wire [3:0] op_mod_s0;
-	// Trace: src/VX_fncp_unit.sv:57:5
-	wire [31:0] dataa_s0;
-	wire [31:0] datab_s0;
-	// Trace: src/VX_fncp_unit.sv:58:5
-	wire a_sign_s0;
-	wire b_sign_s0;
-	// Trace: src/VX_fncp_unit.sv:59:5
-	wire [7:0] a_exponent_s0;
-	// Trace: src/VX_fncp_unit.sv:60:5
-	wire [22:0] a_mantissa_s0;
-	// Trace: src/VX_fncp_unit.sv:61:5
-	wire [6:0] a_fclass_s0;
-	wire [6:0] b_fclass_s0;
-	// Trace: src/VX_fncp_unit.sv:62:5
-	wire a_smaller_s0;
-	wire ab_equal_s0;
-	// Trace: src/VX_fncp_unit.sv:63:5
-	localparam VX_gpu_pkg_INST_FPU_CMP = 4'b1100;
-	wire [3:0] op_mod = {op_type == VX_gpu_pkg_INST_FPU_CMP, frm};
-	// Trace: src/VX_fncp_unit.sv:64:5
-	VX_pipe_register #(
-		.DATAW(117),
-		.DEPTH(LATENCY > 0)
-	) pipe_reg0(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({op_mod, dataa, datab, a_sign, b_sign, a_exponent, a_mantissa, a_fclass, b_fclass, a_smaller, ab_equal}),
-		.data_out({op_mod_s0, dataa_s0, datab_s0, a_sign_s0, b_sign_s0, a_exponent_s0, a_mantissa_s0, a_fclass_s0, b_fclass_s0, a_smaller_s0, ab_equal_s0})
-	);
-	// Trace: src/VX_fncp_unit.sv:74:5
-	reg [31:0] fclass_mask_s0;
-	// Trace: src/VX_fncp_unit.sv:75:5
-	always @(*)
-		// Trace: src/VX_fncp_unit.sv:76:9
-		if (a_fclass_s0[6])
-			// Trace: src/VX_fncp_unit.sv:77:13
-			fclass_mask_s0 = (a_sign_s0 ? NEG_NORM : POS_NORM);
-		else if (a_fclass_s0[3])
-			// Trace: src/VX_fncp_unit.sv:80:13
-			fclass_mask_s0 = (a_sign_s0 ? NEG_INF : POS_INF);
-		else if (a_fclass_s0[5])
-			// Trace: src/VX_fncp_unit.sv:83:13
-			fclass_mask_s0 = (a_sign_s0 ? NEG_ZERO : POS_ZERO);
-		else if (a_fclass_s0[4])
-			// Trace: src/VX_fncp_unit.sv:86:13
-			fclass_mask_s0 = (a_sign_s0 ? NEG_SUBNORM : POS_SUBNORM);
-		else if (a_fclass_s0[2])
-			// Trace: src/VX_fncp_unit.sv:89:13
-			fclass_mask_s0 = {22'h000000, a_fclass_s0[1], a_fclass_s0[0], 8'h00};
-		else
-			// Trace: src/VX_fncp_unit.sv:92:13
-			fclass_mask_s0 = QUT_NAN;
-	// Trace: src/VX_fncp_unit.sv:95:5
-	reg [31:0] fminmax_res_s0;
-	// Trace: src/VX_fncp_unit.sv:96:5
-	always @(*)
-		// Trace: src/VX_fncp_unit.sv:97:9
-		if (a_fclass_s0[2] && b_fclass_s0[2])
-			// Trace: src/VX_fncp_unit.sv:98:13
-			fminmax_res_s0 = 32'h7fc00000;
-		else if (a_fclass_s0[2])
-			// Trace: src/VX_fncp_unit.sv:100:13
-			fminmax_res_s0 = datab_s0;
-		else if (b_fclass_s0[2])
-			// Trace: src/VX_fncp_unit.sv:102:13
-			fminmax_res_s0 = dataa_s0;
-		else
-			// Trace: src/VX_fncp_unit.sv:104:13
-			fminmax_res_s0 = (op_mod_s0[0] ^ a_smaller_s0 ? dataa_s0 : datab_s0);
-	// Trace: src/VX_fncp_unit.sv:107:5
-	reg [31:0] fsgnj_res_s0;
-	// Trace: src/VX_fncp_unit.sv:108:5
-	always @(*)
-		// Trace: src/VX_fncp_unit.sv:109:9
-		case (op_mod_s0[1:0])
-			0:
-				// Trace: src/VX_fncp_unit.sv:110:16
-				fsgnj_res_s0 = {b_sign_s0, a_exponent_s0, a_mantissa_s0};
-			1:
-				// Trace: src/VX_fncp_unit.sv:111:16
-				fsgnj_res_s0 = {~b_sign_s0, a_exponent_s0, a_mantissa_s0};
-			default:
-				// Trace: src/VX_fncp_unit.sv:112:18
-				fsgnj_res_s0 = {a_sign_s0 ^ b_sign_s0, a_exponent_s0, a_mantissa_s0};
-		endcase
-	// Trace: src/VX_fncp_unit.sv:115:5
-	reg fcmp_res_s0;
-	// Trace: src/VX_fncp_unit.sv:116:5
-	reg fcmp_fflags_NV_s0;
-	// Trace: src/VX_fncp_unit.sv:117:5
-	always @(*)
-		// Trace: src/VX_fncp_unit.sv:118:9
-		case (op_mod_s0[1:0])
-			0:
-				// Trace: src/VX_fncp_unit.sv:120:17
-				if (a_fclass_s0[2] || b_fclass_s0[2]) begin
-					// Trace: src/VX_fncp_unit.sv:121:21
-					fcmp_res_s0 = 0;
-					// Trace: src/VX_fncp_unit.sv:122:21
-					fcmp_fflags_NV_s0 = 1;
-				end
-				else begin
-					// Trace: src/VX_fncp_unit.sv:124:21
-					fcmp_res_s0 = a_smaller_s0 | ab_equal_s0;
-					// Trace: src/VX_fncp_unit.sv:125:21
-					fcmp_fflags_NV_s0 = 0;
-				end
-			1:
-				// Trace: src/VX_fncp_unit.sv:129:17
-				if (a_fclass_s0[2] || b_fclass_s0[2]) begin
-					// Trace: src/VX_fncp_unit.sv:130:21
-					fcmp_res_s0 = 0;
-					// Trace: src/VX_fncp_unit.sv:131:21
-					fcmp_fflags_NV_s0 = 1;
-				end
-				else begin
-					// Trace: src/VX_fncp_unit.sv:133:21
-					fcmp_res_s0 = a_smaller_s0 & ~ab_equal_s0;
-					// Trace: src/VX_fncp_unit.sv:134:21
-					fcmp_fflags_NV_s0 = 0;
-				end
-			2:
-				// Trace: src/VX_fncp_unit.sv:138:17
-				if (a_fclass_s0[2] || b_fclass_s0[2]) begin
-					// Trace: src/VX_fncp_unit.sv:139:21
-					fcmp_res_s0 = 0;
-					// Trace: src/VX_fncp_unit.sv:140:21
-					fcmp_fflags_NV_s0 = a_fclass_s0[0] | b_fclass_s0[0];
-				end
-				else begin
-					// Trace: src/VX_fncp_unit.sv:142:21
-					fcmp_res_s0 = ab_equal_s0;
-					// Trace: src/VX_fncp_unit.sv:143:21
-					fcmp_fflags_NV_s0 = 0;
-				end
-			default: begin
-				// Trace: src/VX_fncp_unit.sv:147:17
-				fcmp_res_s0 = 1'sbx;
-				// Trace: src/VX_fncp_unit.sv:148:17
-				fcmp_fflags_NV_s0 = 1'sbx;
-			end
-		endcase
-	// Trace: src/VX_fncp_unit.sv:152:5
-	reg [31:0] result_s0;
-	// Trace: src/VX_fncp_unit.sv:153:5
-	reg fflags_NV_s0;
-	// Trace: src/VX_fncp_unit.sv:154:5
-	function automatic [31:0] sv2v_cast_32;
-		input reg [31:0] inp;
-		sv2v_cast_32 = inp;
-	endfunction
-	always @(*)
-		// Trace: src/VX_fncp_unit.sv:155:9
-		case (op_mod_s0[2:0])
-			0, 1, 2: begin
-				// Trace: src/VX_fncp_unit.sv:157:17
-				result_s0 = (op_mod_s0[3] ? sv2v_cast_32(fcmp_res_s0) : fsgnj_res_s0);
-				// Trace: src/VX_fncp_unit.sv:158:17
-				fflags_NV_s0 = fcmp_fflags_NV_s0;
-			end
-			3: begin
-				// Trace: src/VX_fncp_unit.sv:161:17
-				result_s0 = fclass_mask_s0;
-				// Trace: src/VX_fncp_unit.sv:162:17
-				fflags_NV_s0 = 0;
-			end
-			4, 5: begin
-				// Trace: src/VX_fncp_unit.sv:165:17
-				result_s0 = dataa_s0;
-				// Trace: src/VX_fncp_unit.sv:166:17
-				fflags_NV_s0 = 0;
-			end
-			6, 7: begin
-				// Trace: src/VX_fncp_unit.sv:169:17
-				result_s0 = fminmax_res_s0;
-				// Trace: src/VX_fncp_unit.sv:170:17
-				fflags_NV_s0 = a_fclass_s0[0] | b_fclass_s0[0];
-			end
-		endcase
-	// Trace: src/VX_fncp_unit.sv:174:5
-	wire fflags_NV;
-	// Trace: src/VX_fncp_unit.sv:175:5
-	VX_pipe_register #(
-		.DATAW(33),
-		.DEPTH(OUT_REG)
-	) pipe_reg1(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({result_s0, fflags_NV_s0}),
-		.data_out({result, fflags_NV})
-	);
-	// Trace: src/VX_fncp_unit.sv:185:5
-	assign fflags = {fflags_NV, 4'b0000};
 endmodule
 module VX_reduce_tree (
 	data_in,
@@ -2609,240 +1944,8 @@ module VX_stream_buffer (
 endmodule
 // removed module with interface ports: VX_cache_bypass
 // removed module with interface ports: VX_gather_unit
-module VX_fp_classifier (
-	exp_i,
-	man_i,
-	clss_o
-);
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fp_classifier.sv:2:15
-	parameter MAN_BITS = 23;
-	// Trace: src/VX_fp_classifier.sv:3:15
-	parameter EXP_BITS = 8;
-	// Trace: src/VX_fp_classifier.sv:5:5
-	input [EXP_BITS - 1:0] exp_i;
-	// Trace: src/VX_fp_classifier.sv:6:5
-	input [MAN_BITS - 1:0] man_i;
-	// Trace: src/VX_fp_classifier.sv:7:5
-	// removed localparam type VX_fpu_pkg_fclass_t
-	output wire [6:0] clss_o;
-	// Trace: src/VX_fp_classifier.sv:9:5
-	wire is_normal = (exp_i != {EXP_BITS {1'sb0}}) && (exp_i != {EXP_BITS {1'sb1}});
-	// Trace: src/VX_fp_classifier.sv:10:5
-	wire is_zero = (exp_i == {EXP_BITS {1'sb0}}) && (man_i == {MAN_BITS {1'sb0}});
-	// Trace: src/VX_fp_classifier.sv:11:5
-	wire is_subnormal = (exp_i == {EXP_BITS {1'sb0}}) && (man_i != {MAN_BITS {1'sb0}});
-	// Trace: src/VX_fp_classifier.sv:12:5
-	wire is_inf = (exp_i == {EXP_BITS {1'sb1}}) && (man_i == {MAN_BITS {1'sb0}});
-	// Trace: src/VX_fp_classifier.sv:13:5
-	wire is_nan = (exp_i == {EXP_BITS {1'sb1}}) && (man_i != {MAN_BITS {1'sb0}});
-	// Trace: src/VX_fp_classifier.sv:14:5
-	wire is_signaling = is_nan && ~man_i[MAN_BITS - 1];
-	// Trace: src/VX_fp_classifier.sv:15:5
-	wire is_quiet = is_nan && ~is_signaling;
-	// Trace: src/VX_fp_classifier.sv:16:5
-	assign clss_o[6] = is_normal;
-	// Trace: src/VX_fp_classifier.sv:17:5
-	assign clss_o[5] = is_zero;
-	// Trace: src/VX_fp_classifier.sv:18:5
-	assign clss_o[4] = is_subnormal;
-	// Trace: src/VX_fp_classifier.sv:19:5
-	assign clss_o[3] = is_inf;
-	// Trace: src/VX_fp_classifier.sv:20:5
-	assign clss_o[2] = is_nan;
-	// Trace: src/VX_fp_classifier.sv:21:5
-	assign clss_o[1] = is_quiet;
-	// Trace: src/VX_fp_classifier.sv:22:5
-	assign clss_o[0] = is_signaling;
-endmodule
 // removed module with interface ports: VX_ibuffer
 // removed interface: VX_writeback_if
-module VX_fpu_div (
-	clk,
-	reset,
-	valid_in,
-	ready_in,
-	mask_in,
-	tag_in,
-	frm,
-	dataa,
-	datab,
-	result,
-	has_fflags,
-	fflags,
-	tag_out,
-	valid_out,
-	ready_out
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fpu_div.sv:2:15
-	parameter NUM_LANES = 1;
-	// Trace: src/VX_fpu_div.sv:3:15
-	parameter NUM_PES = ((NUM_LANES / 8) > 0 ? NUM_LANES / 8 : 1);
-	// Trace: src/VX_fpu_div.sv:4:15
-	parameter TAG_WIDTH = 1;
-	// Trace: src/VX_fpu_div.sv:6:5
-	input wire clk;
-	// Trace: src/VX_fpu_div.sv:7:5
-	input wire reset;
-	// Trace: src/VX_fpu_div.sv:8:5
-	input wire valid_in;
-	// Trace: src/VX_fpu_div.sv:9:5
-	output wire ready_in;
-	// Trace: src/VX_fpu_div.sv:10:5
-	input wire [NUM_LANES - 1:0] mask_in;
-	// Trace: src/VX_fpu_div.sv:11:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_fpu_div.sv:12:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fpu_div.sv:13:5
-	input wire [(NUM_LANES * 32) - 1:0] dataa;
-	// Trace: src/VX_fpu_div.sv:14:5
-	input wire [(NUM_LANES * 32) - 1:0] datab;
-	// Trace: src/VX_fpu_div.sv:15:5
-	output wire [(NUM_LANES * 32) - 1:0] result;
-	// Trace: src/VX_fpu_div.sv:16:5
-	output wire has_fflags;
-	// Trace: src/VX_fpu_div.sv:17:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fpu_div.sv:18:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_fpu_div.sv:19:5
-	output wire valid_out;
-	// Trace: src/VX_fpu_div.sv:20:5
-	input wire ready_out;
-	// Trace: src/VX_fpu_div.sv:22:5
-	localparam DATAW = 67;
-	// Trace: src/VX_fpu_div.sv:23:5
-	wire [(NUM_LANES * 67) - 1:0] data_in;
-	// Trace: src/VX_fpu_div.sv:24:5
-	wire [NUM_LANES - 1:0] mask_out;
-	// Trace: src/VX_fpu_div.sv:25:5
-	wire [(NUM_LANES * 37) - 1:0] data_out;
-	// Trace: src/VX_fpu_div.sv:26:5
-	wire [(NUM_LANES * 5) - 1:0] fflags_out;
-	// Trace: src/VX_fpu_div.sv:27:5
-	wire pe_enable;
-	// Trace: src/VX_fpu_div.sv:28:5
-	wire [(NUM_PES * 67) - 1:0] pe_data_in;
-	// Trace: src/VX_fpu_div.sv:29:5
-	wire [(NUM_PES * 37) - 1:0] pe_data_out;
-	// Trace: src/VX_fpu_div.sv:30:5
-	genvar _gv_i_63;
-	generate
-		for (_gv_i_63 = 0; _gv_i_63 < NUM_LANES; _gv_i_63 = _gv_i_63 + 1) begin : g_data_in
-			localparam i = _gv_i_63;
-			// Trace: src/VX_fpu_div.sv:31:9
-			assign data_in[i * 67+:32] = dataa[i * 32+:32];
-			// Trace: src/VX_fpu_div.sv:32:9
-			assign data_in[(i * 67) + 32+:32] = datab[i * 32+:32];
-			// Trace: src/VX_fpu_div.sv:33:9
-			assign data_in[(i * 67) + 64+:VX_gpu_pkg_INST_FRM_BITS] = frm;
-		end
-	endgenerate
-	// Trace: src/VX_fpu_div.sv:35:5
-	VX_pe_serializer #(
-		.NUM_LANES(NUM_LANES),
-		.NUM_PES(NUM_PES),
-		.LATENCY(16),
-		.DATA_IN_WIDTH(DATAW),
-		.DATA_OUT_WIDTH(37),
-		.TAG_WIDTH(NUM_LANES + TAG_WIDTH),
-		.PE_REG(0),
-		.OUT_BUF(2)
-	) pe_serializer(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(valid_in),
-		.data_in(data_in),
-		.tag_in({mask_in, tag_in}),
-		.ready_in(ready_in),
-		.pe_enable(pe_enable),
-		.pe_data_out(pe_data_in),
-		.pe_data_in(pe_data_out),
-		.valid_out(valid_out),
-		.data_out(data_out),
-		.tag_out({mask_out, tag_out}),
-		.ready_out(ready_out)
-	);
-	// Trace: src/VX_fpu_div.sv:59:5
-	genvar _gv_i_64;
-	generate
-		for (_gv_i_64 = 0; _gv_i_64 < NUM_LANES; _gv_i_64 = _gv_i_64 + 1) begin : g_result
-			localparam i = _gv_i_64;
-			// Trace: src/VX_fpu_div.sv:60:9
-			assign result[i * 32+:32] = data_out[i * 37+:32];
-			// Trace: src/VX_fpu_div.sv:61:9
-			assign fflags_out[i * 5+:5] = data_out[(i * 37) + 32+:5];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_div.sv:63:5
-	wire [(NUM_LANES * 5) - 1:0] per_lane_fflags;
-	// Trace: src/VX_fpu_div.sv:64:5
-	genvar _gv_i_65;
-	generate
-		for (_gv_i_65 = 0; _gv_i_65 < NUM_PES; _gv_i_65 = _gv_i_65 + 1) begin : g_fdivs
-			localparam i = _gv_i_65;
-			// Trace: src/VX_fpu_div.sv:65:9
-			reg [63:0] r;
-			// Trace: src/VX_fpu_div.sv:66:9
-			wire [4:0] f;
-			// Trace: src/VX_fpu_div.sv:67:9
-			always @(*)
-				// Trace: src/VX_fpu_div.sv:68:13
-				dpi_fdiv(pe_enable, 32'sd0, {32'hffffffff, pe_data_in[i * 67+:32]}, {32'hffffffff, pe_data_in[(i * 67) + 32+:32]}, pe_data_in[64+:VX_gpu_pkg_INST_FRM_BITS], r, f);
-			// Trace: src/VX_fpu_div.sv:78:9
-			VX_shift_register #(
-				.DATAW(37),
-				.DEPTH(16)
-			) shift_req_dpi(
-				.clk(clk),
-				.reset(),
-				.enable(pe_enable),
-				.data_in({f, r[31:0]}),
-				.data_out(pe_data_out[i * 37+:37])
-			);
-		end
-	endgenerate
-	// Trace: src/VX_fpu_div.sv:89:5
-	assign has_fflags = 1;
-	// Trace: src/VX_fpu_div.sv:90:5
-	assign per_lane_fflags = fflags_out;
-	// Trace: src/VX_fpu_div.sv:91:5
-	reg [4:0] __fflags;
-	// Trace: src/VX_fpu_div.sv:92:5
-	always @(*) begin
-		// Trace: src/VX_fpu_div.sv:93:9
-		__fflags = 1'sb0;
-		// Trace: src/VX_fpu_div.sv:94:9
-		begin : sv2v_autoblock_1
-			// Trace: src/VX_fpu_div.sv:94:14
-			integer __i;
-			// Trace: src/VX_fpu_div.sv:94:14
-			for (__i = 0; __i < NUM_LANES; __i = __i + 1)
-				begin
-					// Trace: src/VX_fpu_div.sv:95:13
-					if (mask_out[__i]) begin
-						// Trace: src/VX_fpu_div.sv:96:17
-						__fflags[0] = __fflags[0] | per_lane_fflags[__i * 5];
-						// Trace: src/VX_fpu_div.sv:97:17
-						__fflags[1] = __fflags[1] | per_lane_fflags[(__i * 5) + 1];
-						// Trace: src/VX_fpu_div.sv:98:17
-						__fflags[2] = __fflags[2] | per_lane_fflags[(__i * 5) + 2];
-						// Trace: src/VX_fpu_div.sv:99:17
-						__fflags[3] = __fflags[3] | per_lane_fflags[(__i * 5) + 3];
-						// Trace: src/VX_fpu_div.sv:100:17
-						__fflags[4] = __fflags[4] | per_lane_fflags[(__i * 5) + 4];
-					end
-				end
-		end
-	end
-	// Trace: src/VX_fpu_div.sv:104:5
-	assign fflags = __fflags;
-endmodule
 // removed module with interface ports: VX_sfu_unit
 module VX_onehot_encoder (
 	data_in,
@@ -4414,220 +3517,6 @@ module VX_matrix_arbiter (
 endmodule
 // removed module with interface ports: VX_alu_muldiv
 // removed module with interface ports: VX_commit
-module VX_pe_serializer (
-	clk,
-	reset,
-	valid_in,
-	data_in,
-	tag_in,
-	ready_in,
-	pe_enable,
-	pe_data_out,
-	pe_data_in,
-	valid_out,
-	data_out,
-	tag_out,
-	ready_out
-);
-	// Trace: src/VX_pe_serializer.sv:2:15
-	parameter NUM_LANES = 1;
-	// Trace: src/VX_pe_serializer.sv:3:15
-	parameter NUM_PES = 1;
-	// Trace: src/VX_pe_serializer.sv:4:15
-	parameter LATENCY = 1;
-	// Trace: src/VX_pe_serializer.sv:5:15
-	parameter DATA_IN_WIDTH = 1;
-	// Trace: src/VX_pe_serializer.sv:6:15
-	parameter DATA_OUT_WIDTH = 1;
-	// Trace: src/VX_pe_serializer.sv:7:15
-	parameter TAG_WIDTH = 0;
-	// Trace: src/VX_pe_serializer.sv:8:15
-	parameter PE_REG = 0;
-	// Trace: src/VX_pe_serializer.sv:9:15
-	parameter OUT_BUF = 0;
-	// Trace: src/VX_pe_serializer.sv:11:5
-	input wire clk;
-	// Trace: src/VX_pe_serializer.sv:12:5
-	input wire reset;
-	// Trace: src/VX_pe_serializer.sv:13:5
-	input wire valid_in;
-	// Trace: src/VX_pe_serializer.sv:14:5
-	input wire [(NUM_LANES * DATA_IN_WIDTH) - 1:0] data_in;
-	// Trace: src/VX_pe_serializer.sv:15:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_pe_serializer.sv:16:5
-	output wire ready_in;
-	// Trace: src/VX_pe_serializer.sv:17:5
-	output wire pe_enable;
-	// Trace: src/VX_pe_serializer.sv:18:5
-	output wire [(NUM_PES * DATA_IN_WIDTH) - 1:0] pe_data_out;
-	// Trace: src/VX_pe_serializer.sv:19:5
-	input wire [(NUM_PES * DATA_OUT_WIDTH) - 1:0] pe_data_in;
-	// Trace: src/VX_pe_serializer.sv:20:5
-	output wire valid_out;
-	// Trace: src/VX_pe_serializer.sv:21:5
-	output wire [(NUM_LANES * DATA_OUT_WIDTH) - 1:0] data_out;
-	// Trace: src/VX_pe_serializer.sv:22:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_pe_serializer.sv:23:5
-	input wire ready_out;
-	// Trace: src/VX_pe_serializer.sv:25:5
-	wire valid_out_u;
-	// Trace: src/VX_pe_serializer.sv:26:5
-	wire [(NUM_LANES * DATA_OUT_WIDTH) - 1:0] data_out_u;
-	// Trace: src/VX_pe_serializer.sv:27:5
-	wire [TAG_WIDTH - 1:0] tag_out_u;
-	// Trace: src/VX_pe_serializer.sv:28:5
-	wire ready_out_u;
-	// Trace: src/VX_pe_serializer.sv:29:5
-	wire [(NUM_PES * DATA_IN_WIDTH) - 1:0] pe_data_out_w;
-	// Trace: src/VX_pe_serializer.sv:30:5
-	wire pe_valid_in;
-	// Trace: src/VX_pe_serializer.sv:31:5
-	wire [TAG_WIDTH - 1:0] pe_tag_in;
-	// Trace: src/VX_pe_serializer.sv:32:5
-	wire enable;
-	// Trace: src/VX_pe_serializer.sv:33:5
-	VX_shift_register #(
-		.DATAW(1 + TAG_WIDTH),
-		.DEPTH(PE_REG + LATENCY),
-		.RESETW(1)
-	) shift_reg(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in({valid_in, tag_in}),
-		.data_out({pe_valid_in, pe_tag_in})
-	);
-	// Trace: src/VX_pe_serializer.sv:44:5
-	VX_pipe_register #(
-		.DATAW(NUM_PES * DATA_IN_WIDTH),
-		.DEPTH(PE_REG)
-	) pe_data_reg(
-		.clk(clk),
-		.reset(reset),
-		.enable(enable),
-		.data_in(pe_data_out_w),
-		.data_out(pe_data_out)
-	);
-	// Trace: src/VX_pe_serializer.sv:54:5
-	assign pe_enable = enable;
-	// Trace: src/VX_pe_serializer.sv:55:5
-	generate
-		if (NUM_LANES != NUM_PES) begin : g_serialize
-			// Trace: src/VX_pe_serializer.sv:56:9
-			localparam BATCH_SIZE = NUM_LANES / NUM_PES;
-			// Trace: src/VX_pe_serializer.sv:57:9
-			localparam BATCH_SIZEW = (BATCH_SIZE > 1 ? $clog2(BATCH_SIZE) : 1);
-			// Trace: src/VX_pe_serializer.sv:58:9
-			reg [BATCH_SIZEW - 1:0] batch_in_idx;
-			reg [BATCH_SIZEW - 1:0] batch_out_idx;
-			// Trace: src/VX_pe_serializer.sv:59:9
-			reg batch_in_done;
-			reg batch_out_done;
-			genvar _gv_i_83;
-			for (_gv_i_83 = 0; _gv_i_83 < NUM_PES; _gv_i_83 = _gv_i_83 + 1) begin : g_pe_data_out_w
-				localparam i = _gv_i_83;
-				// Trace: src/VX_pe_serializer.sv:61:13
-				assign pe_data_out_w[i * DATA_IN_WIDTH+:DATA_IN_WIDTH] = data_in[((batch_in_idx * NUM_PES) + i) * DATA_IN_WIDTH+:DATA_IN_WIDTH];
-			end
-			// Trace: src/VX_pe_serializer.sv:63:9
-			always @(posedge clk)
-				// Trace: src/VX_pe_serializer.sv:64:13
-				if (reset) begin
-					// Trace: src/VX_pe_serializer.sv:65:17
-					batch_in_idx <= 1'sb0;
-					// Trace: src/VX_pe_serializer.sv:66:17
-					batch_out_idx <= 1'sb0;
-					// Trace: src/VX_pe_serializer.sv:67:17
-					batch_in_done <= 0;
-					// Trace: src/VX_pe_serializer.sv:68:17
-					batch_out_done <= 0;
-				end
-				else if (enable) begin
-					// Trace: src/VX_pe_serializer.sv:70:17
-					begin : sv2v_autoblock_1
-						reg [BATCH_SIZEW - 1:0] sv2v_tmp_cast;
-						sv2v_tmp_cast = valid_in;
-						batch_in_idx <= batch_in_idx + sv2v_tmp_cast;
-					end
-					// Trace: src/VX_pe_serializer.sv:71:17
-					begin : sv2v_autoblock_2
-						reg [BATCH_SIZEW - 1:0] sv2v_tmp_cast_1;
-						sv2v_tmp_cast_1 = pe_valid_in;
-						batch_out_idx <= batch_out_idx + sv2v_tmp_cast_1;
-					end
-					// Trace: src/VX_pe_serializer.sv:72:17
-					begin : sv2v_autoblock_3
-						reg signed [BATCH_SIZEW - 1:0] sv2v_tmp_cast_2;
-						sv2v_tmp_cast_2 = BATCH_SIZE - 2;
-						batch_in_done <= valid_in && (batch_in_idx == sv2v_tmp_cast_2);
-					end
-					// Trace: src/VX_pe_serializer.sv:73:17
-					begin : sv2v_autoblock_4
-						reg signed [BATCH_SIZEW - 1:0] sv2v_tmp_cast_3;
-						sv2v_tmp_cast_3 = BATCH_SIZE - 2;
-						batch_out_done <= pe_valid_in && (batch_out_idx == sv2v_tmp_cast_3);
-					end
-				end
-			// Trace: src/VX_pe_serializer.sv:76:9
-			reg [(BATCH_SIZE * (NUM_PES * DATA_OUT_WIDTH)) - 1:0] data_out_r;
-			reg [(BATCH_SIZE * (NUM_PES * DATA_OUT_WIDTH)) - 1:0] data_out_n;
-			// Trace: src/VX_pe_serializer.sv:77:9
-			always @(*) begin
-				// Trace: src/VX_pe_serializer.sv:78:13
-				data_out_n = data_out_r;
-				// Trace: src/VX_pe_serializer.sv:79:13
-				if (pe_valid_in)
-					// Trace: src/VX_pe_serializer.sv:80:17
-					data_out_n[batch_out_idx * (NUM_PES * DATA_OUT_WIDTH)+:NUM_PES * DATA_OUT_WIDTH] = pe_data_in;
-			end
-			// Trace: src/VX_pe_serializer.sv:83:9
-			always @(posedge clk)
-				// Trace: src/VX_pe_serializer.sv:84:13
-				data_out_r <= data_out_n;
-			// Trace: src/VX_pe_serializer.sv:86:9
-			assign enable = ready_out_u || ~valid_out_u;
-			// Trace: src/VX_pe_serializer.sv:87:9
-			assign ready_in = enable && batch_in_done;
-			// Trace: src/VX_pe_serializer.sv:88:9
-			assign valid_out_u = batch_out_done;
-			// Trace: src/VX_pe_serializer.sv:89:9
-			assign data_out_u = data_out_n;
-			// Trace: src/VX_pe_serializer.sv:90:9
-			assign tag_out_u = pe_tag_in;
-		end
-		else begin : g_passthru
-			// Trace: src/VX_pe_serializer.sv:92:9
-			assign pe_data_out_w = data_in;
-			// Trace: src/VX_pe_serializer.sv:93:9
-			assign enable = ready_out_u || ~pe_valid_in;
-			// Trace: src/VX_pe_serializer.sv:94:9
-			assign ready_in = enable;
-			// Trace: src/VX_pe_serializer.sv:95:9
-			assign valid_out_u = pe_valid_in;
-			// Trace: src/VX_pe_serializer.sv:96:9
-			assign data_out_u = pe_data_in;
-			// Trace: src/VX_pe_serializer.sv:97:9
-			assign tag_out_u = pe_tag_in;
-		end
-	endgenerate
-	// Trace: src/VX_pe_serializer.sv:99:5
-	VX_elastic_buffer #(
-		.DATAW((NUM_LANES * DATA_OUT_WIDTH) + TAG_WIDTH),
-		.SIZE(((OUT_BUF & 7) < 2 ? OUT_BUF & 7 : 2)),
-		.OUT_REG(((OUT_BUF & 7) < 2 ? OUT_BUF & 7 : (OUT_BUF & 7) - 2))
-	) out_buf(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(valid_out_u),
-		.ready_in(ready_out_u),
-		.data_in({data_out_u, tag_out_u}),
-		.data_out({data_out, tag_out}),
-		.valid_out(valid_out),
-		.ready_out(ready_out)
-	);
-endmodule
 module VX_stream_arb (
 	clk,
 	reset,
@@ -5272,190 +4161,6 @@ module VX_ipdom_stack (
 	assign full = full_w[wid];
 endmodule
 // removed module with interface ports: VX_dispatch
-module VX_fpu_ncp (
-	clk,
-	reset,
-	ready_in,
-	valid_in,
-	mask_in,
-	tag_in,
-	op_type,
-	frm,
-	dataa,
-	datab,
-	result,
-	has_fflags,
-	fflags,
-	tag_out,
-	ready_out,
-	valid_out
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fpu_ncp.sv:2:15
-	parameter NUM_LANES = 1;
-	// Trace: src/VX_fpu_ncp.sv:3:15
-	parameter NUM_PES = ((NUM_LANES / 2) > 0 ? NUM_LANES / 2 : 1);
-	// Trace: src/VX_fpu_ncp.sv:4:15
-	parameter TAG_WIDTH = 1;
-	// Trace: src/VX_fpu_ncp.sv:6:5
-	input wire clk;
-	// Trace: src/VX_fpu_ncp.sv:7:5
-	input wire reset;
-	// Trace: src/VX_fpu_ncp.sv:8:5
-	output wire ready_in;
-	// Trace: src/VX_fpu_ncp.sv:9:5
-	input wire valid_in;
-	// Trace: src/VX_fpu_ncp.sv:10:5
-	input wire [NUM_LANES - 1:0] mask_in;
-	// Trace: src/VX_fpu_ncp.sv:11:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_fpu_ncp.sv:12:5
-	localparam VX_gpu_pkg_INST_FPU_BITS = 4;
-	input wire [3:0] op_type;
-	// Trace: src/VX_fpu_ncp.sv:13:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fpu_ncp.sv:14:5
-	input wire [(NUM_LANES * 32) - 1:0] dataa;
-	// Trace: src/VX_fpu_ncp.sv:15:5
-	input wire [(NUM_LANES * 32) - 1:0] datab;
-	// Trace: src/VX_fpu_ncp.sv:16:5
-	output wire [(NUM_LANES * 32) - 1:0] result;
-	// Trace: src/VX_fpu_ncp.sv:17:5
-	output wire has_fflags;
-	// Trace: src/VX_fpu_ncp.sv:18:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fpu_ncp.sv:19:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_fpu_ncp.sv:20:5
-	input wire ready_out;
-	// Trace: src/VX_fpu_ncp.sv:21:5
-	output wire valid_out;
-	// Trace: src/VX_fpu_ncp.sv:23:5
-	localparam DATAW = 71;
-	// Trace: src/VX_fpu_ncp.sv:24:5
-	wire [(NUM_LANES * 71) - 1:0] data_in;
-	// Trace: src/VX_fpu_ncp.sv:25:5
-	wire [NUM_LANES - 1:0] mask_out;
-	// Trace: src/VX_fpu_ncp.sv:26:5
-	wire [(NUM_LANES * 37) - 1:0] data_out;
-	// Trace: src/VX_fpu_ncp.sv:27:5
-	wire [(NUM_LANES * 5) - 1:0] fflags_out;
-	// Trace: src/VX_fpu_ncp.sv:28:5
-	wire pe_enable;
-	// Trace: src/VX_fpu_ncp.sv:29:5
-	wire [(NUM_PES * 71) - 1:0] pe_data_in;
-	// Trace: src/VX_fpu_ncp.sv:30:5
-	wire [(NUM_PES * 37) - 1:0] pe_data_out;
-	// Trace: src/VX_fpu_ncp.sv:31:5
-	genvar _gv_i_92;
-	generate
-		for (_gv_i_92 = 0; _gv_i_92 < NUM_LANES; _gv_i_92 = _gv_i_92 + 1) begin : g_data_in
-			localparam i = _gv_i_92;
-			// Trace: src/VX_fpu_ncp.sv:32:9
-			assign data_in[i * 71+:32] = dataa[i * 32+:32];
-			// Trace: src/VX_fpu_ncp.sv:33:9
-			assign data_in[(i * 71) + 32+:32] = datab[i * 32+:32];
-			// Trace: src/VX_fpu_ncp.sv:34:9
-			assign data_in[(i * 71) + 64+:VX_gpu_pkg_INST_FRM_BITS] = frm;
-			// Trace: src/VX_fpu_ncp.sv:35:9
-			assign data_in[(i * 71) + 67+:VX_gpu_pkg_INST_FPU_BITS] = op_type;
-		end
-	endgenerate
-	// Trace: src/VX_fpu_ncp.sv:37:5
-	VX_pe_serializer #(
-		.NUM_LANES(NUM_LANES),
-		.NUM_PES(NUM_PES),
-		.LATENCY(2),
-		.DATA_IN_WIDTH(DATAW),
-		.DATA_OUT_WIDTH(37),
-		.TAG_WIDTH(NUM_LANES + TAG_WIDTH),
-		.PE_REG(0),
-		.OUT_BUF(2)
-	) pe_serializer(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(valid_in),
-		.data_in(data_in),
-		.tag_in({mask_in, tag_in}),
-		.ready_in(ready_in),
-		.pe_enable(pe_enable),
-		.pe_data_out(pe_data_in),
-		.pe_data_in(pe_data_out),
-		.valid_out(valid_out),
-		.data_out(data_out),
-		.tag_out({mask_out, tag_out}),
-		.ready_out(ready_out)
-	);
-	// Trace: src/VX_fpu_ncp.sv:61:5
-	genvar _gv_i_93;
-	generate
-		for (_gv_i_93 = 0; _gv_i_93 < NUM_LANES; _gv_i_93 = _gv_i_93 + 1) begin : g_result
-			localparam i = _gv_i_93;
-			// Trace: src/VX_fpu_ncp.sv:62:9
-			assign result[i * 32+:32] = data_out[i * 37+:32];
-			// Trace: src/VX_fpu_ncp.sv:63:9
-			assign fflags_out[i * 5+:5] = data_out[(i * 37) + 32+:5];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_ncp.sv:65:5
-	genvar _gv_i_94;
-	generate
-		for (_gv_i_94 = 0; _gv_i_94 < NUM_PES; _gv_i_94 = _gv_i_94 + 1) begin : g_fncp_units
-			localparam i = _gv_i_94;
-			// Trace: src/VX_fpu_ncp.sv:66:9
-			VX_fncp_unit #(
-				.LATENCY(2),
-				.OUT_REG(1)
-			) fncp_unit(
-				.clk(clk),
-				.reset(reset),
-				.enable(pe_enable),
-				.frm(pe_data_in[64+:VX_gpu_pkg_INST_FRM_BITS]),
-				.op_type(pe_data_in[67+:VX_gpu_pkg_INST_FPU_BITS]),
-				.dataa(pe_data_in[i * 71+:32]),
-				.datab(pe_data_in[(i * 71) + 32+:32]),
-				.result(pe_data_out[i * 37+:32]),
-				.fflags(pe_data_out[(i * 37) + 32+:5])
-			);
-		end
-	endgenerate
-	// Trace: src/VX_fpu_ncp.sv:81:5
-	assign has_fflags = 1;
-	// Trace: src/VX_fpu_ncp.sv:82:5
-	reg [4:0] __fflags;
-	// Trace: src/VX_fpu_ncp.sv:83:5
-	always @(*) begin
-		// Trace: src/VX_fpu_ncp.sv:84:9
-		__fflags = 1'sb0;
-		// Trace: src/VX_fpu_ncp.sv:85:9
-		begin : sv2v_autoblock_1
-			// Trace: src/VX_fpu_ncp.sv:85:14
-			integer __i;
-			// Trace: src/VX_fpu_ncp.sv:85:14
-			for (__i = 0; __i < NUM_LANES; __i = __i + 1)
-				begin
-					// Trace: src/VX_fpu_ncp.sv:86:13
-					if (mask_out[__i]) begin
-						// Trace: src/VX_fpu_ncp.sv:87:17
-						__fflags[0] = __fflags[0] | fflags_out[__i * 5];
-						// Trace: src/VX_fpu_ncp.sv:88:17
-						__fflags[1] = __fflags[1] | fflags_out[(__i * 5) + 1];
-						// Trace: src/VX_fpu_ncp.sv:89:17
-						__fflags[2] = __fflags[2] | fflags_out[(__i * 5) + 2];
-						// Trace: src/VX_fpu_ncp.sv:90:17
-						__fflags[3] = __fflags[3] | fflags_out[(__i * 5) + 3];
-						// Trace: src/VX_fpu_ncp.sv:91:17
-						__fflags[4] = __fflags[4] | fflags_out[(__i * 5) + 4];
-					end
-				end
-		end
-	end
-	// Trace: src/VX_fpu_ncp.sv:95:5
-	assign fflags = __fflags;
-endmodule
 module Vortex (
 	clk,
 	reset,
@@ -5486,22 +4191,22 @@ module Vortex (
 	localparam VX_gpu_pkg_LSU_WORD_SIZE = VX_gpu_pkg_XLENB;
 	localparam VX_gpu_pkg_DCACHE_CHANNELS = 1;
 	localparam VX_gpu_pkg_DCACHE_NUM_REQS = 1;
-	localparam VX_gpu_pkg_NUM_SOCKETS = 4;
-	localparam VX_gpu_pkg_L2_NUM_REQS = 4;
-	localparam VX_gpu_pkg_L3_NUM_REQS = 8;
-	localparam VX_gpu_pkg_VX_MEM_PORTS = 2;
-	output wire [0:1] mem_req_valid;
+	localparam VX_gpu_pkg_NUM_SOCKETS = 1;
+	localparam VX_gpu_pkg_L2_NUM_REQS = 1;
+	localparam VX_gpu_pkg_L3_NUM_REQS = 1;
+	localparam VX_gpu_pkg_VX_MEM_PORTS = VX_gpu_pkg_L3_NUM_REQS;
+	output wire [0:0] mem_req_valid;
 	// Trace: src/Vortex.sv:5:5
-	output wire [0:1] mem_req_rw;
+	output wire [0:0] mem_req_rw;
 	// Trace: src/Vortex.sv:6:5
 	localparam VX_gpu_pkg_VX_MEM_BYTEEN_WIDTH = 64;
-	output wire [127:0] mem_req_byteen;
+	output wire [63:0] mem_req_byteen;
 	// Trace: src/Vortex.sv:7:5
 	localparam VX_gpu_pkg_VX_MEM_ADDR_WIDTH = 26;
-	output wire [51:0] mem_req_addr;
+	output wire [25:0] mem_req_addr;
 	// Trace: src/Vortex.sv:8:5
 	localparam VX_gpu_pkg_VX_MEM_DATA_WIDTH = 512;
-	output wire [1023:0] mem_req_data;
+	output wire [511:0] mem_req_data;
 	// Trace: src/Vortex.sv:9:5
 	localparam VX_gpu_pkg_DCACHE_LINE_SIZE = 64;
 	localparam VX_gpu_pkg_DCACHE_MERGED_REQS = 1;
@@ -5509,28 +4214,28 @@ module Vortex (
 	localparam VX_gpu_pkg_DCACHE_TAG_ID_BITS = 2;
 	localparam VX_gpu_pkg_UUID_WIDTH = 1;
 	localparam VX_gpu_pkg_DCACHE_TAG_WIDTH = 3;
-	localparam VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH = 8;
+	localparam VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH = 6;
 	localparam VX_gpu_pkg_ICACHE_MEM_TAG_WIDTH = 5;
 	localparam VX_gpu_pkg_L1_MEM_TAG_WIDTH = VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH;
-	localparam VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH = 9;
+	localparam VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH = 7;
 	localparam VX_gpu_pkg_L2_TAG_WIDTH = VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH;
 	localparam VX_gpu_pkg_L2_WORD_SIZE = 64;
-	localparam VX_gpu_pkg_L2_MEM_TAG_WIDTH = 11;
+	localparam VX_gpu_pkg_L2_MEM_TAG_WIDTH = 7;
 	localparam VX_gpu_pkg_L3_TAG_WIDTH = VX_gpu_pkg_L2_MEM_TAG_WIDTH;
 	localparam VX_gpu_pkg_L3_WORD_SIZE = 64;
-	localparam VX_gpu_pkg_L3_MEM_TAG_WIDTH = 13;
+	localparam VX_gpu_pkg_L3_MEM_TAG_WIDTH = 7;
 	localparam VX_gpu_pkg_VX_MEM_TAG_WIDTH = VX_gpu_pkg_L3_MEM_TAG_WIDTH;
-	output wire [25:0] mem_req_tag;
+	output wire [6:0] mem_req_tag;
 	// Trace: src/Vortex.sv:10:5
-	input wire [0:1] mem_req_ready;
+	input wire [0:0] mem_req_ready;
 	// Trace: src/Vortex.sv:11:5
-	input wire [0:1] mem_rsp_valid;
+	input wire [0:0] mem_rsp_valid;
 	// Trace: src/Vortex.sv:12:5
-	input wire [1023:0] mem_rsp_data;
+	input wire [511:0] mem_rsp_data;
 	// Trace: src/Vortex.sv:13:5
-	input wire [25:0] mem_rsp_tag;
+	input wire [6:0] mem_rsp_tag;
 	// Trace: src/Vortex.sv:14:5
-	output wire [0:1] mem_rsp_ready;
+	output wire [0:0] mem_rsp_ready;
 	// Trace: src/Vortex.sv:15:5
 	input wire dcr_wr_valid;
 	// Trace: src/Vortex.sv:16:5
@@ -5547,7 +4252,7 @@ module Vortex (
 	localparam _param_CA4E3_TAG_WIDTH = VX_gpu_pkg_L2_MEM_TAG_WIDTH;
 	genvar _arr_CA4E3;
 	generate
-		for (_arr_CA4E3 = 0; _arr_CA4E3 <= 7; _arr_CA4E3 = _arr_CA4E3 + 1) begin : per_cluster_mem_bus_if
+		for (_arr_CA4E3 = 0; _arr_CA4E3 <= 0; _arr_CA4E3 = _arr_CA4E3 + 1) begin : per_cluster_mem_bus_if
 			// removed import VX_gpu_pkg::*;
 			// Trace: src/VX_mem_bus_if.sv:2:15
 			localparam DATA_SIZE = _param_CA4E3_DATA_SIZE;
@@ -5571,13 +4276,13 @@ module Vortex (
 			// Trace: src/VX_mem_bus_if.sv:24:5
 			wire req_valid;
 			// Trace: src/VX_mem_bus_if.sv:25:5
-			wire [616:0] req_data;
+			wire [612:0] req_data;
 			// Trace: src/VX_mem_bus_if.sv:26:5
 			wire req_ready;
 			// Trace: src/VX_mem_bus_if.sv:27:5
 			wire rsp_valid;
 			// Trace: src/VX_mem_bus_if.sv:28:5
-			wire [522:0] rsp_data;
+			wire [518:0] rsp_data;
 			// Trace: src/VX_mem_bus_if.sv:29:5
 			wire rsp_ready;
 			// Trace: src/VX_mem_bus_if.sv:30:5
@@ -5590,7 +4295,7 @@ module Vortex (
 	localparam _param_4F26C_TAG_WIDTH = VX_gpu_pkg_L3_MEM_TAG_WIDTH;
 	genvar _arr_4F26C;
 	generate
-		for (_arr_4F26C = 0; _arr_4F26C <= 1; _arr_4F26C = _arr_4F26C + 1) begin : mem_bus_if
+		for (_arr_4F26C = 0; _arr_4F26C <= 0; _arr_4F26C = _arr_4F26C + 1) begin : mem_bus_if
 			// removed import VX_gpu_pkg::*;
 			// Trace: src/VX_mem_bus_if.sv:2:15
 			localparam DATA_SIZE = _param_4F26C_DATA_SIZE;
@@ -5614,13 +4319,13 @@ module Vortex (
 			// Trace: src/VX_mem_bus_if.sv:24:5
 			wire req_valid;
 			// Trace: src/VX_mem_bus_if.sv:25:5
-			wire [618:0] req_data;
+			wire [612:0] req_data;
 			// Trace: src/VX_mem_bus_if.sv:26:5
 			wire req_ready;
 			// Trace: src/VX_mem_bus_if.sv:27:5
 			wire rsp_valid;
 			// Trace: src/VX_mem_bus_if.sv:28:5
-			wire [524:0] rsp_data;
+			wire [518:0] rsp_data;
 			// Trace: src/VX_mem_bus_if.sv:29:5
 			wire rsp_ready;
 			// Trace: src/VX_mem_bus_if.sv:30:5
@@ -5649,7 +4354,7 @@ module Vortex (
 	localparam _param_56375_NUM_WAYS = 8;
 	localparam _param_56375_WORD_SIZE = VX_gpu_pkg_L3_WORD_SIZE;
 	localparam _param_56375_NUM_REQS = VX_gpu_pkg_L3_NUM_REQS;
-	localparam _param_56375_MEM_PORTS = 2;
+	localparam _param_56375_MEM_PORTS = VX_gpu_pkg_L3_NUM_REQS;
 	localparam _param_56375_CRSQ_SIZE = 2;
 	localparam _param_56375_MSHR_SIZE = 16;
 	localparam _param_56375_MRSQ_SIZE = 4;
@@ -5663,9 +4368,9 @@ module Vortex (
 	localparam _param_56375_MEM_OUT_BUF = 3;
 	localparam _param_56375_NC_ENABLE = 1;
 	localparam _param_56375_PASSTHRU = 1'd1;
-	function automatic [12:0] sv2v_cast_13;
-		input reg [12:0] inp;
-		sv2v_cast_13 = inp;
+	function automatic [6:0] sv2v_cast_7;
+		input reg [6:0] inp;
+		sv2v_cast_7 = inp;
 	endfunction
 	generate
 		if (1) begin : l3cache
@@ -5724,11 +4429,11 @@ module Vortex (
 			// Trace: src/VX_cache_wrap.sv:28:5
 			localparam _mbase_mem_bus_if = 0;
 			// Trace: src/VX_cache_wrap.sv:30:5
-			localparam CACHE_MEM_TAG_WIDTH = 7;
+			localparam CACHE_MEM_TAG_WIDTH = 5;
 			// Trace: src/VX_cache_wrap.sv:32:5
-			localparam BYPASS_TAG_WIDTH = 13;
+			localparam BYPASS_TAG_WIDTH = 7;
 			// Trace: src/VX_cache_wrap.sv:34:5
-			localparam NC_TAG_WIDTH = 14;
+			localparam NC_TAG_WIDTH = 8;
 			// Trace: src/VX_cache_wrap.sv:35:5
 			localparam MEM_TAG_WIDTH = (PASSTHRU ? BYPASS_TAG_WIDTH : (NC_ENABLE ? NC_TAG_WIDTH : CACHE_MEM_TAG_WIDTH));
 			// Trace: src/VX_cache_wrap.sv:36:5
@@ -5738,7 +4443,7 @@ module Vortex (
 			localparam _param_24C1C_DATA_SIZE = WORD_SIZE;
 			localparam _param_24C1C_TAG_WIDTH = TAG_WIDTH;
 			genvar _arr_24C1C;
-			for (_arr_24C1C = 0; _arr_24C1C <= 7; _arr_24C1C = _arr_24C1C + 1) begin : core_bus_cache_if
+			for (_arr_24C1C = 0; _arr_24C1C <= 0; _arr_24C1C = _arr_24C1C + 1) begin : core_bus_cache_if
 				// removed import VX_gpu_pkg::*;
 				// Trace: src/VX_mem_bus_if.sv:2:15
 				localparam DATA_SIZE = _param_24C1C_DATA_SIZE;
@@ -5748,47 +4453,6 @@ module Vortex (
 				localparam FLAGS_WIDTH = VX_gpu_pkg_MEM_FLAGS_WIDTH;
 				// Trace: src/VX_mem_bus_if.sv:4:15
 				localparam TAG_WIDTH = _param_24C1C_TAG_WIDTH;
-				// Trace: src/VX_mem_bus_if.sv:5:15
-				localparam MEM_ADDR_WIDTH = 32;
-				// Trace: src/VX_mem_bus_if.sv:6:15
-				localparam ADDR_WIDTH = 26;
-				// Trace: src/VX_mem_bus_if.sv:8:5
-				localparam VX_gpu_pkg_UUID_WIDTH = 1;
-				// removed localparam type tag_t
-				// Trace: src/VX_mem_bus_if.sv:12:5
-				// removed localparam type req_data_t
-				// Trace: src/VX_mem_bus_if.sv:20:5
-				// removed localparam type rsp_data_t
-				// Trace: src/VX_mem_bus_if.sv:24:5
-				wire req_valid;
-				// Trace: src/VX_mem_bus_if.sv:25:5
-				wire [616:0] req_data;
-				// Trace: src/VX_mem_bus_if.sv:26:5
-				wire req_ready;
-				// Trace: src/VX_mem_bus_if.sv:27:5
-				wire rsp_valid;
-				// Trace: src/VX_mem_bus_if.sv:28:5
-				wire [522:0] rsp_data;
-				// Trace: src/VX_mem_bus_if.sv:29:5
-				wire rsp_ready;
-				// Trace: src/VX_mem_bus_if.sv:30:5
-				// Trace: src/VX_mem_bus_if.sv:38:5
-			end
-			// Trace: src/VX_cache_wrap.sv:41:5
-			// expanded interface instance: mem_bus_cache_if
-			localparam _param_D895D_DATA_SIZE = LINE_SIZE;
-			localparam _param_D895D_TAG_WIDTH = CACHE_MEM_TAG_WIDTH;
-			genvar _arr_D895D;
-			for (_arr_D895D = 0; _arr_D895D <= 1; _arr_D895D = _arr_D895D + 1) begin : mem_bus_cache_if
-				// removed import VX_gpu_pkg::*;
-				// Trace: src/VX_mem_bus_if.sv:2:15
-				localparam DATA_SIZE = _param_D895D_DATA_SIZE;
-				// Trace: src/VX_mem_bus_if.sv:3:15
-				localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
-				localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-				localparam FLAGS_WIDTH = VX_gpu_pkg_MEM_FLAGS_WIDTH;
-				// Trace: src/VX_mem_bus_if.sv:4:15
-				localparam TAG_WIDTH = _param_D895D_TAG_WIDTH;
 				// Trace: src/VX_mem_bus_if.sv:5:15
 				localparam MEM_ADDR_WIDTH = 32;
 				// Trace: src/VX_mem_bus_if.sv:6:15
@@ -5815,12 +4479,53 @@ module Vortex (
 				// Trace: src/VX_mem_bus_if.sv:30:5
 				// Trace: src/VX_mem_bus_if.sv:38:5
 			end
+			// Trace: src/VX_cache_wrap.sv:41:5
+			// expanded interface instance: mem_bus_cache_if
+			localparam _param_D895D_DATA_SIZE = LINE_SIZE;
+			localparam _param_D895D_TAG_WIDTH = CACHE_MEM_TAG_WIDTH;
+			genvar _arr_D895D;
+			for (_arr_D895D = 0; _arr_D895D <= 0; _arr_D895D = _arr_D895D + 1) begin : mem_bus_cache_if
+				// removed import VX_gpu_pkg::*;
+				// Trace: src/VX_mem_bus_if.sv:2:15
+				localparam DATA_SIZE = _param_D895D_DATA_SIZE;
+				// Trace: src/VX_mem_bus_if.sv:3:15
+				localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
+				localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
+				localparam FLAGS_WIDTH = VX_gpu_pkg_MEM_FLAGS_WIDTH;
+				// Trace: src/VX_mem_bus_if.sv:4:15
+				localparam TAG_WIDTH = _param_D895D_TAG_WIDTH;
+				// Trace: src/VX_mem_bus_if.sv:5:15
+				localparam MEM_ADDR_WIDTH = 32;
+				// Trace: src/VX_mem_bus_if.sv:6:15
+				localparam ADDR_WIDTH = 26;
+				// Trace: src/VX_mem_bus_if.sv:8:5
+				localparam VX_gpu_pkg_UUID_WIDTH = 1;
+				// removed localparam type tag_t
+				// Trace: src/VX_mem_bus_if.sv:12:5
+				// removed localparam type req_data_t
+				// Trace: src/VX_mem_bus_if.sv:20:5
+				// removed localparam type rsp_data_t
+				// Trace: src/VX_mem_bus_if.sv:24:5
+				wire req_valid;
+				// Trace: src/VX_mem_bus_if.sv:25:5
+				wire [610:0] req_data;
+				// Trace: src/VX_mem_bus_if.sv:26:5
+				wire req_ready;
+				// Trace: src/VX_mem_bus_if.sv:27:5
+				wire rsp_valid;
+				// Trace: src/VX_mem_bus_if.sv:28:5
+				wire [516:0] rsp_data;
+				// Trace: src/VX_mem_bus_if.sv:29:5
+				wire rsp_ready;
+				// Trace: src/VX_mem_bus_if.sv:30:5
+				// Trace: src/VX_mem_bus_if.sv:38:5
+			end
 			// Trace: src/VX_cache_wrap.sv:45:5
 			// expanded interface instance: mem_bus_tmp_if
 			localparam _param_4FE36_DATA_SIZE = LINE_SIZE;
 			localparam _param_4FE36_TAG_WIDTH = MEM_TAG_WIDTH;
 			genvar _arr_4FE36;
-			for (_arr_4FE36 = 0; _arr_4FE36 <= 1; _arr_4FE36 = _arr_4FE36 + 1) begin : mem_bus_tmp_if
+			for (_arr_4FE36 = 0; _arr_4FE36 <= 0; _arr_4FE36 = _arr_4FE36 + 1) begin : mem_bus_tmp_if
 				// removed import VX_gpu_pkg::*;
 				// Trace: src/VX_mem_bus_if.sv:2:15
 				localparam DATA_SIZE = _param_4FE36_DATA_SIZE;
@@ -5915,7 +4620,7 @@ module Vortex (
 					// Trace: src/VX_cache_bypass.sv:20:5
 					localparam _mbase_mem_bus_out_if = 0;
 					// Trace: src/VX_cache_bypass.sv:22:5
-					localparam DIRECT_PASSTHRU = (!CACHE_ENABLE && 1'd1) && 1'd0;
+					localparam DIRECT_PASSTHRU = (!CACHE_ENABLE && 1'd1) && 1'd1;
 					// Trace: src/VX_cache_bypass.sv:23:5
 					localparam CORE_DATA_WIDTH = 512;
 					// Trace: src/VX_cache_bypass.sv:24:5
@@ -5924,13 +4629,13 @@ module Vortex (
 					localparam WSEL_BITS = 0;
 					// Trace: src/VX_cache_bypass.sv:26:5
 					localparam VX_gpu_pkg_UUID_WIDTH = 1;
-					localparam CORE_TAG_ID_WIDTH = 10;
+					localparam CORE_TAG_ID_WIDTH = 6;
 					// Trace: src/VX_cache_bypass.sv:27:5
-					localparam MEM_TAG_ID_WIDTH = 12;
+					localparam MEM_TAG_ID_WIDTH = 6;
 					// Trace: src/VX_cache_bypass.sv:28:5
-					localparam MEM_TAG_NC1_WIDTH = 13;
+					localparam MEM_TAG_NC1_WIDTH = 7;
 					// Trace: src/VX_cache_bypass.sv:29:5
-					localparam MEM_TAG_NC2_WIDTH = 13;
+					localparam MEM_TAG_NC2_WIDTH = 7;
 					// Trace: src/VX_cache_bypass.sv:30:5
 					localparam MEM_TAG_OUT_WIDTH = (CACHE_ENABLE ? MEM_TAG_NC2_WIDTH : MEM_TAG_NC2_WIDTH);
 					// Trace: src/VX_cache_bypass.sv:31:5
@@ -5962,20 +4667,20 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [616:0] req_data;
+						wire [612:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [522:0] rsp_data;
+						wire [518:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
 						// Trace: src/VX_mem_bus_if.sv:38:5
 					end
 					// Trace: src/VX_cache_bypass.sv:35:5
-					wire [7:0] core_req_nc_sel;
+					wire [0:0] core_req_nc_sel;
 					// Trace: src/VX_cache_bypass.sv:36:5
 					genvar _gv_i_56;
 					localparam VX_gpu_pkg_MEM_REQ_FLAG_IO = 1;
@@ -5983,7 +4688,7 @@ module Vortex (
 						localparam i = _gv_i_56;
 						if (CACHE_ENABLE) begin : g_cache
 							// Trace: src/VX_cache_bypass.sv:38:13
-							assign core_req_nc_sel[i] = ~Vortex.per_cluster_mem_bus_if[i + _mbase_core_bus_in_if].req_data[12];
+							assign core_req_nc_sel[i] = ~Vortex.per_cluster_mem_bus_if[i + _mbase_core_bus_in_if].req_data[8];
 						end
 						else begin : g_no_cache
 							// Trace: src/VX_cache_bypass.sv:40:13
@@ -6042,19 +4747,19 @@ module Vortex (
 						// Trace: src/VX_mem_switch.sv:22:5
 						localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
 						localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-						localparam REQ_DATAW = 617;
+						localparam REQ_DATAW = 613;
 						// Trace: src/VX_mem_switch.sv:23:5
-						localparam RSP_DATAW = 523;
+						localparam RSP_DATAW = 519;
 						// Trace: src/VX_mem_switch.sv:24:5
-						wire [7:0] req_valid_in;
+						wire [0:0] req_valid_in;
 						// Trace: src/VX_mem_switch.sv:25:5
-						wire [4935:0] req_data_in;
+						wire [612:0] req_data_in;
 						// Trace: src/VX_mem_switch.sv:26:5
-						wire [7:0] req_ready_in;
+						wire [0:0] req_ready_in;
 						// Trace: src/VX_mem_switch.sv:27:5
 						wire [NUM_OUTPUTS - 1:0] req_valid_out;
 						// Trace: src/VX_mem_switch.sv:28:5
-						wire [(NUM_OUTPUTS * 617) - 1:0] req_data_out;
+						wire [(NUM_OUTPUTS * 613) - 1:0] req_data_out;
 						// Trace: src/VX_mem_switch.sv:29:5
 						wire [NUM_OUTPUTS - 1:0] req_ready_out;
 						// Trace: src/VX_mem_switch.sv:30:5
@@ -6064,7 +4769,7 @@ module Vortex (
 							// Trace: src/VX_mem_switch.sv:31:9
 							assign req_valid_in[i] = Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].req_valid;
 							// Trace: src/VX_mem_switch.sv:32:9
-							assign req_data_in[i * 617+:617] = Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].req_data;
+							assign req_data_in[i * 613+:613] = Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].req_data;
 							// Trace: src/VX_mem_switch.sv:33:9
 							assign Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 						end
@@ -6092,22 +4797,22 @@ module Vortex (
 							// Trace: src/VX_mem_switch.sv:52:9
 							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 							// Trace: src/VX_mem_switch.sv:53:9
-							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 617+:617];
+							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 613+:613];
 							// Trace: src/VX_mem_switch.sv:54:9
 							assign req_ready_out[i] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_ready;
 						end
 						// Trace: src/VX_mem_switch.sv:56:5
 						wire [NUM_OUTPUTS - 1:0] rsp_valid_in;
 						// Trace: src/VX_mem_switch.sv:57:5
-						wire [(NUM_OUTPUTS * 523) - 1:0] rsp_data_in;
+						wire [(NUM_OUTPUTS * 519) - 1:0] rsp_data_in;
 						// Trace: src/VX_mem_switch.sv:58:5
 						wire [NUM_OUTPUTS - 1:0] rsp_ready_in;
 						// Trace: src/VX_mem_switch.sv:59:5
-						wire [7:0] rsp_valid_out;
+						wire [0:0] rsp_valid_out;
 						// Trace: src/VX_mem_switch.sv:60:5
-						wire [4183:0] rsp_data_out;
+						wire [518:0] rsp_data_out;
 						// Trace: src/VX_mem_switch.sv:61:5
-						wire [7:0] rsp_ready_out;
+						wire [0:0] rsp_ready_out;
 						// Trace: src/VX_mem_switch.sv:62:5
 						genvar _gv_i_111;
 						for (_gv_i_111 = 0; _gv_i_111 < NUM_OUTPUTS; _gv_i_111 = _gv_i_111 + 1) begin : g_rsp_data_in
@@ -6115,7 +4820,7 @@ module Vortex (
 							// Trace: src/VX_mem_switch.sv:63:9
 							assign rsp_valid_in[i] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_valid;
 							// Trace: src/VX_mem_switch.sv:64:9
-							assign rsp_data_in[i * 523+:523] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
+							assign rsp_data_in[i * 519+:519] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
 							// Trace: src/VX_mem_switch.sv:65:9
 							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 						end
@@ -6144,7 +4849,7 @@ module Vortex (
 							// Trace: src/VX_mem_switch.sv:85:9
 							assign Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 							// Trace: src/VX_mem_switch.sv:86:9
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 523+:523];
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
 							// Trace: src/VX_mem_switch.sv:87:9
 							assign rsp_ready_out[i] = Vortex.per_cluster_mem_bus_if[i + _mbase_bus_in_if].rsp_ready;
 						end
@@ -6157,7 +4862,7 @@ module Vortex (
 					localparam _param_C0263_DATA_SIZE = WORD_SIZE;
 					localparam _param_C0263_TAG_WIDTH = CORE_TAG_WIDTH;
 					genvar _arr_C0263;
-					for (_arr_C0263 = 0; _arr_C0263 <= 7; _arr_C0263 = _arr_C0263 + 1) begin : core_bus_in_nc_if
+					for (_arr_C0263 = 0; _arr_C0263 <= 0; _arr_C0263 = _arr_C0263 + 1) begin : core_bus_in_nc_if
 						// removed import VX_gpu_pkg::*;
 						// Trace: src/VX_mem_bus_if.sv:2:15
 						localparam DATA_SIZE = _param_C0263_DATA_SIZE;
@@ -6181,13 +4886,13 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [616:0] req_data;
+						wire [612:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [522:0] rsp_data;
+						wire [518:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
@@ -6211,17 +4916,17 @@ module Vortex (
 						assign core_bus_in_nc_if[i].rsp_ready = core_bus_nc_switch_if[0 + i].rsp_ready;
 						if (CACHE_ENABLE) begin : g_cache
 							// Trace: src/VX_cache_bypass.sv:70:13
-							assign Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_valid = core_bus_nc_switch_if[8 + i].req_valid;
+							assign Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_valid = core_bus_nc_switch_if[1 + i].req_valid;
 							// Trace: src/VX_cache_bypass.sv:71:13
-							assign Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_data = core_bus_nc_switch_if[8 + i].req_data;
+							assign Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_data = core_bus_nc_switch_if[1 + i].req_data;
 							// Trace: src/VX_cache_bypass.sv:72:13
-							assign core_bus_nc_switch_if[8 + i].req_ready = Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_ready;
+							assign core_bus_nc_switch_if[1 + i].req_ready = Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_ready;
 							// Trace: src/VX_cache_bypass.sv:73:13
-							assign core_bus_nc_switch_if[8 + i].rsp_valid = Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_valid;
+							assign core_bus_nc_switch_if[1 + i].rsp_valid = Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_valid;
 							// Trace: src/VX_cache_bypass.sv:74:13
-							assign core_bus_nc_switch_if[8 + i].rsp_data = Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_data;
+							assign core_bus_nc_switch_if[1 + i].rsp_data = Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_data;
 							// Trace: src/VX_cache_bypass.sv:75:13
-							assign Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_ready = core_bus_nc_switch_if[8 + i].rsp_ready;
+							assign Vortex.l3cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_ready = core_bus_nc_switch_if[1 + i].rsp_ready;
 						end
 						else begin : g_no_cache
 							// Trace: src/VX_cache_bypass.sv:77:5
@@ -6237,7 +4942,7 @@ module Vortex (
 					localparam _param_D50AC_DATA_SIZE = WORD_SIZE;
 					localparam _param_D50AC_TAG_WIDTH = MEM_TAG_NC1_WIDTH;
 					genvar _arr_D50AC;
-					for (_arr_D50AC = 0; _arr_D50AC <= 1; _arr_D50AC = _arr_D50AC + 1) begin : core_bus_nc_arb_if
+					for (_arr_D50AC = 0; _arr_D50AC <= 0; _arr_D50AC = _arr_D50AC + 1) begin : core_bus_nc_arb_if
 						// removed import VX_gpu_pkg::*;
 						// Trace: src/VX_mem_bus_if.sv:2:15
 						localparam DATA_SIZE = _param_D50AC_DATA_SIZE;
@@ -6261,13 +4966,13 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [618:0] req_data;
+						wire [612:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [524:0] rsp_data;
+						wire [518:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
@@ -6322,27 +5027,27 @@ module Vortex (
 						// Trace: src/VX_mem_arb.sv:19:5
 						localparam DATA_WIDTH = 512;
 						// Trace: src/VX_mem_arb.sv:20:5
-						localparam LOG_NUM_REQS = 2;
+						localparam LOG_NUM_REQS = 0;
 						// Trace: src/VX_mem_arb.sv:21:5
-						localparam REQ_DATAW = 617;
+						localparam REQ_DATAW = 613;
 						// Trace: src/VX_mem_arb.sv:22:5
-						localparam RSP_DATAW = 523;
+						localparam RSP_DATAW = 519;
 						// Trace: src/VX_mem_arb.sv:23:5
 						localparam SEL_COUNT = NUM_OUTPUTS;
 						// Trace: src/VX_mem_arb.sv:24:5
-						wire [7:0] req_valid_in;
+						wire [0:0] req_valid_in;
 						// Trace: src/VX_mem_arb.sv:25:5
-						wire [4935:0] req_data_in;
+						wire [612:0] req_data_in;
 						// Trace: src/VX_mem_arb.sv:26:5
-						wire [7:0] req_ready_in;
+						wire [0:0] req_ready_in;
 						// Trace: src/VX_mem_arb.sv:27:5
-						wire [1:0] req_valid_out;
+						wire [0:0] req_valid_out;
 						// Trace: src/VX_mem_arb.sv:28:5
-						wire [1233:0] req_data_out;
+						wire [612:0] req_data_out;
 						// Trace: src/VX_mem_arb.sv:29:5
-						wire [3:0] req_sel_out;
+						wire [0:0] req_sel_out;
 						// Trace: src/VX_mem_arb.sv:30:5
-						wire [1:0] req_ready_out;
+						wire [0:0] req_ready_out;
 						// Trace: src/VX_mem_arb.sv:31:5
 						genvar _gv_i_183;
 						for (_gv_i_183 = 0; _gv_i_183 < NUM_INPUTS; _gv_i_183 = _gv_i_183 + 1) begin : g_req_data_in
@@ -6350,7 +5055,7 @@ module Vortex (
 							// Trace: src/VX_mem_arb.sv:32:9
 							assign req_valid_in[i] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_valid;
 							// Trace: src/VX_mem_arb.sv:33:9
-							assign req_data_in[i * 617+:617] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
+							assign req_data_in[i * 613+:613] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
 							// Trace: src/VX_mem_arb.sv:34:9
 							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 						end
@@ -6377,80 +5082,59 @@ module Vortex (
 						for (_gv_i_184 = 0; _gv_i_184 < NUM_OUTPUTS; _gv_i_184 = _gv_i_184 + 1) begin : g_bus_out_if
 							localparam i = _gv_i_184;
 							// Trace: src/VX_mem_arb.sv:54:9
-							wire [10:0] req_tag_out;
+							wire [6:0] req_tag_out;
 							// Trace: src/VX_mem_arb.sv:55:9
 							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 							// Trace: src/VX_mem_arb.sv:56:9
-							assign {Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[618], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[617-:26], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[591-:512], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[79-:64], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[15-:3], req_tag_out} = req_data_out[i * 617+:617];
+							assign {Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[612], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[611-:26], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[585-:512], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[73-:64], Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[9-:3], req_tag_out} = req_data_out[i * 613+:613];
 							// Trace: src/VX_mem_arb.sv:64:9
 							assign req_ready_out[i] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_ready;
-							if (1) begin : g_req_tag_sel_out
-								// Trace: src/VX_mem_arb.sv:66:13
-								VX_bits_insert #(
-									.N(TAG_WIDTH),
-									.S(LOG_NUM_REQS),
-									.POS(TAG_SEL_IDX)
-								) bits_insert(
-									.data_in(req_tag_out),
-									.ins_in(req_sel_out[i * 2+:2]),
-									.data_out(Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[12-:13])
-								);
+							if (1) begin : g_req_tag_out
+								// Trace: src/VX_mem_arb.sv:76:13
+								assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[6-:7] = req_tag_out;
 							end
 						end
 						// Trace: src/VX_mem_arb.sv:79:5
-						wire [7:0] rsp_valid_out;
+						wire [0:0] rsp_valid_out;
 						// Trace: src/VX_mem_arb.sv:80:5
-						wire [4183:0] rsp_data_out;
+						wire [518:0] rsp_data_out;
 						// Trace: src/VX_mem_arb.sv:81:5
-						wire [7:0] rsp_ready_out;
+						wire [0:0] rsp_ready_out;
 						// Trace: src/VX_mem_arb.sv:82:5
-						wire [1:0] rsp_valid_in;
+						wire [0:0] rsp_valid_in;
 						// Trace: src/VX_mem_arb.sv:83:5
-						wire [1045:0] rsp_data_in;
+						wire [518:0] rsp_data_in;
 						// Trace: src/VX_mem_arb.sv:84:5
-						wire [1:0] rsp_ready_in;
+						wire [0:0] rsp_ready_in;
 						// Trace: src/VX_mem_arb.sv:85:5
-						if (1) begin : g_rsp_select
-							// Trace: src/VX_mem_arb.sv:86:9
-							wire [3:0] rsp_sel_in;
-							genvar _gv_i_185;
-							for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
-								localparam i = _gv_i_185;
-								// Trace: src/VX_mem_arb.sv:88:13
-								wire [10:0] rsp_tag_out;
-								// Trace: src/VX_mem_arb.sv:89:13
-								VX_bits_remove #(
-									.N(13),
-									.S(LOG_NUM_REQS),
-									.POS(TAG_SEL_IDX)
-								) bits_remove(
-									.data_in(Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data[12-:13]),
-									.sel_out(rsp_sel_in[i * 2+:2]),
-									.data_out(rsp_tag_out)
-								);
-								// Trace: src/VX_mem_arb.sv:98:13
+						if (1) begin : g_rsp_arb
+							genvar _gv_i_186;
+							for (_gv_i_186 = 0; _gv_i_186 < NUM_OUTPUTS; _gv_i_186 = _gv_i_186 + 1) begin : g_rsp_data_in
+								localparam i = _gv_i_186;
+								// Trace: src/VX_mem_arb.sv:120:13
 								assign rsp_valid_in[i] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_valid;
-								// Trace: src/VX_mem_arb.sv:99:13
-								assign rsp_data_in[i * 523+:523] = {Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data[524-:512], rsp_tag_out};
-								// Trace: src/VX_mem_arb.sv:100:13
+								// Trace: src/VX_mem_arb.sv:121:13
+								assign rsp_data_in[i * 519+:519] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data;
+								// Trace: src/VX_mem_arb.sv:122:13
 								assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 							end
-							// Trace: src/VX_mem_arb.sv:102:9
-							VX_stream_switch #(
+							// Trace: src/VX_mem_arb.sv:124:9
+							VX_stream_arb #(
 								.NUM_INPUTS(NUM_OUTPUTS),
 								.NUM_OUTPUTS(NUM_INPUTS),
 								.DATAW(RSP_DATAW),
+								.ARBITER(ARBITER),
 								.OUT_BUF(RSP_OUT_BUF)
-							) rsp_switch(
+							) req_arb(
 								.clk(clk),
 								.reset(reset),
-								.sel_in(rsp_sel_in),
 								.valid_in(rsp_valid_in),
 								.ready_in(rsp_ready_in),
 								.data_in(rsp_data_in),
 								.data_out(rsp_data_out),
 								.valid_out(rsp_valid_out),
-								.ready_out(rsp_ready_out)
+								.ready_out(rsp_ready_out),
+								.sel_out()
 							);
 						end
 						// Trace: src/VX_mem_arb.sv:142:5
@@ -6460,7 +5144,7 @@ module Vortex (
 							// Trace: src/VX_mem_arb.sv:143:9
 							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 							// Trace: src/VX_mem_arb.sv:144:9
-							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 523+:523];
+							assign Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
 							// Trace: src/VX_mem_arb.sv:145:9
 							assign rsp_ready_out[i] = Vortex.l3cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_ready;
 						end
@@ -6472,7 +5156,7 @@ module Vortex (
 					localparam _param_0061C_DATA_SIZE = LINE_SIZE;
 					localparam _param_0061C_TAG_WIDTH = MEM_TAG_NC2_WIDTH;
 					genvar _arr_0061C;
-					for (_arr_0061C = 0; _arr_0061C <= 1; _arr_0061C = _arr_0061C + 1) begin : mem_bus_out_nc_if
+					for (_arr_0061C = 0; _arr_0061C <= 0; _arr_0061C = _arr_0061C + 1) begin : mem_bus_out_nc_if
 						// removed import VX_gpu_pkg::*;
 						// Trace: src/VX_mem_bus_if.sv:2:15
 						localparam DATA_SIZE = _param_0061C_DATA_SIZE;
@@ -6496,13 +5180,13 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [618:0] req_data;
+						wire [612:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [524:0] rsp_data;
+						wire [518:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
@@ -6525,7 +5209,7 @@ module Vortex (
 						// Trace: src/VX_cache_bypass.sv:110:9
 						wire [511:0] core_req_nc_arb_data;
 						// Trace: src/VX_cache_bypass.sv:111:9
-						wire [12:0] core_req_nc_arb_tag;
+						wire [6:0] core_req_nc_arb_tag;
 						// Trace: src/VX_cache_bypass.sv:112:9
 						assign {core_req_nc_arb_rw, core_req_nc_arb_addr, core_req_nc_arb_data, core_req_nc_arb_byteen, core_req_nc_arb_flags, core_req_nc_arb_tag} = core_bus_nc_arb_if[i].req_data;
 						// Trace: src/VX_cache_bypass.sv:120:9
@@ -6537,9 +5221,9 @@ module Vortex (
 						// Trace: src/VX_cache_bypass.sv:123:9
 						wire [511:0] core_rsp_nc_arb_data_w;
 						// Trace: src/VX_cache_bypass.sv:124:9
-						wire [12:0] core_req_nc_arb_tag_w;
+						wire [6:0] core_req_nc_arb_tag_w;
 						// Trace: src/VX_cache_bypass.sv:125:9
-						wire [12:0] core_rsp_nc_arb_tag_w;
+						wire [6:0] core_rsp_nc_arb_tag_w;
 						if (1) begin : g_single_word_line
 							// Trace: src/VX_cache_bypass.sv:156:13
 							assign core_req_nc_arb_addr_w = core_req_nc_arb_addr;
@@ -6550,9 +5234,9 @@ module Vortex (
 							// Trace: src/VX_cache_bypass.sv:159:13
 							assign core_req_nc_arb_tag_w = core_req_nc_arb_tag;
 							// Trace: src/VX_cache_bypass.sv:160:13
-							assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[524-:512];
+							assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[518-:512];
 							// Trace: src/VX_cache_bypass.sv:161:13
-							assign core_rsp_nc_arb_tag_w = sv2v_cast_13(mem_bus_out_nc_if[i].rsp_data[12-:13]);
+							assign core_rsp_nc_arb_tag_w = sv2v_cast_7(mem_bus_out_nc_if[i].rsp_data[6-:7]);
 						end
 						// Trace: src/VX_cache_bypass.sv:163:9
 						assign mem_bus_out_nc_if[i].req_valid = core_bus_nc_arb_if[i].req_valid;
@@ -6615,108 +5299,108 @@ module Vortex (
 						// Trace: src/VX_cache_bypass.sv:186:5
 						assign mem_bus_out_src_if[0 + i].req_valid = mem_bus_out_nc_if[i].req_valid;
 						// Trace: src/VX_cache_bypass.sv:187:5
-						assign mem_bus_out_src_if[0 + i].req_data[539 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))] = mem_bus_out_nc_if[i].req_data[618];
+						assign mem_bus_out_src_if[0 + i].req_data[539 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))] = mem_bus_out_nc_if[i].req_data[612];
 						// Trace: src/VX_cache_bypass.sv:188:5
-						assign mem_bus_out_src_if[0 + i].req_data[538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((602 + (_param_913F6_TAG_WIDTH + 2)) >= (579 + (_param_913F6_TAG_WIDTH + 0)) ? ((538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))))) + 1 : ((512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) - (538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = mem_bus_out_nc_if[i].req_data[617-:26];
+						assign mem_bus_out_src_if[0 + i].req_data[538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((602 + (_param_913F6_TAG_WIDTH + 2)) >= (579 + (_param_913F6_TAG_WIDTH + 0)) ? ((538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))))) + 1 : ((512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) - (538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = mem_bus_out_nc_if[i].req_data[611-:26];
 						// Trace: src/VX_cache_bypass.sv:189:5
-						assign mem_bus_out_src_if[0 + i].req_data[512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((576 + (_param_913F6_TAG_WIDTH + 2)) >= (67 + (_param_913F6_TAG_WIDTH + 0)) ? ((512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) + 1 : ((_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))) - (512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = mem_bus_out_nc_if[i].req_data[591-:512];
+						assign mem_bus_out_src_if[0 + i].req_data[512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((576 + (_param_913F6_TAG_WIDTH + 2)) >= (67 + (_param_913F6_TAG_WIDTH + 0)) ? ((512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) + 1 : ((_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))) - (512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = mem_bus_out_nc_if[i].req_data[585-:512];
 						// Trace: src/VX_cache_bypass.sv:190:5
-						assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)-:((64 + (_param_913F6_TAG_WIDTH + 2)) >= (3 + (_param_913F6_TAG_WIDTH + 0)) ? ((_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)) - (3 + (_param_913F6_TAG_WIDTH + 0))) + 1 : ((3 + (_param_913F6_TAG_WIDTH + 0)) - (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) + 1)] = mem_bus_out_nc_if[i].req_data[79-:64];
+						assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)-:((64 + (_param_913F6_TAG_WIDTH + 2)) >= (3 + (_param_913F6_TAG_WIDTH + 0)) ? ((_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)) - (3 + (_param_913F6_TAG_WIDTH + 0))) + 1 : ((3 + (_param_913F6_TAG_WIDTH + 0)) - (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) + 1)] = mem_bus_out_nc_if[i].req_data[73-:64];
 						// Trace: src/VX_cache_bypass.sv:191:5
-						assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH + 2-:((_param_913F6_TAG_WIDTH + 2) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 2) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 2)) + 1)] = mem_bus_out_nc_if[i].req_data[15-:3];
+						assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH + 2-:((_param_913F6_TAG_WIDTH + 2) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 2) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 2)) + 1)] = mem_bus_out_nc_if[i].req_data[9-:3];
 						if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk1
 							if (1) begin : genblk1
 								if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 									// Trace: src/VX_cache_bypass.sv:195:17
-									assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {mem_bus_out_nc_if[i].req_data[12-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[11-:12]};
+									assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {mem_bus_out_nc_if[i].req_data[6-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[5-:6]};
 								end
 								else begin : genblk1
 									// Trace: src/VX_cache_bypass.sv:197:17
-									assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {mem_bus_out_nc_if[i].req_data[12-:1], mem_bus_out_nc_if[i].req_data[12 - (1 + (12 - (MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH))):0]};
+									assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {mem_bus_out_nc_if[i].req_data[6-:1], mem_bus_out_nc_if[i].req_data[6 - (1 + (6 - (MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH))):0]};
 								end
 							end
 						end
 						else begin : genblk1
 							// Trace: src/VX_cache_bypass.sv:207:9
-							assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = mem_bus_out_nc_if[i].req_data[12-:13];
+							assign mem_bus_out_src_if[0 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = mem_bus_out_nc_if[i].req_data[6-:7];
 						end
 						// Trace: src/VX_cache_bypass.sv:209:5
 						assign mem_bus_out_nc_if[i].req_ready = mem_bus_out_src_if[0 + i].req_ready;
 						// Trace: src/VX_cache_bypass.sv:210:5
 						assign mem_bus_out_nc_if[i].rsp_valid = mem_bus_out_src_if[0 + i].rsp_valid;
 						// Trace: src/VX_cache_bypass.sv:211:5
-						assign mem_bus_out_nc_if[i].rsp_data[524-:512] = mem_bus_out_src_if[0 + i].rsp_data[_param_913F6_TAG_WIDTH + 511-:((_param_913F6_TAG_WIDTH + 511) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 511) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 511)) + 1)];
+						assign mem_bus_out_nc_if[i].rsp_data[518-:512] = mem_bus_out_src_if[0 + i].rsp_data[_param_913F6_TAG_WIDTH + 511-:((_param_913F6_TAG_WIDTH + 511) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 511) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 511)) + 1)];
 						if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk2
 							if (1) begin : genblk1
 								if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 									// Trace: src/VX_cache_bypass.sv:215:17
-									assign mem_bus_out_nc_if[i].rsp_data[12-:13] = {mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 13))):(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 2)))]};
+									assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 7))):(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 2)))]};
 								end
 								else begin : genblk1
 									// Trace: src/VX_cache_bypass.sv:217:17
-									assign mem_bus_out_nc_if[i].rsp_data[12-:13] = {mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 2))-:_param_913F6_TAG_WIDTH - 1]};
+									assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 2))-:_param_913F6_TAG_WIDTH - 1]};
 								end
 							end
 						end
 						else begin : genblk2
 							// Trace: src/VX_cache_bypass.sv:227:9
-							assign mem_bus_out_nc_if[i].rsp_data[12-:13] = mem_bus_out_src_if[0 + i].rsp_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0];
+							assign mem_bus_out_nc_if[i].rsp_data[6-:7] = mem_bus_out_src_if[0 + i].rsp_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0];
 						end
 						// Trace: src/VX_cache_bypass.sv:229:5
 						assign mem_bus_out_src_if[0 + i].rsp_ready = mem_bus_out_nc_if[i].rsp_ready;
 						if (CACHE_ENABLE) begin : g_cache
 							// Trace: src/VX_cache_bypass.sv:233:5
-							assign mem_bus_out_src_if[2 + i].req_valid = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_valid;
+							assign mem_bus_out_src_if[1 + i].req_valid = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_valid;
 							// Trace: src/VX_cache_bypass.sv:234:5
-							assign mem_bus_out_src_if[2 + i].req_data[539 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[612];
+							assign mem_bus_out_src_if[1 + i].req_data[539 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610];
 							// Trace: src/VX_cache_bypass.sv:235:5
-							assign mem_bus_out_src_if[2 + i].req_data[538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((602 + (_param_913F6_TAG_WIDTH + 2)) >= (579 + (_param_913F6_TAG_WIDTH + 0)) ? ((538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))))) + 1 : ((512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) - (538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[611-:26];
+							assign mem_bus_out_src_if[1 + i].req_data[538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((602 + (_param_913F6_TAG_WIDTH + 2)) >= (579 + (_param_913F6_TAG_WIDTH + 0)) ? ((538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))))) + 1 : ((512 + (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) - (538 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[609-:26];
 							// Trace: src/VX_cache_bypass.sv:236:5
-							assign mem_bus_out_src_if[2 + i].req_data[512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((576 + (_param_913F6_TAG_WIDTH + 2)) >= (67 + (_param_913F6_TAG_WIDTH + 0)) ? ((512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) + 1 : ((_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))) - (512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[585-:512];
+							assign mem_bus_out_src_if[1 + i].req_data[512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))-:((576 + (_param_913F6_TAG_WIDTH + 2)) >= (67 + (_param_913F6_TAG_WIDTH + 0)) ? ((512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) - (_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0)))) + 1 : ((_param_913F6_DATA_SIZE + (3 + (_param_913F6_TAG_WIDTH + 0))) - (512 + (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)))) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[583-:512];
 							// Trace: src/VX_cache_bypass.sv:237:5
-							assign mem_bus_out_src_if[2 + i].req_data[_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)-:((64 + (_param_913F6_TAG_WIDTH + 2)) >= (3 + (_param_913F6_TAG_WIDTH + 0)) ? ((_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)) - (3 + (_param_913F6_TAG_WIDTH + 0))) + 1 : ((3 + (_param_913F6_TAG_WIDTH + 0)) - (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[73-:64];
+							assign mem_bus_out_src_if[1 + i].req_data[_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)-:((64 + (_param_913F6_TAG_WIDTH + 2)) >= (3 + (_param_913F6_TAG_WIDTH + 0)) ? ((_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2)) - (3 + (_param_913F6_TAG_WIDTH + 0))) + 1 : ((3 + (_param_913F6_TAG_WIDTH + 0)) - (_param_913F6_DATA_SIZE + (_param_913F6_TAG_WIDTH + 2))) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[71-:64];
 							// Trace: src/VX_cache_bypass.sv:238:5
-							assign mem_bus_out_src_if[2 + i].req_data[_param_913F6_TAG_WIDTH + 2-:((_param_913F6_TAG_WIDTH + 2) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 2) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 2)) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[9-:3];
+							assign mem_bus_out_src_if[1 + i].req_data[_param_913F6_TAG_WIDTH + 2-:((_param_913F6_TAG_WIDTH + 2) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 2) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 2)) + 1)] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[7-:3];
 							if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk1
 								if (1) begin : genblk1
 									if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 										// Trace: src/VX_cache_bypass.sv:242:17
-										assign mem_bus_out_src_if[2 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[6-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[5-:6]};
+										assign mem_bus_out_src_if[1 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[3-:4]};
 									end
 									else begin : genblk1
 										// Trace: src/VX_cache_bypass.sv:244:17
-										assign mem_bus_out_src_if[2 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[6-:1], Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[6 - (1 + (6 - (MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH))):0]};
+										assign mem_bus_out_src_if[1 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = {Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4 - (1 + (4 - (MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH))):0]};
 									end
 								end
 							end
 							else begin : genblk1
 								// Trace: src/VX_cache_bypass.sv:254:9
-								assign mem_bus_out_src_if[2 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[6-:7];
+								assign mem_bus_out_src_if[1 + i].req_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0] = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5];
 							end
 							// Trace: src/VX_cache_bypass.sv:256:5
-							assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_ready = mem_bus_out_src_if[2 + i].req_ready;
+							assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_ready = mem_bus_out_src_if[1 + i].req_ready;
 							// Trace: src/VX_cache_bypass.sv:257:5
-							assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_valid = mem_bus_out_src_if[2 + i].rsp_valid;
+							assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_valid = mem_bus_out_src_if[1 + i].rsp_valid;
 							// Trace: src/VX_cache_bypass.sv:258:5
-							assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[518-:512] = mem_bus_out_src_if[2 + i].rsp_data[_param_913F6_TAG_WIDTH + 511-:((_param_913F6_TAG_WIDTH + 511) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 511) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 511)) + 1)];
+							assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[516-:512] = mem_bus_out_src_if[1 + i].rsp_data[_param_913F6_TAG_WIDTH + 511-:((_param_913F6_TAG_WIDTH + 511) >= (_param_913F6_TAG_WIDTH + 0) ? ((_param_913F6_TAG_WIDTH + 511) - (_param_913F6_TAG_WIDTH + 0)) + 1 : ((_param_913F6_TAG_WIDTH + 0) - (_param_913F6_TAG_WIDTH + 511)) + 1)];
 							if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk2
 								if (1) begin : genblk1
 									if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 										// Trace: src/VX_cache_bypass.sv:262:17
-										assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[6-:7] = {mem_bus_out_src_if[2 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], mem_bus_out_src_if[2 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 7))):(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 2)))]};
+										assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], mem_bus_out_src_if[1 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 5))):(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 2) - (_param_913F6_TAG_WIDTH - 2)))]};
 									end
 									else begin : genblk1
 										// Trace: src/VX_cache_bypass.sv:264:17
-										assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[6-:7] = {mem_bus_out_src_if[2 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[2 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 2))-:_param_913F6_TAG_WIDTH - 1]};
+										assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1))-:((_param_913F6_TAG_WIDTH - 1) >= (_param_913F6_TAG_WIDTH - 1) ? ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1 : ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 1)) + 1)], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[1 + i].rsp_data[(_param_913F6_TAG_WIDTH - 1) - ((_param_913F6_TAG_WIDTH - 1) - (_param_913F6_TAG_WIDTH - 2))-:_param_913F6_TAG_WIDTH - 1]};
 									end
 								end
 							end
 							else begin : genblk2
 								// Trace: src/VX_cache_bypass.sv:274:9
-								assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[6-:7] = mem_bus_out_src_if[2 + i].rsp_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0];
+								assign Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = mem_bus_out_src_if[1 + i].rsp_data[_param_913F6_TAG_WIDTH - 1-:_param_913F6_TAG_WIDTH + 0];
 							end
 							// Trace: src/VX_cache_bypass.sv:276:5
-							assign mem_bus_out_src_if[2 + i].rsp_ready = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_ready;
+							assign mem_bus_out_src_if[1 + i].rsp_ready = Vortex.l3cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_ready;
 						end
 						else begin : g_no_cache
 							// Trace: src/VX_cache_bypass.sv:279:5
@@ -6775,7 +5459,7 @@ module Vortex (
 						// Trace: src/VX_mem_arb.sv:19:5
 						localparam DATA_WIDTH = 512;
 						// Trace: src/VX_mem_arb.sv:20:5
-						localparam LOG_NUM_REQS = (NUM_INPUTS > NUM_OUTPUTS ? $clog2((NUM_INPUTS + 1) / 2) : 0);
+						localparam LOG_NUM_REQS = (NUM_INPUTS > NUM_OUTPUTS ? $clog2((NUM_INPUTS + 0) / 1) : 0);
 						// Trace: src/VX_mem_arb.sv:21:5
 						localparam REQ_DATAW = 606 + TAG_WIDTH;
 						// Trace: src/VX_mem_arb.sv:22:5
@@ -6789,13 +5473,13 @@ module Vortex (
 						// Trace: src/VX_mem_arb.sv:26:5
 						wire [NUM_INPUTS - 1:0] req_ready_in;
 						// Trace: src/VX_mem_arb.sv:27:5
-						wire [1:0] req_valid_out;
+						wire [0:0] req_valid_out;
 						// Trace: src/VX_mem_arb.sv:28:5
-						wire [(2 * REQ_DATAW) - 1:0] req_data_out;
+						wire [REQ_DATAW - 1:0] req_data_out;
 						// Trace: src/VX_mem_arb.sv:29:5
 						wire [(SEL_COUNT * (LOG_NUM_REQS > 0 ? LOG_NUM_REQS : 1)) - 1:0] req_sel_out;
 						// Trace: src/VX_mem_arb.sv:30:5
-						wire [1:0] req_ready_out;
+						wire [0:0] req_ready_out;
 						// Trace: src/VX_mem_arb.sv:31:5
 						genvar _gv_i_183;
 						for (_gv_i_183 = 0; _gv_i_183 < NUM_INPUTS; _gv_i_183 = _gv_i_183 + 1) begin : g_req_data_in
@@ -6861,15 +5545,15 @@ module Vortex (
 						// Trace: src/VX_mem_arb.sv:81:5
 						wire [NUM_INPUTS - 1:0] rsp_ready_out;
 						// Trace: src/VX_mem_arb.sv:82:5
-						wire [1:0] rsp_valid_in;
+						wire [0:0] rsp_valid_in;
 						// Trace: src/VX_mem_arb.sv:83:5
-						wire [(2 * RSP_DATAW) - 1:0] rsp_data_in;
+						wire [RSP_DATAW - 1:0] rsp_data_in;
 						// Trace: src/VX_mem_arb.sv:84:5
-						wire [1:0] rsp_ready_in;
+						wire [0:0] rsp_ready_in;
 						// Trace: src/VX_mem_arb.sv:85:5
 						if (NUM_INPUTS > NUM_OUTPUTS) begin : g_rsp_select
 							// Trace: src/VX_mem_arb.sv:86:9
-							wire [(2 * LOG_NUM_REQS) - 1:0] rsp_sel_in;
+							wire [LOG_NUM_REQS - 1:0] rsp_sel_in;
 							genvar _gv_i_185;
 							for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
 								localparam i = _gv_i_185;
@@ -7014,25 +5698,25 @@ module Vortex (
 					// Trace: src/VX_cache_wrap.sv:98:5
 					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_valid = mem_bus_tmp_if[i].req_valid;
 					// Trace: src/VX_cache_wrap.sv:99:5
-					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[618] = 0;
+					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[612] = 0;
 					// Trace: src/VX_cache_wrap.sv:100:5
-					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[617-:26] = mem_bus_tmp_if[i].req_data[538 + (_param_4FE36_DATA_SIZE + (_param_4FE36_TAG_WIDTH + 2))-:((602 + (_param_4FE36_TAG_WIDTH + 2)) >= (579 + (_param_4FE36_TAG_WIDTH + 0)) ? ((538 + (_param_4FE36_DATA_SIZE + (_param_4FE36_TAG_WIDTH + 2))) - (512 + (_param_4FE36_DATA_SIZE + (3 + (_param_4FE36_TAG_WIDTH + 0))))) + 1 : ((512 + (_param_4FE36_DATA_SIZE + (3 + (_param_4FE36_TAG_WIDTH + 0)))) - (538 + (_param_4FE36_DATA_SIZE + (_param_4FE36_TAG_WIDTH + 2)))) + 1)];
+					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[611-:26] = mem_bus_tmp_if[i].req_data[538 + (_param_4FE36_DATA_SIZE + (_param_4FE36_TAG_WIDTH + 2))-:((602 + (_param_4FE36_TAG_WIDTH + 2)) >= (579 + (_param_4FE36_TAG_WIDTH + 0)) ? ((538 + (_param_4FE36_DATA_SIZE + (_param_4FE36_TAG_WIDTH + 2))) - (512 + (_param_4FE36_DATA_SIZE + (3 + (_param_4FE36_TAG_WIDTH + 0))))) + 1 : ((512 + (_param_4FE36_DATA_SIZE + (3 + (_param_4FE36_TAG_WIDTH + 0)))) - (538 + (_param_4FE36_DATA_SIZE + (_param_4FE36_TAG_WIDTH + 2)))) + 1)];
 					// Trace: src/VX_cache_wrap.sv:101:5
-					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[591-:512] = 1'sb0;
+					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[585-:512] = 1'sb0;
 					// Trace: src/VX_cache_wrap.sv:102:5
-					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[79-:64] = 1'sb1;
+					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[73-:64] = 1'sb1;
 					// Trace: src/VX_cache_wrap.sv:103:5
-					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[15-:3] = mem_bus_tmp_if[i].req_data[_param_4FE36_TAG_WIDTH + 2-:((_param_4FE36_TAG_WIDTH + 2) >= (_param_4FE36_TAG_WIDTH + 0) ? ((_param_4FE36_TAG_WIDTH + 2) - (_param_4FE36_TAG_WIDTH + 0)) + 1 : ((_param_4FE36_TAG_WIDTH + 0) - (_param_4FE36_TAG_WIDTH + 2)) + 1)];
+					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[9-:3] = mem_bus_tmp_if[i].req_data[_param_4FE36_TAG_WIDTH + 2-:((_param_4FE36_TAG_WIDTH + 2) >= (_param_4FE36_TAG_WIDTH + 0) ? ((_param_4FE36_TAG_WIDTH + 2) - (_param_4FE36_TAG_WIDTH + 0)) + 1 : ((_param_4FE36_TAG_WIDTH + 0) - (_param_4FE36_TAG_WIDTH + 2)) + 1)];
 					// Trace: src/VX_cache_wrap.sv:104:5
-					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[12-:13] = mem_bus_tmp_if[i].req_data[_param_4FE36_TAG_WIDTH - 1-:_param_4FE36_TAG_WIDTH + 0];
+					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_data[6-:7] = mem_bus_tmp_if[i].req_data[_param_4FE36_TAG_WIDTH - 1-:_param_4FE36_TAG_WIDTH + 0];
 					// Trace: src/VX_cache_wrap.sv:105:5
 					assign mem_bus_tmp_if[i].req_ready = Vortex.mem_bus_if[i + _mbase_mem_bus_if].req_ready;
 					// Trace: src/VX_cache_wrap.sv:106:5
 					assign mem_bus_tmp_if[i].rsp_valid = Vortex.mem_bus_if[i + _mbase_mem_bus_if].rsp_valid;
 					// Trace: src/VX_cache_wrap.sv:107:5
-					assign mem_bus_tmp_if[i].rsp_data[_param_4FE36_TAG_WIDTH + 511-:((_param_4FE36_TAG_WIDTH + 511) >= (_param_4FE36_TAG_WIDTH + 0) ? ((_param_4FE36_TAG_WIDTH + 511) - (_param_4FE36_TAG_WIDTH + 0)) + 1 : ((_param_4FE36_TAG_WIDTH + 0) - (_param_4FE36_TAG_WIDTH + 511)) + 1)] = Vortex.mem_bus_if[i + _mbase_mem_bus_if].rsp_data[524-:512];
+					assign mem_bus_tmp_if[i].rsp_data[_param_4FE36_TAG_WIDTH + 511-:((_param_4FE36_TAG_WIDTH + 511) >= (_param_4FE36_TAG_WIDTH + 0) ? ((_param_4FE36_TAG_WIDTH + 511) - (_param_4FE36_TAG_WIDTH + 0)) + 1 : ((_param_4FE36_TAG_WIDTH + 0) - (_param_4FE36_TAG_WIDTH + 511)) + 1)] = Vortex.mem_bus_if[i + _mbase_mem_bus_if].rsp_data[518-:512];
 					// Trace: src/VX_cache_wrap.sv:108:5
-					assign mem_bus_tmp_if[i].rsp_data[_param_4FE36_TAG_WIDTH - 1-:_param_4FE36_TAG_WIDTH + 0] = Vortex.mem_bus_if[i + _mbase_mem_bus_if].rsp_data[12-:13];
+					assign mem_bus_tmp_if[i].rsp_data[_param_4FE36_TAG_WIDTH - 1-:_param_4FE36_TAG_WIDTH + 0] = Vortex.mem_bus_if[i + _mbase_mem_bus_if].rsp_data[6-:7];
 					// Trace: src/VX_cache_wrap.sv:109:5
 					assign Vortex.mem_bus_if[i + _mbase_mem_bus_if].rsp_ready = mem_bus_tmp_if[i].rsp_ready;
 				end
@@ -7067,28 +5751,28 @@ module Vortex (
 	// Trace: src/Vortex.sv:62:5
 	genvar _gv_i_95;
 	generate
-		for (_gv_i_95 = 0; _gv_i_95 < 2; _gv_i_95 = _gv_i_95 + 1) begin : g_mem_bus_if
+		for (_gv_i_95 = 0; _gv_i_95 < VX_gpu_pkg_L3_NUM_REQS; _gv_i_95 = _gv_i_95 + 1) begin : g_mem_bus_if
 			localparam i = _gv_i_95;
 			// Trace: src/Vortex.sv:63:9
 			assign mem_req_valid[i] = mem_bus_if[i].req_valid;
 			// Trace: src/Vortex.sv:64:9
-			assign mem_req_rw[i] = mem_bus_if[i].req_data[618];
+			assign mem_req_rw[i] = mem_bus_if[i].req_data[612];
 			// Trace: src/Vortex.sv:65:9
-			assign mem_req_byteen[(1 - i) * 64+:64] = mem_bus_if[i].req_data[79-:64];
+			assign mem_req_byteen[i * 64+:64] = mem_bus_if[i].req_data[73-:64];
 			// Trace: src/Vortex.sv:66:9
-			assign mem_req_addr[(1 - i) * 26+:26] = mem_bus_if[i].req_data[617-:26];
+			assign mem_req_addr[i * 26+:26] = mem_bus_if[i].req_data[611-:26];
 			// Trace: src/Vortex.sv:67:9
-			assign mem_req_data[(1 - i) * 512+:512] = mem_bus_if[i].req_data[591-:512];
+			assign mem_req_data[i * 512+:512] = mem_bus_if[i].req_data[585-:512];
 			// Trace: src/Vortex.sv:68:9
-			assign mem_req_tag[(1 - i) * 13+:13] = mem_bus_if[i].req_data[12-:13];
+			assign mem_req_tag[i * 7+:7] = mem_bus_if[i].req_data[6-:7];
 			// Trace: src/Vortex.sv:69:9
 			assign mem_bus_if[i].req_ready = mem_req_ready[i];
 			// Trace: src/Vortex.sv:70:9
 			assign mem_bus_if[i].rsp_valid = mem_rsp_valid[i];
 			// Trace: src/Vortex.sv:71:9
-			assign mem_bus_if[i].rsp_data[524-:512] = mem_rsp_data[(1 - i) * 512+:512];
+			assign mem_bus_if[i].rsp_data[518-:512] = mem_rsp_data[i * 512+:512];
 			// Trace: src/Vortex.sv:72:9
-			assign mem_bus_if[i].rsp_data[12-:13] = mem_rsp_tag[(1 - i) * 13+:13];
+			assign mem_bus_if[i].rsp_data[6-:7] = mem_rsp_tag[i * 7+:7];
 			// Trace: src/Vortex.sv:73:9
 			assign mem_rsp_ready[i] = mem_bus_if[i].rsp_ready;
 		end
@@ -7117,24 +5801,12 @@ module Vortex (
 	// Trace: src/Vortex.sv:78:5
 	assign dcr_bus_if.write_data = dcr_wr_data;
 	// Trace: src/Vortex.sv:79:5
-	wire [3:0] per_cluster_busy;
+	wire [0:0] per_cluster_busy;
 	// Trace: src/Vortex.sv:80:5
 	genvar _gv_cluster_id_1;
-	function automatic [9:0] sv2v_cast_10;
-		input reg [9:0] inp;
-		sv2v_cast_10 = inp;
-	endfunction
-	function automatic signed [0:0] sv2v_cast_1_signed;
-		input reg signed [0:0] inp;
-		sv2v_cast_1_signed = inp;
-	endfunction
 	function automatic [2:0] sv2v_cast_3;
 		input reg [2:0] inp;
 		sv2v_cast_3 = inp;
-	endfunction
-	function automatic [25:0] sv2v_cast_26;
-		input reg [25:0] inp;
-		sv2v_cast_26 = inp;
 	endfunction
 	function automatic [29:0] sv2v_cast_30;
 		input reg [29:0] inp;
@@ -7152,10 +5824,6 @@ module Vortex (
 		input reg [3:0] inp;
 		sv2v_cast_4 = inp;
 	endfunction
-	function automatic signed [2:0] sv2v_cast_3_signed;
-		input reg signed [2:0] inp;
-		sv2v_cast_3_signed = inp;
-	endfunction
 	function automatic signed [1:0] sv2v_cast_2_signed;
 		input reg signed [1:0] inp;
 		sv2v_cast_2_signed = inp;
@@ -7163,6 +5831,10 @@ module Vortex (
 	function automatic [0:0] sv2v_cast_1;
 		input reg [0:0] inp;
 		sv2v_cast_1 = inp;
+	endfunction
+	function automatic signed [0:0] sv2v_cast_1_signed;
+		input reg signed [0:0] inp;
+		sv2v_cast_1_signed = inp;
 	endfunction
 	function automatic signed [31:0] sv2v_cast_32_signed;
 		input reg signed [31:0] inp;
@@ -7172,12 +5844,16 @@ module Vortex (
 		input reg [31:0] inp;
 		sv2v_cast_32 = inp;
 	endfunction
+	function automatic [25:0] sv2v_cast_26;
+		input reg [25:0] inp;
+		sv2v_cast_26 = inp;
+	endfunction
 	function automatic [43:0] sv2v_cast_44;
 		input reg [43:0] inp;
 		sv2v_cast_44 = inp;
 	endfunction
 	generate
-		for (_gv_cluster_id_1 = 0; _gv_cluster_id_1 < 4; _gv_cluster_id_1 = _gv_cluster_id_1 + 1) begin : g_clusters
+		for (_gv_cluster_id_1 = 0; _gv_cluster_id_1 < 1; _gv_cluster_id_1 = _gv_cluster_id_1 + 1) begin : g_clusters
 			localparam cluster_id = _gv_cluster_id_1;
 			// Trace: src/Vortex.sv:81:5
 			wire [0:0] cluster_reset;
@@ -7206,21 +5882,12 @@ module Vortex (
 				// Trace: src/VX_dcr_bus_if.sv:10:5
 			end
 			if (1) begin : genblk1
-				// Trace: src/Vortex.sv:90:9
-				VX_pipe_register #(
-					.DATAW(45),
-					.DEPTH(1'd1)
-				) pipe_reg(
-					.clk(clk),
-					.reset(1'b0),
-					.enable(1'b1),
-					.data_in({dcr_bus_if.write_valid && 1'b1, dcr_bus_if.write_addr, dcr_bus_if.write_data}),
-					.data_out({cluster_dcr_bus_if.write_valid, cluster_dcr_bus_if.write_addr, cluster_dcr_bus_if.write_data})
-				);
+				// Trace: src/Vortex.sv:101:9
+				assign {cluster_dcr_bus_if.write_valid, cluster_dcr_bus_if.write_addr, cluster_dcr_bus_if.write_data} = {dcr_bus_if.write_valid && 1'b1, dcr_bus_if.write_addr, dcr_bus_if.write_data};
 			end
 			// Trace: src/Vortex.sv:104:9
 			// expanded module instance: cluster
-			localparam _bbase_5867A_mem_bus_if = cluster_id * 2;
+			localparam _bbase_5867A_mem_bus_if = cluster_id * VX_gpu_pkg_L2_NUM_REQS;
 			localparam _param_5867A_CLUSTER_ID = cluster_id;
 			localparam _param_5867A_INSTANCE_ID = "";
 			if (1) begin : cluster
@@ -7241,8 +5908,8 @@ module Vortex (
 				localparam VX_gpu_pkg_LSU_WORD_SIZE = VX_gpu_pkg_XLENB;
 				localparam VX_gpu_pkg_DCACHE_CHANNELS = 1;
 				localparam VX_gpu_pkg_DCACHE_NUM_REQS = 1;
-				localparam VX_gpu_pkg_NUM_SOCKETS = 4;
-				localparam VX_gpu_pkg_L2_NUM_REQS = 4;
+				localparam VX_gpu_pkg_NUM_SOCKETS = 1;
+				localparam VX_gpu_pkg_L2_NUM_REQS = 1;
 				localparam _mbase_mem_bus_if = _bbase_5867A_mem_bus_if;
 				// Trace: src/VX_cluster.sv:9:5
 				wire busy;
@@ -7253,15 +5920,15 @@ module Vortex (
 				localparam VX_gpu_pkg_DCACHE_TAG_ID_BITS = 2;
 				localparam VX_gpu_pkg_UUID_WIDTH = 1;
 				localparam VX_gpu_pkg_DCACHE_TAG_WIDTH = 3;
-				localparam VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH = 8;
+				localparam VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH = 6;
 				localparam VX_gpu_pkg_ICACHE_MEM_TAG_WIDTH = 5;
 				localparam VX_gpu_pkg_L1_MEM_TAG_WIDTH = VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH;
-				localparam VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH = 9;
+				localparam VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH = 7;
 				// expanded interface instance: per_socket_mem_bus_if
 				localparam _param_1BD2B_DATA_SIZE = 64;
 				localparam _param_1BD2B_TAG_WIDTH = VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH;
 				genvar _arr_1BD2B;
-				for (_arr_1BD2B = 0; _arr_1BD2B <= 3; _arr_1BD2B = _arr_1BD2B + 1) begin : per_socket_mem_bus_if
+				for (_arr_1BD2B = 0; _arr_1BD2B <= 0; _arr_1BD2B = _arr_1BD2B + 1) begin : per_socket_mem_bus_if
 					// removed import VX_gpu_pkg::*;
 					// Trace: src/VX_mem_bus_if.sv:2:15
 					localparam DATA_SIZE = _param_1BD2B_DATA_SIZE;
@@ -7285,13 +5952,13 @@ module Vortex (
 					// Trace: src/VX_mem_bus_if.sv:24:5
 					wire req_valid;
 					// Trace: src/VX_mem_bus_if.sv:25:5
-					wire [614:0] req_data;
+					wire [612:0] req_data;
 					// Trace: src/VX_mem_bus_if.sv:26:5
 					wire req_ready;
 					// Trace: src/VX_mem_bus_if.sv:27:5
 					wire rsp_valid;
 					// Trace: src/VX_mem_bus_if.sv:28:5
-					wire [520:0] rsp_data;
+					wire [518:0] rsp_data;
 					// Trace: src/VX_mem_bus_if.sv:29:5
 					wire rsp_ready;
 					// Trace: src/VX_mem_bus_if.sv:30:5
@@ -7313,7 +5980,7 @@ module Vortex (
 				localparam VX_gpu_pkg_L2_WORD_SIZE = 64;
 				// expanded module instance: l2cache
 				localparam _bbase_56EB4_core_bus_if = 0;
-				localparam _bbase_56EB4_mem_bus_if = cluster_id * 2;
+				localparam _bbase_56EB4_mem_bus_if = cluster_id * VX_gpu_pkg_L2_NUM_REQS;
 				localparam _param_56EB4_INSTANCE_ID = "";
 				localparam _param_56EB4_CACHE_SIZE = 1048576;
 				localparam _param_56EB4_LINE_SIZE = 64;
@@ -7321,7 +5988,7 @@ module Vortex (
 				localparam _param_56EB4_NUM_WAYS = 8;
 				localparam _param_56EB4_WORD_SIZE = VX_gpu_pkg_L2_WORD_SIZE;
 				localparam _param_56EB4_NUM_REQS = VX_gpu_pkg_L2_NUM_REQS;
-				localparam _param_56EB4_MEM_PORTS = 2;
+				localparam _param_56EB4_MEM_PORTS = VX_gpu_pkg_L2_NUM_REQS;
 				localparam _param_56EB4_CRSQ_SIZE = 2;
 				localparam _param_56EB4_MSHR_SIZE = 16;
 				localparam _param_56EB4_MRSQ_SIZE = 4;
@@ -7334,7 +6001,7 @@ module Vortex (
 				localparam _param_56EB4_CORE_OUT_BUF = 3;
 				localparam _param_56EB4_MEM_OUT_BUF = 3;
 				localparam _param_56EB4_NC_ENABLE = 1;
-				localparam _param_56EB4_PASSTHRU = 1'd0;
+				localparam _param_56EB4_PASSTHRU = 1'd1;
 				if (1) begin : l2cache
 					// removed import VX_gpu_pkg::*;
 					// Trace: src/VX_cache_wrap.sv:2:15
@@ -7391,11 +6058,11 @@ module Vortex (
 					// Trace: src/VX_cache_wrap.sv:28:5
 					localparam _mbase_mem_bus_if = _bbase_56EB4_mem_bus_if;
 					// Trace: src/VX_cache_wrap.sv:30:5
-					localparam CACHE_MEM_TAG_WIDTH = 6;
+					localparam CACHE_MEM_TAG_WIDTH = 5;
 					// Trace: src/VX_cache_wrap.sv:32:5
-					localparam BYPASS_TAG_WIDTH = 10;
+					localparam BYPASS_TAG_WIDTH = 7;
 					// Trace: src/VX_cache_wrap.sv:34:5
-					localparam NC_TAG_WIDTH = 11;
+					localparam NC_TAG_WIDTH = 8;
 					// Trace: src/VX_cache_wrap.sv:35:5
 					localparam MEM_TAG_WIDTH = (PASSTHRU ? BYPASS_TAG_WIDTH : (NC_ENABLE ? NC_TAG_WIDTH : CACHE_MEM_TAG_WIDTH));
 					// Trace: src/VX_cache_wrap.sv:36:5
@@ -7405,7 +6072,7 @@ module Vortex (
 					localparam _param_24C1C_DATA_SIZE = WORD_SIZE;
 					localparam _param_24C1C_TAG_WIDTH = TAG_WIDTH;
 					genvar _arr_24C1C;
-					for (_arr_24C1C = 0; _arr_24C1C <= 3; _arr_24C1C = _arr_24C1C + 1) begin : core_bus_cache_if
+					for (_arr_24C1C = 0; _arr_24C1C <= 0; _arr_24C1C = _arr_24C1C + 1) begin : core_bus_cache_if
 						// removed import VX_gpu_pkg::*;
 						// Trace: src/VX_mem_bus_if.sv:2:15
 						localparam DATA_SIZE = _param_24C1C_DATA_SIZE;
@@ -7429,13 +6096,13 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [614:0] req_data;
+						wire [612:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [520:0] rsp_data;
+						wire [518:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
@@ -7446,7 +6113,7 @@ module Vortex (
 					localparam _param_D895D_DATA_SIZE = LINE_SIZE;
 					localparam _param_D895D_TAG_WIDTH = CACHE_MEM_TAG_WIDTH;
 					genvar _arr_D895D;
-					for (_arr_D895D = 0; _arr_D895D <= 1; _arr_D895D = _arr_D895D + 1) begin : mem_bus_cache_if
+					for (_arr_D895D = 0; _arr_D895D <= 0; _arr_D895D = _arr_D895D + 1) begin : mem_bus_cache_if
 						// removed import VX_gpu_pkg::*;
 						// Trace: src/VX_mem_bus_if.sv:2:15
 						localparam DATA_SIZE = _param_D895D_DATA_SIZE;
@@ -7470,13 +6137,13 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [611:0] req_data;
+						wire [610:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [517:0] rsp_data;
+						wire [516:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
@@ -7487,7 +6154,7 @@ module Vortex (
 					localparam _param_4FE36_DATA_SIZE = LINE_SIZE;
 					localparam _param_4FE36_TAG_WIDTH = MEM_TAG_WIDTH;
 					genvar _arr_4FE36;
-					for (_arr_4FE36 = 0; _arr_4FE36 <= 1; _arr_4FE36 = _arr_4FE36 + 1) begin : mem_bus_tmp_if
+					for (_arr_4FE36 = 0; _arr_4FE36 <= 0; _arr_4FE36 = _arr_4FE36 + 1) begin : mem_bus_tmp_if
 						// removed import VX_gpu_pkg::*;
 						// Trace: src/VX_mem_bus_if.sv:2:15
 						localparam DATA_SIZE = _param_4FE36_DATA_SIZE;
@@ -7511,13 +6178,13 @@ module Vortex (
 						// Trace: src/VX_mem_bus_if.sv:24:5
 						wire req_valid;
 						// Trace: src/VX_mem_bus_if.sv:25:5
-						wire [616:0] req_data;
+						wire [612:0] req_data;
 						// Trace: src/VX_mem_bus_if.sv:26:5
 						wire req_ready;
 						// Trace: src/VX_mem_bus_if.sv:27:5
 						wire rsp_valid;
 						// Trace: src/VX_mem_bus_if.sv:28:5
-						wire [522:0] rsp_data;
+						wire [518:0] rsp_data;
 						// Trace: src/VX_mem_bus_if.sv:29:5
 						wire rsp_ready;
 						// Trace: src/VX_mem_bus_if.sv:30:5
@@ -7582,7 +6249,7 @@ module Vortex (
 							// Trace: src/VX_cache_bypass.sv:20:5
 							localparam _mbase_mem_bus_out_if = 0;
 							// Trace: src/VX_cache_bypass.sv:22:5
-							localparam DIRECT_PASSTHRU = (!CACHE_ENABLE && 1'd1) && 1'd0;
+							localparam DIRECT_PASSTHRU = (!CACHE_ENABLE && 1'd1) && 1'd1;
 							// Trace: src/VX_cache_bypass.sv:23:5
 							localparam CORE_DATA_WIDTH = 512;
 							// Trace: src/VX_cache_bypass.sv:24:5
@@ -7591,13 +6258,13 @@ module Vortex (
 							localparam WSEL_BITS = 0;
 							// Trace: src/VX_cache_bypass.sv:26:5
 							localparam VX_gpu_pkg_UUID_WIDTH = 1;
-							localparam CORE_TAG_ID_WIDTH = 8;
+							localparam CORE_TAG_ID_WIDTH = 6;
 							// Trace: src/VX_cache_bypass.sv:27:5
-							localparam MEM_TAG_ID_WIDTH = 9;
+							localparam MEM_TAG_ID_WIDTH = 6;
 							// Trace: src/VX_cache_bypass.sv:28:5
-							localparam MEM_TAG_NC1_WIDTH = 10;
+							localparam MEM_TAG_NC1_WIDTH = 7;
 							// Trace: src/VX_cache_bypass.sv:29:5
-							localparam MEM_TAG_NC2_WIDTH = 10;
+							localparam MEM_TAG_NC2_WIDTH = 7;
 							// Trace: src/VX_cache_bypass.sv:30:5
 							localparam MEM_TAG_OUT_WIDTH = (CACHE_ENABLE ? MEM_TAG_NC2_WIDTH : MEM_TAG_NC2_WIDTH);
 							// Trace: src/VX_cache_bypass.sv:31:5
@@ -7629,20 +6296,20 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [614:0] req_data;
+								wire [612:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [520:0] rsp_data;
+								wire [518:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
 								// Trace: src/VX_mem_bus_if.sv:38:5
 							end
 							// Trace: src/VX_cache_bypass.sv:35:5
-							wire [3:0] core_req_nc_sel;
+							wire [0:0] core_req_nc_sel;
 							// Trace: src/VX_cache_bypass.sv:36:5
 							genvar _gv_i_56;
 							localparam VX_gpu_pkg_MEM_REQ_FLAG_IO = 1;
@@ -7650,7 +6317,7 @@ module Vortex (
 								localparam i = _gv_i_56;
 								if (CACHE_ENABLE) begin : g_cache
 									// Trace: src/VX_cache_bypass.sv:38:13
-									assign core_req_nc_sel[i] = ~Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_core_bus_in_if].req_data[10];
+									assign core_req_nc_sel[i] = ~Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_core_bus_in_if].req_data[8];
 								end
 								else begin : g_no_cache
 									// Trace: src/VX_cache_bypass.sv:40:13
@@ -7709,19 +6376,19 @@ module Vortex (
 								// Trace: src/VX_mem_switch.sv:22:5
 								localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
 								localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-								localparam REQ_DATAW = 615;
+								localparam REQ_DATAW = 613;
 								// Trace: src/VX_mem_switch.sv:23:5
-								localparam RSP_DATAW = 521;
+								localparam RSP_DATAW = 519;
 								// Trace: src/VX_mem_switch.sv:24:5
-								wire [3:0] req_valid_in;
+								wire [0:0] req_valid_in;
 								// Trace: src/VX_mem_switch.sv:25:5
-								wire [2459:0] req_data_in;
+								wire [612:0] req_data_in;
 								// Trace: src/VX_mem_switch.sv:26:5
-								wire [3:0] req_ready_in;
+								wire [0:0] req_ready_in;
 								// Trace: src/VX_mem_switch.sv:27:5
 								wire [NUM_OUTPUTS - 1:0] req_valid_out;
 								// Trace: src/VX_mem_switch.sv:28:5
-								wire [(NUM_OUTPUTS * 615) - 1:0] req_data_out;
+								wire [(NUM_OUTPUTS * 613) - 1:0] req_data_out;
 								// Trace: src/VX_mem_switch.sv:29:5
 								wire [NUM_OUTPUTS - 1:0] req_ready_out;
 								// Trace: src/VX_mem_switch.sv:30:5
@@ -7731,7 +6398,7 @@ module Vortex (
 									// Trace: src/VX_mem_switch.sv:31:9
 									assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].req_valid;
 									// Trace: src/VX_mem_switch.sv:32:9
-									assign req_data_in[i * 615+:615] = Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].req_data;
+									assign req_data_in[i * 613+:613] = Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].req_data;
 									// Trace: src/VX_mem_switch.sv:33:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 								end
@@ -7759,22 +6426,22 @@ module Vortex (
 									// Trace: src/VX_mem_switch.sv:52:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 									// Trace: src/VX_mem_switch.sv:53:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 615+:615];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 613+:613];
 									// Trace: src/VX_mem_switch.sv:54:9
 									assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_ready;
 								end
 								// Trace: src/VX_mem_switch.sv:56:5
 								wire [NUM_OUTPUTS - 1:0] rsp_valid_in;
 								// Trace: src/VX_mem_switch.sv:57:5
-								wire [(NUM_OUTPUTS * 521) - 1:0] rsp_data_in;
+								wire [(NUM_OUTPUTS * 519) - 1:0] rsp_data_in;
 								// Trace: src/VX_mem_switch.sv:58:5
 								wire [NUM_OUTPUTS - 1:0] rsp_ready_in;
 								// Trace: src/VX_mem_switch.sv:59:5
-								wire [3:0] rsp_valid_out;
+								wire [0:0] rsp_valid_out;
 								// Trace: src/VX_mem_switch.sv:60:5
-								wire [2083:0] rsp_data_out;
+								wire [518:0] rsp_data_out;
 								// Trace: src/VX_mem_switch.sv:61:5
-								wire [3:0] rsp_ready_out;
+								wire [0:0] rsp_ready_out;
 								// Trace: src/VX_mem_switch.sv:62:5
 								genvar _gv_i_111;
 								for (_gv_i_111 = 0; _gv_i_111 < NUM_OUTPUTS; _gv_i_111 = _gv_i_111 + 1) begin : g_rsp_data_in
@@ -7782,7 +6449,7 @@ module Vortex (
 									// Trace: src/VX_mem_switch.sv:63:9
 									assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_valid;
 									// Trace: src/VX_mem_switch.sv:64:9
-									assign rsp_data_in[i * 521+:521] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
+									assign rsp_data_in[i * 519+:519] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
 									// Trace: src/VX_mem_switch.sv:65:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 								end
@@ -7811,7 +6478,7 @@ module Vortex (
 									// Trace: src/VX_mem_switch.sv:85:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 									// Trace: src/VX_mem_switch.sv:86:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 521+:521];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
 									// Trace: src/VX_mem_switch.sv:87:9
 									assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.per_socket_mem_bus_if[i + _mbase_bus_in_if].rsp_ready;
 								end
@@ -7824,7 +6491,7 @@ module Vortex (
 							localparam _param_C0263_DATA_SIZE = WORD_SIZE;
 							localparam _param_C0263_TAG_WIDTH = CORE_TAG_WIDTH;
 							genvar _arr_C0263;
-							for (_arr_C0263 = 0; _arr_C0263 <= 3; _arr_C0263 = _arr_C0263 + 1) begin : core_bus_in_nc_if
+							for (_arr_C0263 = 0; _arr_C0263 <= 0; _arr_C0263 = _arr_C0263 + 1) begin : core_bus_in_nc_if
 								// removed import VX_gpu_pkg::*;
 								// Trace: src/VX_mem_bus_if.sv:2:15
 								localparam DATA_SIZE = _param_C0263_DATA_SIZE;
@@ -7848,13 +6515,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [614:0] req_data;
+								wire [612:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [520:0] rsp_data;
+								wire [518:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -7878,17 +6545,17 @@ module Vortex (
 								assign core_bus_in_nc_if[i].rsp_ready = core_bus_nc_switch_if[0 + i].rsp_ready;
 								if (CACHE_ENABLE) begin : g_cache
 									// Trace: src/VX_cache_bypass.sv:70:13
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_valid = core_bus_nc_switch_if[4 + i].req_valid;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_valid = core_bus_nc_switch_if[1 + i].req_valid;
 									// Trace: src/VX_cache_bypass.sv:71:13
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_data = core_bus_nc_switch_if[4 + i].req_data;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_data = core_bus_nc_switch_if[1 + i].req_data;
 									// Trace: src/VX_cache_bypass.sv:72:13
-									assign core_bus_nc_switch_if[4 + i].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_ready;
+									assign core_bus_nc_switch_if[1 + i].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].req_ready;
 									// Trace: src/VX_cache_bypass.sv:73:13
-									assign core_bus_nc_switch_if[4 + i].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_valid;
+									assign core_bus_nc_switch_if[1 + i].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_valid;
 									// Trace: src/VX_cache_bypass.sv:74:13
-									assign core_bus_nc_switch_if[4 + i].rsp_data = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_data;
+									assign core_bus_nc_switch_if[1 + i].rsp_data = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_data;
 									// Trace: src/VX_cache_bypass.sv:75:13
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_ready = core_bus_nc_switch_if[4 + i].rsp_ready;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_out_if].rsp_ready = core_bus_nc_switch_if[1 + i].rsp_ready;
 								end
 								else begin : g_no_cache
 									// Trace: src/VX_cache_bypass.sv:77:5
@@ -7904,7 +6571,7 @@ module Vortex (
 							localparam _param_D50AC_DATA_SIZE = WORD_SIZE;
 							localparam _param_D50AC_TAG_WIDTH = MEM_TAG_NC1_WIDTH;
 							genvar _arr_D50AC;
-							for (_arr_D50AC = 0; _arr_D50AC <= 1; _arr_D50AC = _arr_D50AC + 1) begin : core_bus_nc_arb_if
+							for (_arr_D50AC = 0; _arr_D50AC <= 0; _arr_D50AC = _arr_D50AC + 1) begin : core_bus_nc_arb_if
 								// removed import VX_gpu_pkg::*;
 								// Trace: src/VX_mem_bus_if.sv:2:15
 								localparam DATA_SIZE = _param_D50AC_DATA_SIZE;
@@ -7928,13 +6595,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [615:0] req_data;
+								wire [612:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [521:0] rsp_data;
+								wire [518:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -7989,27 +6656,27 @@ module Vortex (
 								// Trace: src/VX_mem_arb.sv:19:5
 								localparam DATA_WIDTH = 512;
 								// Trace: src/VX_mem_arb.sv:20:5
-								localparam LOG_NUM_REQS = 1;
+								localparam LOG_NUM_REQS = 0;
 								// Trace: src/VX_mem_arb.sv:21:5
-								localparam REQ_DATAW = 615;
+								localparam REQ_DATAW = 613;
 								// Trace: src/VX_mem_arb.sv:22:5
-								localparam RSP_DATAW = 521;
+								localparam RSP_DATAW = 519;
 								// Trace: src/VX_mem_arb.sv:23:5
 								localparam SEL_COUNT = NUM_OUTPUTS;
 								// Trace: src/VX_mem_arb.sv:24:5
-								wire [3:0] req_valid_in;
+								wire [0:0] req_valid_in;
 								// Trace: src/VX_mem_arb.sv:25:5
-								wire [2459:0] req_data_in;
+								wire [612:0] req_data_in;
 								// Trace: src/VX_mem_arb.sv:26:5
-								wire [3:0] req_ready_in;
+								wire [0:0] req_ready_in;
 								// Trace: src/VX_mem_arb.sv:27:5
-								wire [1:0] req_valid_out;
+								wire [0:0] req_valid_out;
 								// Trace: src/VX_mem_arb.sv:28:5
-								wire [1229:0] req_data_out;
+								wire [612:0] req_data_out;
 								// Trace: src/VX_mem_arb.sv:29:5
-								wire [1:0] req_sel_out;
+								wire [0:0] req_sel_out;
 								// Trace: src/VX_mem_arb.sv:30:5
-								wire [1:0] req_ready_out;
+								wire [0:0] req_ready_out;
 								// Trace: src/VX_mem_arb.sv:31:5
 								genvar _gv_i_183;
 								for (_gv_i_183 = 0; _gv_i_183 < NUM_INPUTS; _gv_i_183 = _gv_i_183 + 1) begin : g_req_data_in
@@ -8017,7 +6684,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:32:9
 									assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_valid;
 									// Trace: src/VX_mem_arb.sv:33:9
-									assign req_data_in[i * 615+:615] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
+									assign req_data_in[i * 613+:613] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
 									// Trace: src/VX_mem_arb.sv:34:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 								end
@@ -8044,80 +6711,59 @@ module Vortex (
 								for (_gv_i_184 = 0; _gv_i_184 < NUM_OUTPUTS; _gv_i_184 = _gv_i_184 + 1) begin : g_bus_out_if
 									localparam i = _gv_i_184;
 									// Trace: src/VX_mem_arb.sv:54:9
-									wire [8:0] req_tag_out;
+									wire [6:0] req_tag_out;
 									// Trace: src/VX_mem_arb.sv:55:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 									// Trace: src/VX_mem_arb.sv:56:9
-									assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[615], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[614-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[588-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[76-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[12-:3], req_tag_out} = req_data_out[i * 615+:615];
+									assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[612], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[611-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[585-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[73-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[9-:3], req_tag_out} = req_data_out[i * 613+:613];
 									// Trace: src/VX_mem_arb.sv:64:9
 									assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_ready;
-									if (1) begin : g_req_tag_sel_out
-										// Trace: src/VX_mem_arb.sv:66:13
-										VX_bits_insert #(
-											.N(TAG_WIDTH),
-											.S(LOG_NUM_REQS),
-											.POS(TAG_SEL_IDX)
-										) bits_insert(
-											.data_in(req_tag_out),
-											.ins_in(req_sel_out[i+:1]),
-											.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[9-:10])
-										);
+									if (1) begin : g_req_tag_out
+										// Trace: src/VX_mem_arb.sv:76:13
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[6-:7] = req_tag_out;
 									end
 								end
 								// Trace: src/VX_mem_arb.sv:79:5
-								wire [3:0] rsp_valid_out;
+								wire [0:0] rsp_valid_out;
 								// Trace: src/VX_mem_arb.sv:80:5
-								wire [2083:0] rsp_data_out;
+								wire [518:0] rsp_data_out;
 								// Trace: src/VX_mem_arb.sv:81:5
-								wire [3:0] rsp_ready_out;
+								wire [0:0] rsp_ready_out;
 								// Trace: src/VX_mem_arb.sv:82:5
-								wire [1:0] rsp_valid_in;
+								wire [0:0] rsp_valid_in;
 								// Trace: src/VX_mem_arb.sv:83:5
-								wire [1041:0] rsp_data_in;
+								wire [518:0] rsp_data_in;
 								// Trace: src/VX_mem_arb.sv:84:5
-								wire [1:0] rsp_ready_in;
+								wire [0:0] rsp_ready_in;
 								// Trace: src/VX_mem_arb.sv:85:5
-								if (1) begin : g_rsp_select
-									// Trace: src/VX_mem_arb.sv:86:9
-									wire [1:0] rsp_sel_in;
-									genvar _gv_i_185;
-									for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
-										localparam i = _gv_i_185;
-										// Trace: src/VX_mem_arb.sv:88:13
-										wire [8:0] rsp_tag_out;
-										// Trace: src/VX_mem_arb.sv:89:13
-										VX_bits_remove #(
-											.N(10),
-											.S(LOG_NUM_REQS),
-											.POS(TAG_SEL_IDX)
-										) bits_remove(
-											.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data[9-:10]),
-											.sel_out(rsp_sel_in[i+:1]),
-											.data_out(rsp_tag_out)
-										);
-										// Trace: src/VX_mem_arb.sv:98:13
+								if (1) begin : g_rsp_arb
+									genvar _gv_i_186;
+									for (_gv_i_186 = 0; _gv_i_186 < NUM_OUTPUTS; _gv_i_186 = _gv_i_186 + 1) begin : g_rsp_data_in
+										localparam i = _gv_i_186;
+										// Trace: src/VX_mem_arb.sv:120:13
 										assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_valid;
-										// Trace: src/VX_mem_arb.sv:99:13
-										assign rsp_data_in[i * 521+:521] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data[521-:512], rsp_tag_out};
-										// Trace: src/VX_mem_arb.sv:100:13
+										// Trace: src/VX_mem_arb.sv:121:13
+										assign rsp_data_in[i * 519+:519] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data;
+										// Trace: src/VX_mem_arb.sv:122:13
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 									end
-									// Trace: src/VX_mem_arb.sv:102:9
-									VX_stream_switch #(
+									// Trace: src/VX_mem_arb.sv:124:9
+									VX_stream_arb #(
 										.NUM_INPUTS(NUM_OUTPUTS),
 										.NUM_OUTPUTS(NUM_INPUTS),
 										.DATAW(RSP_DATAW),
+										.ARBITER(ARBITER),
 										.OUT_BUF(RSP_OUT_BUF)
-									) rsp_switch(
+									) req_arb(
 										.clk(clk),
 										.reset(reset),
-										.sel_in(rsp_sel_in),
 										.valid_in(rsp_valid_in),
 										.ready_in(rsp_ready_in),
 										.data_in(rsp_data_in),
 										.data_out(rsp_data_out),
 										.valid_out(rsp_valid_out),
-										.ready_out(rsp_ready_out)
+										.ready_out(rsp_ready_out),
+										.sel_out()
 									);
 								end
 								// Trace: src/VX_mem_arb.sv:142:5
@@ -8127,7 +6773,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:143:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 									// Trace: src/VX_mem_arb.sv:144:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 521+:521];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
 									// Trace: src/VX_mem_arb.sv:145:9
 									assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_ready;
 								end
@@ -8139,7 +6785,7 @@ module Vortex (
 							localparam _param_0061C_DATA_SIZE = LINE_SIZE;
 							localparam _param_0061C_TAG_WIDTH = MEM_TAG_NC2_WIDTH;
 							genvar _arr_0061C;
-							for (_arr_0061C = 0; _arr_0061C <= 1; _arr_0061C = _arr_0061C + 1) begin : mem_bus_out_nc_if
+							for (_arr_0061C = 0; _arr_0061C <= 0; _arr_0061C = _arr_0061C + 1) begin : mem_bus_out_nc_if
 								// removed import VX_gpu_pkg::*;
 								// Trace: src/VX_mem_bus_if.sv:2:15
 								localparam DATA_SIZE = _param_0061C_DATA_SIZE;
@@ -8163,13 +6809,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [615:0] req_data;
+								wire [612:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [521:0] rsp_data;
+								wire [518:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -8192,7 +6838,7 @@ module Vortex (
 								// Trace: src/VX_cache_bypass.sv:110:9
 								wire [511:0] core_req_nc_arb_data;
 								// Trace: src/VX_cache_bypass.sv:111:9
-								wire [9:0] core_req_nc_arb_tag;
+								wire [6:0] core_req_nc_arb_tag;
 								// Trace: src/VX_cache_bypass.sv:112:9
 								assign {core_req_nc_arb_rw, core_req_nc_arb_addr, core_req_nc_arb_data, core_req_nc_arb_byteen, core_req_nc_arb_flags, core_req_nc_arb_tag} = core_bus_nc_arb_if[i].req_data;
 								// Trace: src/VX_cache_bypass.sv:120:9
@@ -8204,9 +6850,9 @@ module Vortex (
 								// Trace: src/VX_cache_bypass.sv:123:9
 								wire [511:0] core_rsp_nc_arb_data_w;
 								// Trace: src/VX_cache_bypass.sv:124:9
-								wire [9:0] core_req_nc_arb_tag_w;
+								wire [6:0] core_req_nc_arb_tag_w;
 								// Trace: src/VX_cache_bypass.sv:125:9
-								wire [9:0] core_rsp_nc_arb_tag_w;
+								wire [6:0] core_rsp_nc_arb_tag_w;
 								if (1) begin : g_single_word_line
 									// Trace: src/VX_cache_bypass.sv:156:13
 									assign core_req_nc_arb_addr_w = core_req_nc_arb_addr;
@@ -8217,9 +6863,9 @@ module Vortex (
 									// Trace: src/VX_cache_bypass.sv:159:13
 									assign core_req_nc_arb_tag_w = core_req_nc_arb_tag;
 									// Trace: src/VX_cache_bypass.sv:160:13
-									assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[521-:512];
+									assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[518-:512];
 									// Trace: src/VX_cache_bypass.sv:161:13
-									assign core_rsp_nc_arb_tag_w = sv2v_cast_10(mem_bus_out_nc_if[i].rsp_data[9-:10]);
+									assign core_rsp_nc_arb_tag_w = sv2v_cast_7(mem_bus_out_nc_if[i].rsp_data[6-:7]);
 								end
 								// Trace: src/VX_cache_bypass.sv:163:9
 								assign mem_bus_out_nc_if[i].req_valid = core_bus_nc_arb_if[i].req_valid;
@@ -8263,13 +6909,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [615:0] req_data;
+								wire [612:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [521:0] rsp_data;
+								wire [518:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -8282,108 +6928,108 @@ module Vortex (
 								// Trace: src/VX_cache_bypass.sv:186:5
 								assign mem_bus_out_src_if[0 + i].req_valid = mem_bus_out_nc_if[i].req_valid;
 								// Trace: src/VX_cache_bypass.sv:187:5
-								assign mem_bus_out_src_if[0 + i].req_data[615] = mem_bus_out_nc_if[i].req_data[615];
+								assign mem_bus_out_src_if[0 + i].req_data[612] = mem_bus_out_nc_if[i].req_data[612];
 								// Trace: src/VX_cache_bypass.sv:188:5
-								assign mem_bus_out_src_if[0 + i].req_data[614-:26] = mem_bus_out_nc_if[i].req_data[614-:26];
+								assign mem_bus_out_src_if[0 + i].req_data[611-:26] = mem_bus_out_nc_if[i].req_data[611-:26];
 								// Trace: src/VX_cache_bypass.sv:189:5
-								assign mem_bus_out_src_if[0 + i].req_data[588-:512] = mem_bus_out_nc_if[i].req_data[588-:512];
+								assign mem_bus_out_src_if[0 + i].req_data[585-:512] = mem_bus_out_nc_if[i].req_data[585-:512];
 								// Trace: src/VX_cache_bypass.sv:190:5
-								assign mem_bus_out_src_if[0 + i].req_data[76-:64] = mem_bus_out_nc_if[i].req_data[76-:64];
+								assign mem_bus_out_src_if[0 + i].req_data[73-:64] = mem_bus_out_nc_if[i].req_data[73-:64];
 								// Trace: src/VX_cache_bypass.sv:191:5
-								assign mem_bus_out_src_if[0 + i].req_data[12-:3] = mem_bus_out_nc_if[i].req_data[12-:3];
+								assign mem_bus_out_src_if[0 + i].req_data[9-:3] = mem_bus_out_nc_if[i].req_data[9-:3];
 								if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk1
 									if (1) begin : genblk1
 										if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 											// Trace: src/VX_cache_bypass.sv:195:17
-											assign mem_bus_out_src_if[0 + i].req_data[9-:10] = {mem_bus_out_nc_if[i].req_data[9-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[8-:9]};
+											assign mem_bus_out_src_if[0 + i].req_data[6-:7] = {mem_bus_out_nc_if[i].req_data[6-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[5-:6]};
 										end
 										else begin : genblk1
 											// Trace: src/VX_cache_bypass.sv:197:17
-											assign mem_bus_out_src_if[0 + i].req_data[9-:10] = {mem_bus_out_nc_if[i].req_data[9-:1], mem_bus_out_nc_if[i].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
+											assign mem_bus_out_src_if[0 + i].req_data[6-:7] = {mem_bus_out_nc_if[i].req_data[6-:1], mem_bus_out_nc_if[i].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
 										end
 									end
 								end
 								else begin : genblk1
 									// Trace: src/VX_cache_bypass.sv:207:9
-									assign mem_bus_out_src_if[0 + i].req_data[9-:10] = mem_bus_out_nc_if[i].req_data[9-:10];
+									assign mem_bus_out_src_if[0 + i].req_data[6-:7] = mem_bus_out_nc_if[i].req_data[6-:7];
 								end
 								// Trace: src/VX_cache_bypass.sv:209:5
 								assign mem_bus_out_nc_if[i].req_ready = mem_bus_out_src_if[0 + i].req_ready;
 								// Trace: src/VX_cache_bypass.sv:210:5
 								assign mem_bus_out_nc_if[i].rsp_valid = mem_bus_out_src_if[0 + i].rsp_valid;
 								// Trace: src/VX_cache_bypass.sv:211:5
-								assign mem_bus_out_nc_if[i].rsp_data[521-:512] = mem_bus_out_src_if[0 + i].rsp_data[521-:512];
+								assign mem_bus_out_nc_if[i].rsp_data[518-:512] = mem_bus_out_src_if[0 + i].rsp_data[518-:512];
 								if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk2
 									if (1) begin : genblk1
 										if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 											// Trace: src/VX_cache_bypass.sv:215:17
-											assign mem_bus_out_nc_if[i].rsp_data[9-:10] = {mem_bus_out_src_if[0 + i].rsp_data[9-:1], mem_bus_out_src_if[0 + i].rsp_data[8:0]};
+											assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[6-:1], mem_bus_out_src_if[0 + i].rsp_data[5:0]};
 										end
 										else begin : genblk1
 											// Trace: src/VX_cache_bypass.sv:217:17
-											assign mem_bus_out_nc_if[i].rsp_data[9-:10] = {mem_bus_out_src_if[0 + i].rsp_data[9-:1], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[8-:9]};
+											assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[6-:1], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[5-:6]};
 										end
 									end
 								end
 								else begin : genblk2
 									// Trace: src/VX_cache_bypass.sv:227:9
-									assign mem_bus_out_nc_if[i].rsp_data[9-:10] = mem_bus_out_src_if[0 + i].rsp_data[9-:10];
+									assign mem_bus_out_nc_if[i].rsp_data[6-:7] = mem_bus_out_src_if[0 + i].rsp_data[6-:7];
 								end
 								// Trace: src/VX_cache_bypass.sv:229:5
 								assign mem_bus_out_src_if[0 + i].rsp_ready = mem_bus_out_nc_if[i].rsp_ready;
 								if (CACHE_ENABLE) begin : g_cache
 									// Trace: src/VX_cache_bypass.sv:233:5
-									assign mem_bus_out_src_if[2 + i].req_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_valid;
+									assign mem_bus_out_src_if[1 + i].req_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_valid;
 									// Trace: src/VX_cache_bypass.sv:234:5
-									assign mem_bus_out_src_if[2 + i].req_data[615] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[611];
+									assign mem_bus_out_src_if[1 + i].req_data[612] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610];
 									// Trace: src/VX_cache_bypass.sv:235:5
-									assign mem_bus_out_src_if[2 + i].req_data[614-:26] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610-:26];
+									assign mem_bus_out_src_if[1 + i].req_data[611-:26] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[609-:26];
 									// Trace: src/VX_cache_bypass.sv:236:5
-									assign mem_bus_out_src_if[2 + i].req_data[588-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[584-:512];
+									assign mem_bus_out_src_if[1 + i].req_data[585-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[583-:512];
 									// Trace: src/VX_cache_bypass.sv:237:5
-									assign mem_bus_out_src_if[2 + i].req_data[76-:64] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[72-:64];
+									assign mem_bus_out_src_if[1 + i].req_data[73-:64] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[71-:64];
 									// Trace: src/VX_cache_bypass.sv:238:5
-									assign mem_bus_out_src_if[2 + i].req_data[12-:3] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[8-:3];
+									assign mem_bus_out_src_if[1 + i].req_data[9-:3] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[7-:3];
 									if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk1
 										if (1) begin : genblk1
 											if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 												// Trace: src/VX_cache_bypass.sv:242:17
-												assign mem_bus_out_src_if[2 + i].req_data[9-:10] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[5-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5]};
+												assign mem_bus_out_src_if[1 + i].req_data[6-:7] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[3-:4]};
 											end
 											else begin : genblk1
 												// Trace: src/VX_cache_bypass.sv:244:17
-												assign mem_bus_out_src_if[2 + i].req_data[9-:10] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[5-:1], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
+												assign mem_bus_out_src_if[1 + i].req_data[6-:7] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
 											end
 										end
 									end
 									else begin : genblk1
 										// Trace: src/VX_cache_bypass.sv:254:9
-										assign mem_bus_out_src_if[2 + i].req_data[9-:10] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[5-:6];
+										assign mem_bus_out_src_if[1 + i].req_data[6-:7] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5];
 									end
 									// Trace: src/VX_cache_bypass.sv:256:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_ready = mem_bus_out_src_if[2 + i].req_ready;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_ready = mem_bus_out_src_if[1 + i].req_ready;
 									// Trace: src/VX_cache_bypass.sv:257:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_valid = mem_bus_out_src_if[2 + i].rsp_valid;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_valid = mem_bus_out_src_if[1 + i].rsp_valid;
 									// Trace: src/VX_cache_bypass.sv:258:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[517-:512] = mem_bus_out_src_if[2 + i].rsp_data[521-:512];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[516-:512] = mem_bus_out_src_if[1 + i].rsp_data[518-:512];
 									if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk2
 										if (1) begin : genblk1
 											if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 												// Trace: src/VX_cache_bypass.sv:262:17
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[5-:6] = {mem_bus_out_src_if[2 + i].rsp_data[9-:1], mem_bus_out_src_if[2 + i].rsp_data[4:0]};
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[6-:1], mem_bus_out_src_if[1 + i].rsp_data[3:0]};
 											end
 											else begin : genblk1
 												// Trace: src/VX_cache_bypass.sv:264:17
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[5-:6] = {mem_bus_out_src_if[2 + i].rsp_data[9-:1], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[2 + i].rsp_data[8-:9]};
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[6-:1], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[1 + i].rsp_data[5-:6]};
 											end
 										end
 									end
 									else begin : genblk2
 										// Trace: src/VX_cache_bypass.sv:274:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[5-:6] = mem_bus_out_src_if[2 + i].rsp_data[9-:10];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = mem_bus_out_src_if[1 + i].rsp_data[6-:7];
 									end
 									// Trace: src/VX_cache_bypass.sv:276:5
-									assign mem_bus_out_src_if[2 + i].rsp_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_ready;
+									assign mem_bus_out_src_if[1 + i].rsp_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_ready;
 								end
 								else begin : g_no_cache
 									// Trace: src/VX_cache_bypass.sv:279:5
@@ -8442,7 +7088,7 @@ module Vortex (
 								// Trace: src/VX_mem_arb.sv:19:5
 								localparam DATA_WIDTH = 512;
 								// Trace: src/VX_mem_arb.sv:20:5
-								localparam LOG_NUM_REQS = (NUM_INPUTS > NUM_OUTPUTS ? $clog2((NUM_INPUTS + 1) / 2) : 0);
+								localparam LOG_NUM_REQS = (NUM_INPUTS > NUM_OUTPUTS ? $clog2((NUM_INPUTS + 0) / 1) : 0);
 								// Trace: src/VX_mem_arb.sv:21:5
 								localparam REQ_DATAW = 606 + TAG_WIDTH;
 								// Trace: src/VX_mem_arb.sv:22:5
@@ -8456,13 +7102,13 @@ module Vortex (
 								// Trace: src/VX_mem_arb.sv:26:5
 								wire [NUM_INPUTS - 1:0] req_ready_in;
 								// Trace: src/VX_mem_arb.sv:27:5
-								wire [1:0] req_valid_out;
+								wire [0:0] req_valid_out;
 								// Trace: src/VX_mem_arb.sv:28:5
-								wire [(2 * REQ_DATAW) - 1:0] req_data_out;
+								wire [REQ_DATAW - 1:0] req_data_out;
 								// Trace: src/VX_mem_arb.sv:29:5
 								wire [(SEL_COUNT * (LOG_NUM_REQS > 0 ? LOG_NUM_REQS : 1)) - 1:0] req_sel_out;
 								// Trace: src/VX_mem_arb.sv:30:5
-								wire [1:0] req_ready_out;
+								wire [0:0] req_ready_out;
 								// Trace: src/VX_mem_arb.sv:31:5
 								genvar _gv_i_183;
 								for (_gv_i_183 = 0; _gv_i_183 < NUM_INPUTS; _gv_i_183 = _gv_i_183 + 1) begin : g_req_data_in
@@ -8470,7 +7116,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:32:9
 									assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_valid;
 									// Trace: src/VX_mem_arb.sv:33:9
-									assign req_data_in[i * 616+:616] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_data;
+									assign req_data_in[i * 613+:613] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_data;
 									// Trace: src/VX_mem_arb.sv:34:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 								end
@@ -8501,7 +7147,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:55:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 									// Trace: src/VX_mem_arb.sv:56:9
-									assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[616], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[615-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[589-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[77-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[13-:3], req_tag_out} = req_data_out[i * 616+:616];
+									assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[612], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[611-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[585-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[73-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[9-:3], req_tag_out} = req_data_out[i * 613+:613];
 									// Trace: src/VX_mem_arb.sv:64:9
 									assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_ready;
 									if (NUM_INPUTS > NUM_OUTPUTS) begin : g_req_tag_sel_out
@@ -8513,12 +7159,12 @@ module Vortex (
 										) bits_insert(
 											.data_in(req_tag_out),
 											.ins_in(req_sel_out[i * 1+:1]),
-											.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[10-:11])
+											.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[6-:7])
 										);
 									end
 									else begin : g_req_tag_out
 										// Trace: src/VX_mem_arb.sv:76:13
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[10-:11] = req_tag_out;
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[6-:7] = req_tag_out;
 									end
 								end
 								// Trace: src/VX_mem_arb.sv:79:5
@@ -8528,15 +7174,15 @@ module Vortex (
 								// Trace: src/VX_mem_arb.sv:81:5
 								wire [NUM_INPUTS - 1:0] rsp_ready_out;
 								// Trace: src/VX_mem_arb.sv:82:5
-								wire [1:0] rsp_valid_in;
+								wire [0:0] rsp_valid_in;
 								// Trace: src/VX_mem_arb.sv:83:5
-								wire [(2 * RSP_DATAW) - 1:0] rsp_data_in;
+								wire [RSP_DATAW - 1:0] rsp_data_in;
 								// Trace: src/VX_mem_arb.sv:84:5
-								wire [1:0] rsp_ready_in;
+								wire [0:0] rsp_ready_in;
 								// Trace: src/VX_mem_arb.sv:85:5
 								if (NUM_INPUTS > NUM_OUTPUTS) begin : g_rsp_select
 									// Trace: src/VX_mem_arb.sv:86:9
-									wire [(2 * LOG_NUM_REQS) - 1:0] rsp_sel_in;
+									wire [LOG_NUM_REQS - 1:0] rsp_sel_in;
 									genvar _gv_i_185;
 									for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
 										localparam i = _gv_i_185;
@@ -8548,14 +7194,14 @@ module Vortex (
 											.S(LOG_NUM_REQS),
 											.POS(TAG_SEL_IDX)
 										) bits_remove(
-											.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[10-:11]),
-											.sel_out(rsp_sel_in[i * 1+:1]),
+											.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[6-:7]),
+											.sel_out(rsp_sel_in[0+:0]),
 											.data_out(rsp_tag_out)
 										);
 										// Trace: src/VX_mem_arb.sv:98:13
 										assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 										// Trace: src/VX_mem_arb.sv:99:13
-										assign rsp_data_in[i * 522+:522] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[522-:512], rsp_tag_out};
+										assign rsp_data_in[i * 519+:519] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[518-:512], rsp_tag_out};
 										// Trace: src/VX_mem_arb.sv:100:13
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 									end
@@ -8584,7 +7230,7 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:120:13
 										assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 										// Trace: src/VX_mem_arb.sv:121:13
-										assign rsp_data_in[i * 522+:522] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
+										assign rsp_data_in[i * 519+:519] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
 										// Trace: src/VX_mem_arb.sv:122:13
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 									end
@@ -8614,7 +7260,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:143:9
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 									// Trace: src/VX_mem_arb.sv:144:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 522+:522];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
 									// Trace: src/VX_mem_arb.sv:145:9
 									assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_ready;
 								end
@@ -8681,978 +7327,57 @@ module Vortex (
 							// Trace: src/VX_cache_wrap.sv:98:5
 							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_valid = mem_bus_tmp_if[i].req_valid;
 							// Trace: src/VX_cache_wrap.sv:99:5
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[616] = 0;
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[612] = 0;
 							// Trace: src/VX_cache_wrap.sv:100:5
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[615-:26] = mem_bus_tmp_if[i].req_data[615-:26];
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[611-:26] = mem_bus_tmp_if[i].req_data[611-:26];
 							// Trace: src/VX_cache_wrap.sv:101:5
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[589-:512] = 1'sb0;
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[585-:512] = 1'sb0;
 							// Trace: src/VX_cache_wrap.sv:102:5
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[77-:64] = 1'sb1;
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[73-:64] = 1'sb1;
 							// Trace: src/VX_cache_wrap.sv:103:5
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[13-:3] = mem_bus_tmp_if[i].req_data[13-:3];
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[9-:3] = mem_bus_tmp_if[i].req_data[9-:3];
 							// Trace: src/VX_cache_wrap.sv:104:5
-							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[10-:11] = mem_bus_tmp_if[i].req_data[10-:11];
+							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_data[6-:7] = mem_bus_tmp_if[i].req_data[6-:7];
 							// Trace: src/VX_cache_wrap.sv:105:5
 							assign mem_bus_tmp_if[i].req_ready = Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].req_ready;
 							// Trace: src/VX_cache_wrap.sv:106:5
 							assign mem_bus_tmp_if[i].rsp_valid = Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].rsp_valid;
 							// Trace: src/VX_cache_wrap.sv:107:5
-							assign mem_bus_tmp_if[i].rsp_data[522-:512] = Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[522-:512];
+							assign mem_bus_tmp_if[i].rsp_data[518-:512] = Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[518-:512];
 							// Trace: src/VX_cache_wrap.sv:108:5
-							assign mem_bus_tmp_if[i].rsp_data[10-:11] = Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[10-:11];
+							assign mem_bus_tmp_if[i].rsp_data[6-:7] = Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[6-:7];
 							// Trace: src/VX_cache_wrap.sv:109:5
 							assign Vortex.per_cluster_mem_bus_if[i + _mbase_mem_bus_if].rsp_ready = mem_bus_tmp_if[i].rsp_ready;
 						end
 					end
 					// Trace: src/VX_cache_wrap.sv:112:5
-					if (1) begin : g_cache
-						// Trace: src/VX_cache_wrap.sv:113:9
-						// expanded module instance: cache
-						localparam _bbase_90EE2_core_bus_if = 0;
-						localparam _bbase_90EE2_mem_bus_if = 0;
-						localparam _param_90EE2_INSTANCE_ID = INSTANCE_ID;
-						localparam _param_90EE2_CACHE_SIZE = CACHE_SIZE;
-						localparam _param_90EE2_LINE_SIZE = LINE_SIZE;
-						localparam _param_90EE2_NUM_BANKS = NUM_BANKS;
-						localparam _param_90EE2_NUM_WAYS = NUM_WAYS;
-						localparam _param_90EE2_WORD_SIZE = WORD_SIZE;
-						localparam _param_90EE2_NUM_REQS = NUM_REQS;
-						localparam _param_90EE2_MEM_PORTS = MEM_PORTS;
-						localparam _param_90EE2_WRITE_ENABLE = WRITE_ENABLE;
-						localparam _param_90EE2_WRITEBACK = WRITEBACK;
-						localparam _param_90EE2_DIRTY_BYTES = DIRTY_BYTES;
-						localparam _param_90EE2_REPL_POLICY = REPL_POLICY;
-						localparam _param_90EE2_CRSQ_SIZE = CRSQ_SIZE;
-						localparam _param_90EE2_MSHR_SIZE = MSHR_SIZE;
-						localparam _param_90EE2_MRSQ_SIZE = MRSQ_SIZE;
-						localparam _param_90EE2_MREQ_SIZE = MREQ_SIZE;
-						localparam _param_90EE2_TAG_WIDTH = TAG_WIDTH;
-						localparam _param_90EE2_CORE_OUT_BUF = (BYPASS_ENABLE ? 1 : CORE_OUT_BUF);
-						localparam _param_90EE2_MEM_OUT_BUF = (BYPASS_ENABLE ? 1 : MEM_OUT_BUF);
-						if (1) begin : cache
-							// removed import VX_gpu_pkg::*;
-							// Trace: src/VX_cache.sv:2:15
-							localparam INSTANCE_ID = _param_90EE2_INSTANCE_ID;
-							// Trace: src/VX_cache.sv:3:15
-							localparam NUM_REQS = _param_90EE2_NUM_REQS;
-							// Trace: src/VX_cache.sv:4:15
-							localparam MEM_PORTS = _param_90EE2_MEM_PORTS;
-							// Trace: src/VX_cache.sv:5:15
-							localparam CACHE_SIZE = _param_90EE2_CACHE_SIZE;
-							// Trace: src/VX_cache.sv:6:15
-							localparam LINE_SIZE = _param_90EE2_LINE_SIZE;
-							// Trace: src/VX_cache.sv:7:15
-							localparam NUM_BANKS = _param_90EE2_NUM_BANKS;
-							// Trace: src/VX_cache.sv:8:15
-							localparam NUM_WAYS = _param_90EE2_NUM_WAYS;
-							// Trace: src/VX_cache.sv:9:15
-							localparam WORD_SIZE = _param_90EE2_WORD_SIZE;
-							// Trace: src/VX_cache.sv:10:15
-							localparam CRSQ_SIZE = _param_90EE2_CRSQ_SIZE;
-							// Trace: src/VX_cache.sv:11:15
-							localparam MSHR_SIZE = _param_90EE2_MSHR_SIZE;
-							// Trace: src/VX_cache.sv:12:15
-							localparam MRSQ_SIZE = _param_90EE2_MRSQ_SIZE;
-							// Trace: src/VX_cache.sv:13:15
-							localparam MREQ_SIZE = _param_90EE2_MREQ_SIZE;
-							// Trace: src/VX_cache.sv:14:15
-							localparam WRITE_ENABLE = _param_90EE2_WRITE_ENABLE;
-							// Trace: src/VX_cache.sv:15:15
-							localparam WRITEBACK = _param_90EE2_WRITEBACK;
-							// Trace: src/VX_cache.sv:16:15
-							localparam DIRTY_BYTES = _param_90EE2_DIRTY_BYTES;
-							// Trace: src/VX_cache.sv:17:15
-							localparam REPL_POLICY = _param_90EE2_REPL_POLICY;
-							// Trace: src/VX_cache.sv:18:15
-							localparam VX_gpu_pkg_UUID_WIDTH = 1;
-							localparam TAG_WIDTH = _param_90EE2_TAG_WIDTH;
-							// Trace: src/VX_cache.sv:19:15
-							localparam CORE_OUT_BUF = _param_90EE2_CORE_OUT_BUF;
-							// Trace: src/VX_cache.sv:20:15
-							localparam MEM_OUT_BUF = _param_90EE2_MEM_OUT_BUF;
-							// Trace: src/VX_cache.sv:22:5
-							wire clk;
-							// Trace: src/VX_cache.sv:23:5
-							wire reset;
-							// Trace: src/VX_cache.sv:24:5
-							localparam _mbase_core_bus_if = 0;
-							// Trace: src/VX_cache.sv:25:5
-							localparam _mbase_mem_bus_if = 0;
-							// Trace: src/VX_cache.sv:27:5
-							localparam REQ_SEL_WIDTH = 2;
-							// Trace: src/VX_cache.sv:28:5
-							localparam WORD_SEL_WIDTH = 1;
-							// Trace: src/VX_cache.sv:29:5
-							localparam MSHR_ADDR_WIDTH = 4;
-							// Trace: src/VX_cache.sv:30:5
-							localparam MEM_TAG_WIDTH = 6;
-							// Trace: src/VX_cache.sv:32:5
-							localparam WORDS_PER_LINE = 1;
-							// Trace: src/VX_cache.sv:33:5
-							localparam WORD_WIDTH = 512;
-							// Trace: src/VX_cache.sv:34:5
-							localparam WORD_SEL_BITS = 0;
-							// Trace: src/VX_cache.sv:35:5
-							localparam BANK_SEL_BITS = 2;
-							// Trace: src/VX_cache.sv:36:5
-							localparam BANK_SEL_WIDTH = BANK_SEL_BITS;
-							// Trace: src/VX_cache.sv:37:5
-							localparam LINE_ADDR_WIDTH = 24;
-							// Trace: src/VX_cache.sv:38:5
-							localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
-							localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-							localparam CORE_REQ_DATAW = 614;
-							// Trace: src/VX_cache.sv:39:5
-							localparam CORE_RSP_DATAW = 521;
-							// Trace: src/VX_cache.sv:40:5
-							localparam BANK_MEM_TAG_WIDTH = 5;
-							// Trace: src/VX_cache.sv:41:5
-							localparam MEM_REQ_DATAW = 609;
-							// Trace: src/VX_cache.sv:42:5
-							localparam MEM_RSP_DATAW = 518;
-							// Trace: src/VX_cache.sv:43:5
-							localparam MEM_PORTS_SEL_BITS = 1;
-							// Trace: src/VX_cache.sv:44:5
-							localparam MEM_PORTS_SEL_WIDTH = MEM_PORTS_SEL_BITS;
-							// Trace: src/VX_cache.sv:45:5
-							localparam MEM_ARB_SEL_BITS = 1;
-							// Trace: src/VX_cache.sv:46:5
-							localparam MEM_ARB_SEL_WIDTH = MEM_ARB_SEL_BITS;
-							// Trace: src/VX_cache.sv:47:5
-							localparam REQ_XBAR_BUF = 2;
-							// Trace: src/VX_cache.sv:48:5
-							localparam CORE_RSP_BUF_ENABLE = 1'd1;
-							// Trace: src/VX_cache.sv:49:5
-							localparam MEM_REQ_BUF_ENABLE = 1'd1;
-							// Trace: src/VX_cache.sv:50:5
-							// expanded interface instance: core_bus2_if
-							localparam _param_9260A_DATA_SIZE = WORD_SIZE;
-							localparam _param_9260A_TAG_WIDTH = TAG_WIDTH;
-							genvar _arr_9260A;
-							for (_arr_9260A = 0; _arr_9260A <= 3; _arr_9260A = _arr_9260A + 1) begin : core_bus2_if
-								// removed import VX_gpu_pkg::*;
-								// Trace: src/VX_mem_bus_if.sv:2:15
-								localparam DATA_SIZE = _param_9260A_DATA_SIZE;
-								// Trace: src/VX_mem_bus_if.sv:3:15
-								localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
-								localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-								localparam FLAGS_WIDTH = VX_gpu_pkg_MEM_FLAGS_WIDTH;
-								// Trace: src/VX_mem_bus_if.sv:4:15
-								localparam TAG_WIDTH = _param_9260A_TAG_WIDTH;
-								// Trace: src/VX_mem_bus_if.sv:5:15
-								localparam MEM_ADDR_WIDTH = 32;
-								// Trace: src/VX_mem_bus_if.sv:6:15
-								localparam ADDR_WIDTH = 26;
-								// Trace: src/VX_mem_bus_if.sv:8:5
-								localparam VX_gpu_pkg_UUID_WIDTH = 1;
-								// removed localparam type tag_t
-								// Trace: src/VX_mem_bus_if.sv:12:5
-								// removed localparam type req_data_t
-								// Trace: src/VX_mem_bus_if.sv:20:5
-								// removed localparam type rsp_data_t
-								// Trace: src/VX_mem_bus_if.sv:24:5
-								wire req_valid;
-								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [614:0] req_data;
-								// Trace: src/VX_mem_bus_if.sv:26:5
-								wire req_ready;
-								// Trace: src/VX_mem_bus_if.sv:27:5
-								wire rsp_valid;
-								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [520:0] rsp_data;
-								// Trace: src/VX_mem_bus_if.sv:29:5
-								wire rsp_ready;
-								// Trace: src/VX_mem_bus_if.sv:30:5
-								// Trace: src/VX_mem_bus_if.sv:38:5
-							end
-							// Trace: src/VX_cache.sv:54:5
-							wire [3:0] per_bank_flush_begin;
-							// Trace: src/VX_cache.sv:55:5
-							wire [0:0] flush_uuid;
-							// Trace: src/VX_cache.sv:56:5
-							wire [3:0] per_bank_flush_end;
-							// Trace: src/VX_cache.sv:57:5
-							wire [3:0] per_bank_core_req_fire;
-							// Trace: src/VX_cache.sv:58:5
-							// expanded module instance: cache_init
-							localparam _bbase_3B3F2_core_bus_in_if = 0;
-							localparam _bbase_3B3F2_core_bus_out_if = 0;
-							localparam _param_3B3F2_NUM_REQS = NUM_REQS;
-							localparam _param_3B3F2_NUM_BANKS = NUM_BANKS;
-							localparam _param_3B3F2_TAG_WIDTH = TAG_WIDTH;
-							localparam _param_3B3F2_BANK_SEL_LATENCY = 0;
-							if (1) begin : cache_init
-								// removed import VX_gpu_pkg::*;
-								// Trace: src/VX_cache_init.sv:2:15
-								localparam NUM_REQS = _param_3B3F2_NUM_REQS;
-								// Trace: src/VX_cache_init.sv:3:15
-								localparam NUM_BANKS = _param_3B3F2_NUM_BANKS;
-								// Trace: src/VX_cache_init.sv:4:15
-								localparam VX_gpu_pkg_UUID_WIDTH = 1;
-								localparam TAG_WIDTH = _param_3B3F2_TAG_WIDTH;
-								// Trace: src/VX_cache_init.sv:5:15
-								localparam BANK_SEL_LATENCY = _param_3B3F2_BANK_SEL_LATENCY;
-								// Trace: src/VX_cache_init.sv:7:5
-								wire clk;
-								// Trace: src/VX_cache_init.sv:8:5
-								wire reset;
-								// Trace: src/VX_cache_init.sv:9:5
-								localparam _mbase_core_bus_in_if = 0;
-								// Trace: src/VX_cache_init.sv:10:5
-								localparam _mbase_core_bus_out_if = 0;
-								// Trace: src/VX_cache_init.sv:11:5
-								wire [3:0] bank_req_fire;
-								// Trace: src/VX_cache_init.sv:12:5
-								wire [3:0] flush_begin;
-								// Trace: src/VX_cache_init.sv:13:5
-								wire [0:0] flush_uuid;
-								// Trace: src/VX_cache_init.sv:14:5
-								wire [3:0] flush_end;
-								// Trace: src/VX_cache_init.sv:16:5
-								localparam STATE_IDLE = 0;
-								// Trace: src/VX_cache_init.sv:17:5
-								localparam STATE_WAIT1 = 1;
-								// Trace: src/VX_cache_init.sv:18:5
-								localparam STATE_FLUSH = 2;
-								// Trace: src/VX_cache_init.sv:19:5
-								localparam STATE_WAIT2 = 3;
-								// Trace: src/VX_cache_init.sv:20:5
-								localparam STATE_DONE = 4;
-								// Trace: src/VX_cache_init.sv:21:5
-								reg [2:0] state;
-								reg [2:0] state_n;
-								// Trace: src/VX_cache_init.sv:22:5
-								wire no_inflight_reqs;
-								// Trace: src/VX_cache_init.sv:23:5
-								if (1) begin : g_no_bank_sel_latency
-									// Trace: src/VX_cache_init.sv:62:9
-									assign no_inflight_reqs = 0;
-								end
-								// Trace: src/VX_cache_init.sv:64:5
-								reg [3:0] flush_done;
-								reg [3:0] flush_done_n;
-								// Trace: src/VX_cache_init.sv:65:5
-								wire [3:0] flush_req_mask;
-								// Trace: src/VX_cache_init.sv:66:5
-								genvar _gv_i_215;
-								localparam VX_gpu_pkg_MEM_REQ_FLAG_FLUSH = 0;
-								for (_gv_i_215 = 0; _gv_i_215 < NUM_REQS; _gv_i_215 = _gv_i_215 + 1) begin : g_flush_req_mask
-									localparam i = _gv_i_215;
-									// Trace: src/VX_cache_init.sv:67:9
-									assign flush_req_mask[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].req_valid && Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[9];
-								end
-								// Trace: src/VX_cache_init.sv:69:5
-								wire flush_req_enable = |flush_req_mask;
-								// Trace: src/VX_cache_init.sv:70:5
-								reg [3:0] lock_released;
-								reg [3:0] lock_released_n;
-								// Trace: src/VX_cache_init.sv:71:5
-								reg [0:0] flush_uuid_r;
-								reg [0:0] flush_uuid_n;
-								// Trace: src/VX_cache_init.sv:72:5
-								genvar _gv_i_216;
-								for (_gv_i_216 = 0; _gv_i_216 < NUM_REQS; _gv_i_216 = _gv_i_216 + 1) begin : g_core_bus_out_req
-									localparam i = _gv_i_216;
-									// Trace: src/VX_cache_init.sv:73:9
-									wire input_enable = ~flush_req_enable || lock_released[i];
-									// Trace: src/VX_cache_init.sv:74:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].req_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].req_valid && input_enable;
-									// Trace: src/VX_cache_init.sv:75:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].req_data = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data;
-									// Trace: src/VX_cache_init.sv:76:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].req_ready && input_enable;
-								end
-								// Trace: src/VX_cache_init.sv:78:5
-								genvar _gv_i_217;
-								for (_gv_i_217 = 0; _gv_i_217 < NUM_REQS; _gv_i_217 = _gv_i_217 + 1) begin : g_core_bus_in_rsp
-									localparam i = _gv_i_217;
-									// Trace: src/VX_cache_init.sv:79:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].rsp_valid;
-									// Trace: src/VX_cache_init.sv:80:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].rsp_data = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].rsp_data;
-									// Trace: src/VX_cache_init.sv:81:9
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].rsp_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].rsp_ready;
-								end
-								// Trace: src/VX_cache_init.sv:83:5
-								reg [3:0] core_bus_out_uuid;
-								// Trace: src/VX_cache_init.sv:84:5
-								wire [3:0] core_bus_out_ready;
-								// Trace: src/VX_cache_init.sv:85:5
-								genvar _gv_i_218;
-								for (_gv_i_218 = 0; _gv_i_218 < NUM_REQS; _gv_i_218 = _gv_i_218 + 1) begin : g_core_bus_out_uuid
-									localparam i = _gv_i_218;
-									if (1) begin : g_uuid
-										// Trace: src/VX_cache_init.sv:87:13
-										wire [1:1] sv2v_tmp_469B6;
-										assign sv2v_tmp_469B6 = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[8-:1];
-										always @(*) core_bus_out_uuid[i+:1] = sv2v_tmp_469B6;
-									end
-								end
-								// Trace: src/VX_cache_init.sv:92:5
-								genvar _gv_i_219;
-								for (_gv_i_219 = 0; _gv_i_219 < NUM_REQS; _gv_i_219 = _gv_i_219 + 1) begin : g_core_bus_out_ready
-									localparam i = _gv_i_219;
-									// Trace: src/VX_cache_init.sv:93:9
-									assign core_bus_out_ready[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.g_cache.cache.core_bus2_if[i + _mbase_core_bus_out_if].req_ready;
-								end
-								// Trace: src/VX_cache_init.sv:95:5
-								always @(*) begin
-									// Trace: src/VX_cache_init.sv:96:9
-									state_n = state;
-									// Trace: src/VX_cache_init.sv:97:9
-									flush_done_n = flush_done;
-									// Trace: src/VX_cache_init.sv:98:9
-									lock_released_n = lock_released;
-									// Trace: src/VX_cache_init.sv:99:9
-									flush_uuid_n = flush_uuid_r;
-									// Trace: src/VX_cache_init.sv:100:9
-									case (state)
-										default:
-											// Trace: src/VX_cache_init.sv:102:17
-											if (flush_req_enable) begin
-												// Trace: src/VX_cache_init.sv:103:21
-												state_n = STATE_FLUSH;
-												// Trace: src/VX_cache_init.sv:104:21
-												begin : sv2v_autoblock_1
-													// Trace: src/VX_cache_init.sv:104:26
-													integer i;
-													// Trace: src/VX_cache_init.sv:104:26
-													for (i = 3; i >= 0; i = i - 1)
-														begin
-															// Trace: src/VX_cache_init.sv:105:25
-															if (flush_req_mask[i])
-																// Trace: src/VX_cache_init.sv:106:29
-																flush_uuid_n = core_bus_out_uuid[i+:1];
-														end
-												end
-											end
-										STATE_WAIT1:
-											// Trace: src/VX_cache_init.sv:112:17
-											if (no_inflight_reqs)
-												// Trace: src/VX_cache_init.sv:113:21
-												state_n = STATE_FLUSH;
-										STATE_FLUSH:
-											// Trace: src/VX_cache_init.sv:117:17
-											state_n = STATE_WAIT2;
-										STATE_WAIT2: begin
-											// Trace: src/VX_cache_init.sv:120:17
-											flush_done_n = flush_done | flush_end;
-											// Trace: src/VX_cache_init.sv:121:17
-											if (flush_done_n == {NUM_BANKS {1'b1}}) begin
-												// Trace: src/VX_cache_init.sv:122:21
-												state_n = STATE_DONE;
-												// Trace: src/VX_cache_init.sv:123:21
-												flush_done_n = 1'sb0;
-												// Trace: src/VX_cache_init.sv:124:21
-												lock_released_n = flush_req_mask;
-											end
-										end
-										STATE_DONE: begin
-											// Trace: src/VX_cache_init.sv:128:17
-											lock_released_n = lock_released & ~core_bus_out_ready;
-											// Trace: src/VX_cache_init.sv:129:17
-											if (lock_released_n == 0)
-												// Trace: src/VX_cache_init.sv:130:21
-												state_n = STATE_IDLE;
-										end
-									endcase
-								end
-								// Trace: src/VX_cache_init.sv:135:5
-								always @(posedge clk) begin
-									// Trace: src/VX_cache_init.sv:136:9
-									if (reset) begin
-										// Trace: src/VX_cache_init.sv:137:13
-										state <= STATE_IDLE;
-										// Trace: src/VX_cache_init.sv:138:13
-										flush_done <= 1'sb0;
-										// Trace: src/VX_cache_init.sv:139:13
-										lock_released <= 1'sb0;
-									end
-									else begin
-										// Trace: src/VX_cache_init.sv:141:13
-										state <= state_n;
-										// Trace: src/VX_cache_init.sv:142:13
-										flush_done <= flush_done_n;
-										// Trace: src/VX_cache_init.sv:143:13
-										lock_released <= lock_released_n;
-									end
-									// Trace: src/VX_cache_init.sv:145:9
-									flush_uuid_r <= flush_uuid_n;
-								end
-								// Trace: src/VX_cache_init.sv:147:5
-								assign flush_begin = {NUM_BANKS {state == STATE_FLUSH}};
-								// Trace: src/VX_cache_init.sv:148:5
-								assign flush_uuid = flush_uuid_r;
-							end
-							assign cache_init.clk = clk;
-							assign cache_init.reset = reset;
-							assign cache_init.bank_req_fire = per_bank_core_req_fire;
-							assign per_bank_flush_begin = cache_init.flush_begin;
-							assign flush_uuid = cache_init.flush_uuid;
-							assign cache_init.flush_end = per_bank_flush_end;
-							// Trace: src/VX_cache.sv:73:5
-							// expanded interface instance: mem_bus_tmp_if
-							localparam _param_4FE36_DATA_SIZE = LINE_SIZE;
-							localparam _param_4FE36_TAG_WIDTH = MEM_TAG_WIDTH;
-							genvar _arr_4FE36;
-							for (_arr_4FE36 = 0; _arr_4FE36 <= 1; _arr_4FE36 = _arr_4FE36 + 1) begin : mem_bus_tmp_if
-								// removed import VX_gpu_pkg::*;
-								// Trace: src/VX_mem_bus_if.sv:2:15
-								localparam DATA_SIZE = _param_4FE36_DATA_SIZE;
-								// Trace: src/VX_mem_bus_if.sv:3:15
-								localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
-								localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-								localparam FLAGS_WIDTH = VX_gpu_pkg_MEM_FLAGS_WIDTH;
-								// Trace: src/VX_mem_bus_if.sv:4:15
-								localparam TAG_WIDTH = _param_4FE36_TAG_WIDTH;
-								// Trace: src/VX_mem_bus_if.sv:5:15
-								localparam MEM_ADDR_WIDTH = 32;
-								// Trace: src/VX_mem_bus_if.sv:6:15
-								localparam ADDR_WIDTH = 26;
-								// Trace: src/VX_mem_bus_if.sv:8:5
-								localparam VX_gpu_pkg_UUID_WIDTH = 1;
-								// removed localparam type tag_t
-								// Trace: src/VX_mem_bus_if.sv:12:5
-								// removed localparam type req_data_t
-								// Trace: src/VX_mem_bus_if.sv:20:5
-								// removed localparam type rsp_data_t
-								// Trace: src/VX_mem_bus_if.sv:24:5
-								wire req_valid;
-								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [611:0] req_data;
-								// Trace: src/VX_mem_bus_if.sv:26:5
-								wire req_ready;
-								// Trace: src/VX_mem_bus_if.sv:27:5
-								wire rsp_valid;
-								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [517:0] rsp_data;
-								// Trace: src/VX_mem_bus_if.sv:29:5
-								wire rsp_ready;
-								// Trace: src/VX_mem_bus_if.sv:30:5
-								// Trace: src/VX_mem_bus_if.sv:38:5
-							end
-							// Trace: src/VX_cache.sv:77:5
-							wire [1:0] mem_rsp_queue_valid;
-							// Trace: src/VX_cache.sv:78:5
-							wire [1035:0] mem_rsp_queue_data;
-							// Trace: src/VX_cache.sv:79:5
-							wire [1:0] mem_rsp_queue_ready;
-							// Trace: src/VX_cache.sv:80:5
-							genvar _gv_i_230;
-							for (_gv_i_230 = 0; _gv_i_230 < MEM_PORTS; _gv_i_230 = _gv_i_230 + 1) begin : g_mem_rsp_queue
-								localparam i = _gv_i_230;
-								// Trace: src/VX_cache.sv:81:9
-								VX_elastic_buffer #(
-									.DATAW(MEM_RSP_DATAW),
-									.SIZE(MRSQ_SIZE),
-									.OUT_REG(1'd1)
-								) mem_rsp_queue(
-									.clk(clk),
-									.reset(reset),
-									.valid_in(mem_bus_tmp_if[i].rsp_valid),
-									.data_in(mem_bus_tmp_if[i].rsp_data),
-									.ready_in(mem_bus_tmp_if[i].rsp_ready),
-									.valid_out(mem_rsp_queue_valid[i]),
-									.data_out(mem_rsp_queue_data[i * 518+:518]),
-									.ready_out(mem_rsp_queue_ready[i])
-								);
-							end
-							// Trace: src/VX_cache.sv:96:5
-							wire [1033:0] mem_rsp_queue_data_s;
-							// Trace: src/VX_cache.sv:97:5
-							wire [3:0] mem_rsp_queue_sel;
-							// Trace: src/VX_cache.sv:98:5
-							genvar _gv_i_231;
-							for (_gv_i_231 = 0; _gv_i_231 < MEM_PORTS; _gv_i_231 = _gv_i_231 + 1) begin : g_mem_rsp_queue_data_s
-								localparam i = _gv_i_231;
-								// Trace: src/VX_cache.sv:99:9
-								wire [4:0] mem_rsp_tag_s = mem_rsp_queue_data[(i * 518) + 5-:5];
-								// Trace: src/VX_cache.sv:100:9
-								wire [511:0] mem_rsp_data_s = mem_rsp_queue_data[(i * 518) + 517-:512];
-								// Trace: src/VX_cache.sv:101:9
-								assign mem_rsp_queue_data_s[i * 517+:517] = {mem_rsp_data_s, mem_rsp_tag_s};
-							end
-							// Trace: src/VX_cache.sv:103:5
-							genvar _gv_i_232;
-							for (_gv_i_232 = 0; _gv_i_232 < MEM_PORTS; _gv_i_232 = _gv_i_232 + 1) begin : g_mem_rsp_queue_sel
-								localparam i = _gv_i_232;
-								if (1) begin : g_multibanks
-									if (1) begin : g_arb_sel
-										// Trace: src/VX_cache.sv:106:17
-										VX_bits_concat #(
-											.L(MEM_ARB_SEL_BITS),
-											.R(MEM_PORTS_SEL_BITS)
-										) mem_rsp_sel_concat(
-											.left_in(mem_rsp_queue_data[i * 518-:1]),
-											.right_in(sv2v_cast_1_signed(i)),
-											.data_out(mem_rsp_queue_sel[i * 2+:2])
-										);
-									end
-								end
-							end
-							// Trace: src/VX_cache.sv:121:5
-							wire [3:0] per_bank_mem_rsp_valid;
-							// Trace: src/VX_cache.sv:122:5
-							wire [2067:0] per_bank_mem_rsp_pdata;
-							// Trace: src/VX_cache.sv:123:5
-							wire [3:0] per_bank_mem_rsp_ready;
-							// Trace: src/VX_cache.sv:124:5
-							VX_stream_omega #(
-								.NUM_INPUTS(MEM_PORTS),
-								.NUM_OUTPUTS(NUM_BANKS),
-								.DATAW(517),
-								.ARBITER("R"),
-								.OUT_BUF(3)
-							) mem_rsp_xbar(
-								.clk(clk),
-								.reset(reset),
-								.valid_in(mem_rsp_queue_valid),
-								.data_in(mem_rsp_queue_data_s),
-								.sel_in(mem_rsp_queue_sel),
-								.ready_in(mem_rsp_queue_ready),
-								.valid_out(per_bank_mem_rsp_valid),
-								.data_out(per_bank_mem_rsp_pdata),
-								.sel_out(),
-								.ready_out(per_bank_mem_rsp_ready),
-								.collisions()
-							);
-							// Trace: src/VX_cache.sv:143:5
-							wire [2047:0] per_bank_mem_rsp_data;
-							// Trace: src/VX_cache.sv:144:5
-							wire [19:0] per_bank_mem_rsp_tag;
-							// Trace: src/VX_cache.sv:145:5
-							genvar _gv_i_233;
-							for (_gv_i_233 = 0; _gv_i_233 < NUM_BANKS; _gv_i_233 = _gv_i_233 + 1) begin : g_per_bank_mem_rsp_data
-								localparam i = _gv_i_233;
-								// Trace: src/VX_cache.sv:146:9
-								assign {per_bank_mem_rsp_data[i * 512+:512], per_bank_mem_rsp_tag[i * 5+:5]} = per_bank_mem_rsp_pdata[i * 517+:517];
-							end
-							// Trace: src/VX_cache.sv:151:5
-							wire [3:0] per_bank_core_req_valid;
-							// Trace: src/VX_cache.sv:152:5
-							wire [95:0] per_bank_core_req_addr;
-							// Trace: src/VX_cache.sv:153:5
-							wire [3:0] per_bank_core_req_rw;
-							// Trace: src/VX_cache.sv:154:5
-							wire [3:0] per_bank_core_req_wsel;
-							// Trace: src/VX_cache.sv:155:5
-							wire [255:0] per_bank_core_req_byteen;
-							// Trace: src/VX_cache.sv:156:5
-							wire [2047:0] per_bank_core_req_data;
-							// Trace: src/VX_cache.sv:157:5
-							wire [35:0] per_bank_core_req_tag;
-							// Trace: src/VX_cache.sv:158:5
-							wire [7:0] per_bank_core_req_idx;
-							// Trace: src/VX_cache.sv:159:5
-							wire [11:0] per_bank_core_req_flags;
-							// Trace: src/VX_cache.sv:160:5
-							wire [3:0] per_bank_core_req_ready;
-							// Trace: src/VX_cache.sv:161:5
-							wire [3:0] per_bank_core_rsp_valid;
-							// Trace: src/VX_cache.sv:162:5
-							wire [2047:0] per_bank_core_rsp_data;
-							// Trace: src/VX_cache.sv:163:5
-							wire [35:0] per_bank_core_rsp_tag;
-							// Trace: src/VX_cache.sv:164:5
-							wire [7:0] per_bank_core_rsp_idx;
-							// Trace: src/VX_cache.sv:165:5
-							wire [3:0] per_bank_core_rsp_ready;
-							// Trace: src/VX_cache.sv:166:5
-							wire [3:0] per_bank_mem_req_valid;
-							// Trace: src/VX_cache.sv:167:5
-							wire [95:0] per_bank_mem_req_addr;
-							// Trace: src/VX_cache.sv:168:5
-							wire [3:0] per_bank_mem_req_rw;
-							// Trace: src/VX_cache.sv:169:5
-							wire [255:0] per_bank_mem_req_byteen;
-							// Trace: src/VX_cache.sv:170:5
-							wire [2047:0] per_bank_mem_req_data;
-							// Trace: src/VX_cache.sv:171:5
-							wire [19:0] per_bank_mem_req_tag;
-							// Trace: src/VX_cache.sv:172:5
-							wire [11:0] per_bank_mem_req_flags;
-							// Trace: src/VX_cache.sv:173:5
-							wire [3:0] per_bank_mem_req_ready;
-							// Trace: src/VX_cache.sv:174:5
-							wire [3:0] core_req_valid;
-							// Trace: src/VX_cache.sv:175:5
-							wire [103:0] core_req_addr;
-							// Trace: src/VX_cache.sv:176:5
-							wire [3:0] core_req_rw;
-							// Trace: src/VX_cache.sv:177:5
-							wire [255:0] core_req_byteen;
-							// Trace: src/VX_cache.sv:178:5
-							wire [2047:0] core_req_data;
-							// Trace: src/VX_cache.sv:179:5
-							wire [35:0] core_req_tag;
-							// Trace: src/VX_cache.sv:180:5
-							wire [11:0] core_req_flags;
-							// Trace: src/VX_cache.sv:181:5
-							wire [3:0] core_req_ready;
-							// Trace: src/VX_cache.sv:182:5
-							wire [95:0] core_req_line_addr;
-							// Trace: src/VX_cache.sv:183:5
-							wire [7:0] core_req_bid;
-							// Trace: src/VX_cache.sv:184:5
-							wire [3:0] core_req_wsel;
-							// Trace: src/VX_cache.sv:185:5
-							wire [2455:0] core_req_data_in;
-							// Trace: src/VX_cache.sv:186:5
-							wire [2455:0] core_req_data_out;
-							// Trace: src/VX_cache.sv:187:5
-							genvar _gv_i_234;
-							for (_gv_i_234 = 0; _gv_i_234 < NUM_REQS; _gv_i_234 = _gv_i_234 + 1) begin : g_core_req
-								localparam i = _gv_i_234;
-								// Trace: src/VX_cache.sv:188:9
-								assign core_req_valid[i] = core_bus2_if[i].req_valid;
-								// Trace: src/VX_cache.sv:189:9
-								assign core_req_rw[i] = core_bus2_if[i].req_data[614];
-								// Trace: src/VX_cache.sv:190:9
-								assign core_req_byteen[i * 64+:64] = core_bus2_if[i].req_data[75-:64];
-								// Trace: src/VX_cache.sv:191:9
-								assign core_req_addr[i * 26+:26] = core_bus2_if[i].req_data[613-:26];
-								// Trace: src/VX_cache.sv:192:9
-								assign core_req_data[i * 512+:512] = core_bus2_if[i].req_data[587-:512];
-								// Trace: src/VX_cache.sv:193:9
-								assign core_req_tag[i * 9+:9] = core_bus2_if[i].req_data[8-:9];
-								// Trace: src/VX_cache.sv:194:9
-								assign core_req_flags[i * 3+:3] = sv2v_cast_3(core_bus2_if[i].req_data[11-:3]);
-								// Trace: src/VX_cache.sv:195:9
-								assign core_bus2_if[i].req_ready = core_req_ready[i];
-							end
-							// Trace: src/VX_cache.sv:197:5
-							genvar _gv_i_235;
-							for (_gv_i_235 = 0; _gv_i_235 < NUM_REQS; _gv_i_235 = _gv_i_235 + 1) begin : g_core_req_wsel
-								localparam i = _gv_i_235;
-								if (1) begin : g_no_wsel
-									// Trace: src/VX_cache.sv:201:13
-									assign core_req_wsel[i+:1] = 1'sb0;
-								end
-							end
-							// Trace: src/VX_cache.sv:204:5
-							genvar _gv_i_236;
-							for (_gv_i_236 = 0; _gv_i_236 < NUM_REQS; _gv_i_236 = _gv_i_236 + 1) begin : g_core_req_line_addr
-								localparam i = _gv_i_236;
-								// Trace: src/VX_cache.sv:205:9
-								assign core_req_line_addr[i * 24+:24] = core_req_addr[(i * 26) + 2+:LINE_ADDR_WIDTH];
-							end
-							// Trace: src/VX_cache.sv:207:5
-							genvar _gv_i_237;
-							for (_gv_i_237 = 0; _gv_i_237 < NUM_REQS; _gv_i_237 = _gv_i_237 + 1) begin : g_core_req_bid
-								localparam i = _gv_i_237;
-								if (1) begin : g_multibanks
-									// Trace: src/VX_cache.sv:209:13
-									assign core_req_bid[i * 2+:2] = core_req_addr[(i * 26) + WORD_SEL_BITS+:BANK_SEL_BITS];
-								end
-							end
-							// Trace: src/VX_cache.sv:214:5
-							genvar _gv_i_238;
-							for (_gv_i_238 = 0; _gv_i_238 < NUM_REQS; _gv_i_238 = _gv_i_238 + 1) begin : g_core_req_data_in
-								localparam i = _gv_i_238;
-								// Trace: src/VX_cache.sv:215:9
-								assign core_req_data_in[i * 614+:614] = {core_req_line_addr[i * 24+:24], core_req_rw[i], core_req_wsel[i+:1], core_req_byteen[i * 64+:64], core_req_data[i * 512+:512], core_req_tag[i * 9+:9], core_req_flags[i * 3+:3]};
-							end
-							// Trace: src/VX_cache.sv:225:5
-							assign per_bank_core_req_fire = per_bank_core_req_valid & per_bank_mem_req_ready;
-							// Trace: src/VX_cache.sv:226:5
-							localparam VX_gpu_pkg_PERF_CTR_BITS = 44;
-							VX_stream_xbar #(
-								.NUM_INPUTS(NUM_REQS),
-								.NUM_OUTPUTS(NUM_BANKS),
-								.DATAW(CORE_REQ_DATAW),
-								.PERF_CTR_BITS(VX_gpu_pkg_PERF_CTR_BITS),
-								.ARBITER("R"),
-								.OUT_BUF(REQ_XBAR_BUF)
-							) core_req_xbar(
-								.clk(clk),
-								.reset(reset),
-								.collisions(),
-								.valid_in(core_req_valid),
-								.data_in(core_req_data_in),
-								.sel_in(core_req_bid),
-								.ready_in(core_req_ready),
-								.valid_out(per_bank_core_req_valid),
-								.data_out(core_req_data_out),
-								.sel_out(per_bank_core_req_idx),
-								.ready_out(per_bank_core_req_ready)
-							);
-							// Trace: src/VX_cache.sv:246:5
-							genvar _gv_i_239;
-							for (_gv_i_239 = 0; _gv_i_239 < NUM_BANKS; _gv_i_239 = _gv_i_239 + 1) begin : g_core_req_data_out
-								localparam i = _gv_i_239;
-								// Trace: src/VX_cache.sv:247:9
-								assign {per_bank_core_req_addr[i * 24+:24], per_bank_core_req_rw[i], per_bank_core_req_wsel[i+:1], per_bank_core_req_byteen[i * 64+:64], per_bank_core_req_data[i * 512+:512], per_bank_core_req_tag[i * 9+:9], per_bank_core_req_flags[i * 3+:3]} = core_req_data_out[i * 614+:614];
-							end
-							// Trace: src/VX_cache.sv:257:5
-							genvar _gv_bank_id_1;
-							for (_gv_bank_id_1 = 0; _gv_bank_id_1 < NUM_BANKS; _gv_bank_id_1 = _gv_bank_id_1 + 1) begin : g_banks
-								localparam bank_id = _gv_bank_id_1;
-								// Trace: src/VX_cache.sv:258:9
-								VX_cache_bank #(
-									.BANK_ID(bank_id),
-									.INSTANCE_ID(""),
-									.CACHE_SIZE(CACHE_SIZE),
-									.LINE_SIZE(LINE_SIZE),
-									.NUM_BANKS(NUM_BANKS),
-									.NUM_WAYS(NUM_WAYS),
-									.WORD_SIZE(WORD_SIZE),
-									.NUM_REQS(NUM_REQS),
-									.WRITE_ENABLE(WRITE_ENABLE),
-									.WRITEBACK(WRITEBACK),
-									.DIRTY_BYTES(DIRTY_BYTES),
-									.REPL_POLICY(REPL_POLICY),
-									.CRSQ_SIZE(CRSQ_SIZE),
-									.MSHR_SIZE(MSHR_SIZE),
-									.MREQ_SIZE(MREQ_SIZE),
-									.TAG_WIDTH(TAG_WIDTH),
-									.CORE_OUT_REG((CORE_RSP_BUF_ENABLE ? 0 : ((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : (CORE_OUT_BUF & 7) - 2))),
-									.MEM_OUT_REG((MEM_REQ_BUF_ENABLE ? 0 : ((MEM_OUT_BUF & 7) < 2 ? MEM_OUT_BUF & 7 : (MEM_OUT_BUF & 7) - 2)))
-								) bank(
-									.clk(clk),
-									.reset(reset),
-									.core_req_valid(per_bank_core_req_valid[bank_id]),
-									.core_req_addr(per_bank_core_req_addr[bank_id * 24+:24]),
-									.core_req_rw(per_bank_core_req_rw[bank_id]),
-									.core_req_wsel(per_bank_core_req_wsel[bank_id+:1]),
-									.core_req_byteen(per_bank_core_req_byteen[bank_id * 64+:64]),
-									.core_req_data(per_bank_core_req_data[bank_id * 512+:512]),
-									.core_req_tag(per_bank_core_req_tag[bank_id * 9+:9]),
-									.core_req_idx(per_bank_core_req_idx[bank_id * 2+:2]),
-									.core_req_flags(per_bank_core_req_flags[bank_id * 3+:3]),
-									.core_req_ready(per_bank_core_req_ready[bank_id]),
-									.core_rsp_valid(per_bank_core_rsp_valid[bank_id]),
-									.core_rsp_data(per_bank_core_rsp_data[bank_id * 512+:512]),
-									.core_rsp_tag(per_bank_core_rsp_tag[bank_id * 9+:9]),
-									.core_rsp_idx(per_bank_core_rsp_idx[bank_id * 2+:2]),
-									.core_rsp_ready(per_bank_core_rsp_ready[bank_id]),
-									.mem_req_valid(per_bank_mem_req_valid[bank_id]),
-									.mem_req_addr(per_bank_mem_req_addr[bank_id * 24+:24]),
-									.mem_req_rw(per_bank_mem_req_rw[bank_id]),
-									.mem_req_byteen(per_bank_mem_req_byteen[bank_id * 64+:64]),
-									.mem_req_data(per_bank_mem_req_data[bank_id * 512+:512]),
-									.mem_req_tag(per_bank_mem_req_tag[bank_id * 5+:5]),
-									.mem_req_flags(per_bank_mem_req_flags[bank_id * 3+:3]),
-									.mem_req_ready(per_bank_mem_req_ready[bank_id]),
-									.mem_rsp_valid(per_bank_mem_rsp_valid[bank_id]),
-									.mem_rsp_data(per_bank_mem_rsp_data[bank_id * 512+:512]),
-									.mem_rsp_tag(per_bank_mem_rsp_tag[bank_id * 5+:5]),
-									.mem_rsp_ready(per_bank_mem_rsp_ready[bank_id]),
-									.flush_begin(per_bank_flush_begin[bank_id]),
-									.flush_uuid(flush_uuid),
-									.flush_end(per_bank_flush_end[bank_id])
-								);
-							end
-							// Trace: src/VX_cache.sv:312:5
-							wire [2083:0] core_rsp_data_in;
-							// Trace: src/VX_cache.sv:313:5
-							wire [2083:0] core_rsp_data_out;
-							// Trace: src/VX_cache.sv:314:5
-							wire [3:0] core_rsp_valid_s;
-							// Trace: src/VX_cache.sv:315:5
-							wire [2047:0] core_rsp_data_s;
-							// Trace: src/VX_cache.sv:316:5
-							wire [35:0] core_rsp_tag_s;
-							// Trace: src/VX_cache.sv:317:5
-							wire [3:0] core_rsp_ready_s;
-							// Trace: src/VX_cache.sv:318:5
-							genvar _gv_i_240;
-							for (_gv_i_240 = 0; _gv_i_240 < NUM_BANKS; _gv_i_240 = _gv_i_240 + 1) begin : g_core_rsp_data_in
-								localparam i = _gv_i_240;
-								// Trace: src/VX_cache.sv:319:9
-								assign core_rsp_data_in[i * 521+:521] = {per_bank_core_rsp_data[i * 512+:512], per_bank_core_rsp_tag[i * 9+:9]};
-							end
-							// Trace: src/VX_cache.sv:321:5
-							VX_stream_xbar #(
-								.NUM_INPUTS(NUM_BANKS),
-								.NUM_OUTPUTS(NUM_REQS),
-								.DATAW(CORE_RSP_DATAW),
-								.ARBITER("R")
-							) core_rsp_xbar(
-								.clk(clk),
-								.reset(reset),
-								.collisions(),
-								.valid_in(per_bank_core_rsp_valid),
-								.data_in(core_rsp_data_in),
-								.sel_in(per_bank_core_rsp_idx),
-								.ready_in(per_bank_core_rsp_ready),
-								.valid_out(core_rsp_valid_s),
-								.data_out(core_rsp_data_out),
-								.ready_out(core_rsp_ready_s),
-								.sel_out()
-							);
-							// Trace: src/VX_cache.sv:339:5
-							genvar _gv_i_241;
-							for (_gv_i_241 = 0; _gv_i_241 < NUM_REQS; _gv_i_241 = _gv_i_241 + 1) begin : g_core_rsp_data_s
-								localparam i = _gv_i_241;
-								// Trace: src/VX_cache.sv:340:9
-								assign {core_rsp_data_s[i * 512+:512], core_rsp_tag_s[i * 9+:9]} = core_rsp_data_out[i * 521+:521];
-							end
-							// Trace: src/VX_cache.sv:342:5
-							genvar _gv_i_242;
-							for (_gv_i_242 = 0; _gv_i_242 < NUM_REQS; _gv_i_242 = _gv_i_242 + 1) begin : g_core_rsp_buf
-								localparam i = _gv_i_242;
-								// Trace: src/VX_cache.sv:343:9
-								VX_elastic_buffer #(
-									.DATAW(521),
-									.SIZE((CORE_RSP_BUF_ENABLE ? ((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : 2) : 0)),
-									.OUT_REG(((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : (CORE_OUT_BUF & 7) - 2))
-								) core_rsp_buf(
-									.clk(clk),
-									.reset(reset),
-									.valid_in(core_rsp_valid_s[i]),
-									.ready_in(core_rsp_ready_s[i]),
-									.data_in({core_rsp_data_s[i * 512+:512], core_rsp_tag_s[i * 9+:9]}),
-									.data_out({core_bus2_if[i].rsp_data[520-:512], core_bus2_if[i].rsp_data[8-:9]}),
-									.valid_out(core_bus2_if[i].rsp_valid),
-									.ready_out(core_bus2_if[i].rsp_ready)
-								);
-							end
-							// Trace: src/VX_cache.sv:358:5
-							wire [2435:0] per_bank_mem_req_pdata;
-							// Trace: src/VX_cache.sv:359:5
-							genvar _gv_i_243;
-							for (_gv_i_243 = 0; _gv_i_243 < NUM_BANKS; _gv_i_243 = _gv_i_243 + 1) begin : g_per_bank_mem_req_pdata
-								localparam i = _gv_i_243;
-								// Trace: src/VX_cache.sv:360:9
-								assign per_bank_mem_req_pdata[i * 609+:609] = {per_bank_mem_req_rw[i], per_bank_mem_req_addr[i * 24+:24], per_bank_mem_req_data[i * 512+:512], per_bank_mem_req_byteen[i * 64+:64], per_bank_mem_req_flags[i * 3+:3], per_bank_mem_req_tag[i * 5+:5]};
-							end
-							// Trace: src/VX_cache.sv:369:5
-							wire [1:0] mem_req_valid;
-							// Trace: src/VX_cache.sv:370:5
-							wire [1217:0] mem_req_pdata;
-							// Trace: src/VX_cache.sv:371:5
-							wire [1:0] mem_req_ready;
-							// Trace: src/VX_cache.sv:372:5
-							wire [1:0] mem_req_sel_out;
-							// Trace: src/VX_cache.sv:373:5
-							VX_stream_arb #(
-								.NUM_INPUTS(NUM_BANKS),
-								.NUM_OUTPUTS(MEM_PORTS),
-								.DATAW(MEM_REQ_DATAW),
-								.ARBITER("R")
-							) mem_req_arb(
-								.clk(clk),
-								.reset(reset),
-								.valid_in(per_bank_mem_req_valid),
-								.data_in(per_bank_mem_req_pdata),
-								.ready_in(per_bank_mem_req_ready),
-								.valid_out(mem_req_valid),
-								.data_out(mem_req_pdata),
-								.ready_out(mem_req_ready),
-								.sel_out(mem_req_sel_out)
-							);
-							// Trace: src/VX_cache.sv:389:5
-							genvar _gv_i_244;
-							for (_gv_i_244 = 0; _gv_i_244 < MEM_PORTS; _gv_i_244 = _gv_i_244 + 1) begin : g_mem_req_buf
-								localparam i = _gv_i_244;
-								// Trace: src/VX_cache.sv:390:9
-								wire mem_req_rw;
-								// Trace: src/VX_cache.sv:391:9
-								wire [23:0] mem_req_addr;
-								// Trace: src/VX_cache.sv:392:9
-								wire [511:0] mem_req_data;
-								// Trace: src/VX_cache.sv:393:9
-								wire [63:0] mem_req_byteen;
-								// Trace: src/VX_cache.sv:394:9
-								wire [2:0] mem_req_flags;
-								// Trace: src/VX_cache.sv:395:9
-								wire [4:0] mem_req_tag;
-								// Trace: src/VX_cache.sv:396:9
-								assign {mem_req_rw, mem_req_addr, mem_req_data, mem_req_byteen, mem_req_flags, mem_req_tag} = mem_req_pdata[i * 609+:609];
-								// Trace: src/VX_cache.sv:404:9
-								wire [25:0] mem_req_addr_w;
-								// Trace: src/VX_cache.sv:405:9
-								wire [5:0] mem_req_tag_w;
-								// Trace: src/VX_cache.sv:406:9
-								wire [2:0] mem_req_flags_w;
-								if (1) begin : g_mem_req_tag_multibanks
-									if (1) begin : g_arb_sel
-										// Trace: src/VX_cache.sv:409:17
-										wire [1:0] mem_req_bank_id;
-										// Trace: src/VX_cache.sv:410:17
-										VX_bits_concat #(
-											.L(MEM_ARB_SEL_BITS),
-											.R(MEM_PORTS_SEL_BITS)
-										) bank_id_concat(
-											.left_in(mem_req_sel_out[i+:1]),
-											.right_in(sv2v_cast_1_signed(i)),
-											.data_out(mem_req_bank_id)
-										);
-										// Trace: src/VX_cache.sv:418:17
-										assign mem_req_addr_w = sv2v_cast_26({mem_req_addr, mem_req_bank_id});
-										// Trace: src/VX_cache.sv:419:17
-										assign mem_req_tag_w = {mem_req_tag, mem_req_sel_out[i+:1]};
-									end
-								end
-								// Trace: src/VX_cache.sv:428:9
-								VX_elastic_buffer #(
-									.DATAW(612),
-									.SIZE((MEM_REQ_BUF_ENABLE ? ((MEM_OUT_BUF & 7) < 2 ? MEM_OUT_BUF & 7 : 2) : 0)),
-									.OUT_REG(((MEM_OUT_BUF & 7) < 2 ? MEM_OUT_BUF & 7 : (MEM_OUT_BUF & 7) - 2))
-								) mem_req_buf(
-									.clk(clk),
-									.reset(reset),
-									.valid_in(mem_req_valid[i]),
-									.ready_in(mem_req_ready[i]),
-									.data_in({mem_req_rw, mem_req_byteen, mem_req_addr_w, mem_req_data, mem_req_tag_w, mem_req_flags}),
-									.data_out({mem_bus_tmp_if[i].req_data[611], mem_bus_tmp_if[i].req_data[72-:64], mem_bus_tmp_if[i].req_data[610-:26], mem_bus_tmp_if[i].req_data[584-:512], mem_bus_tmp_if[i].req_data[5-:6], mem_req_flags_w}),
-									.valid_out(mem_bus_tmp_if[i].req_valid),
-									.ready_out(mem_bus_tmp_if[i].req_ready)
-								);
-								if (1) begin : g_mem_req_flags
-									// Trace: src/VX_cache.sv:443:13
-									assign mem_bus_tmp_if[i].req_data[8-:3] = mem_req_flags_w;
-								end
-								if (WRITE_ENABLE) begin : g_mem_bus_if
-									// Trace: src/VX_cache.sv:448:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_valid = mem_bus_tmp_if[i].req_valid;
-									// Trace: src/VX_cache.sv:449:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data = mem_bus_tmp_if[i].req_data;
-									// Trace: src/VX_cache.sv:450:5
-									assign mem_bus_tmp_if[i].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_ready;
-									// Trace: src/VX_cache.sv:451:5
-									assign mem_bus_tmp_if[i].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_valid;
-									// Trace: src/VX_cache.sv:452:5
-									assign mem_bus_tmp_if[i].rsp_data = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_data;
-									// Trace: src/VX_cache.sv:453:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_ready = mem_bus_tmp_if[i].rsp_ready;
-								end
-								else begin : g_mem_bus_if_ro
-									// Trace: src/VX_cache.sv:455:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_valid = mem_bus_tmp_if[i].req_valid;
-									// Trace: src/VX_cache.sv:456:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data[611] = 0;
-									// Trace: src/VX_cache.sv:457:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data[610-:26] = mem_bus_tmp_if[i].req_data[610-:26];
-									// Trace: src/VX_cache.sv:458:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data[584-:512] = 1'sb0;
-									// Trace: src/VX_cache.sv:459:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data[72-:64] = 1'sb1;
-									// Trace: src/VX_cache.sv:460:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data[8-:3] = mem_bus_tmp_if[i].req_data[8-:3];
-									// Trace: src/VX_cache.sv:461:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_data[5-:6] = mem_bus_tmp_if[i].req_data[5-:6];
-									// Trace: src/VX_cache.sv:462:5
-									assign mem_bus_tmp_if[i].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].req_ready;
-									// Trace: src/VX_cache.sv:463:5
-									assign mem_bus_tmp_if[i].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_valid;
-									// Trace: src/VX_cache.sv:464:5
-									assign mem_bus_tmp_if[i].rsp_data[517-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_data[517-:512];
-									// Trace: src/VX_cache.sv:465:5
-									assign mem_bus_tmp_if[i].rsp_data[5-:6] = Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_data[5-:6];
-									// Trace: src/VX_cache.sv:466:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.l2cache.mem_bus_cache_if[i + _mbase_mem_bus_if].rsp_ready = mem_bus_tmp_if[i].rsp_ready;
-								end
-							end
+					if (1) begin : g_passthru
+						genvar _gv_i_41;
+						for (_gv_i_41 = 0; _gv_i_41 < NUM_REQS; _gv_i_41 = _gv_i_41 + 1) begin : g_core_bus_cache_if
+							localparam i = _gv_i_41;
+							// Trace: src/VX_cache_wrap.sv:141:5
+							assign core_bus_cache_if[i].req_ready = 0;
+							// Trace: src/VX_cache_wrap.sv:142:5
+							assign core_bus_cache_if[i].rsp_valid = 0;
+							// Trace: src/VX_cache_wrap.sv:143:5
+							assign core_bus_cache_if[i].rsp_data = 1'sb0;
 						end
-						assign cache.clk = clk;
-						assign cache.reset = reset;
+						genvar _gv_i_42;
+						for (_gv_i_42 = 0; _gv_i_42 < MEM_PORTS; _gv_i_42 = _gv_i_42 + 1) begin : g_mem_bus_cache_if
+							localparam i = _gv_i_42;
+							// Trace: src/VX_cache_wrap.sv:146:5
+							assign mem_bus_cache_if[i].req_valid = 0;
+							// Trace: src/VX_cache_wrap.sv:147:5
+							assign mem_bus_cache_if[i].req_data = 1'sb0;
+							// Trace: src/VX_cache_wrap.sv:148:5
+							assign mem_bus_cache_if[i].rsp_ready = 0;
+						end
 					end
 				end
 				assign l2cache.clk = clk;
 				assign l2cache.reset = l2_reset;
 				// Trace: src/VX_cluster.sv:49:5
-				wire [3:0] per_socket_busy;
+				wire [0:0] per_socket_busy;
 				// Trace: src/VX_cluster.sv:50:5
 				genvar _gv_socket_id_1;
 				localparam VX_gpu_pkg_VX_DCR_ADDR_WIDTH = 12;
@@ -9688,17 +7413,8 @@ module Vortex (
 					// Trace: src/VX_cluster.sv:58:9
 					wire is_base_dcr_addr = (Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_addr >= 12'h001) && (Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_addr < 12'h006);
 					if (1) begin : genblk1
-						// Trace: src/VX_cluster.sv:61:9
-						VX_pipe_register #(
-							.DATAW(45),
-							.DEPTH(1'd1)
-						) pipe_reg(
-							.clk(clk),
-							.reset(1'b0),
-							.enable(1'b1),
-							.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_valid && is_base_dcr_addr, Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_addr, Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_data}),
-							.data_out({socket_dcr_bus_if.write_valid, socket_dcr_bus_if.write_addr, socket_dcr_bus_if.write_data})
-						);
+						// Trace: src/VX_cluster.sv:72:9
+						assign {socket_dcr_bus_if.write_valid, socket_dcr_bus_if.write_addr, socket_dcr_bus_if.write_data} = {Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_valid && is_base_dcr_addr, Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_addr, Vortex.g_clusters[_gv_cluster_id_1].cluster_dcr_bus_if.write_data};
 					end
 					// Trace: src/VX_cluster.sv:75:9
 					// expanded module instance: socket
@@ -9737,7 +7453,7 @@ module Vortex (
 						localparam _param_FD2E2_DATA_SIZE = VX_gpu_pkg_ICACHE_WORD_SIZE;
 						localparam _param_FD2E2_TAG_WIDTH = VX_gpu_pkg_ICACHE_TAG_WIDTH;
 						genvar _arr_FD2E2;
-						for (_arr_FD2E2 = 0; _arr_FD2E2 <= 3; _arr_FD2E2 = _arr_FD2E2 + 1) begin : per_core_icache_bus_if
+						for (_arr_FD2E2 = 0; _arr_FD2E2 <= 0; _arr_FD2E2 = _arr_FD2E2 + 1) begin : per_core_icache_bus_if
 							// removed import VX_gpu_pkg::*;
 							// Trace: src/VX_mem_bus_if.sv:2:15
 							localparam DATA_SIZE = _param_FD2E2_DATA_SIZE;
@@ -9833,7 +7549,7 @@ module Vortex (
 						localparam _bbase_9B047_mem_bus_if = 0;
 						localparam _param_9B047_INSTANCE_ID = "";
 						localparam _param_9B047_NUM_UNITS = 1;
-						localparam _param_9B047_NUM_INPUTS = 4;
+						localparam _param_9B047_NUM_INPUTS = 1;
 						localparam _param_9B047_TAG_SEL_IDX = 0;
 						localparam _param_9B047_CACHE_SIZE = 16384;
 						localparam _param_9B047_LINE_SIZE = VX_gpu_pkg_ICACHE_LINE_SIZE;
@@ -9914,13 +7630,13 @@ module Vortex (
 							// Trace: src/VX_cache_cluster.sv:32:5
 							localparam PASSTHRU = 1'd0;
 							// Trace: src/VX_cache_cluster.sv:33:5
-							localparam ARB_TAG_WIDTH = 5;
+							localparam ARB_TAG_WIDTH = 3;
 							// Trace: src/VX_cache_cluster.sv:34:5
 							localparam CACHE_MEM_TAG_WIDTH = 5;
 							// Trace: src/VX_cache_cluster.sv:36:5
-							localparam BYPASS_TAG_WIDTH = 9;
+							localparam BYPASS_TAG_WIDTH = 7;
 							// Trace: src/VX_cache_cluster.sv:38:5
-							localparam NC_TAG_WIDTH = 10;
+							localparam NC_TAG_WIDTH = 8;
 							// Trace: src/VX_cache_cluster.sv:39:5
 							localparam MEM_TAG_WIDTH = (PASSTHRU ? BYPASS_TAG_WIDTH : (NC_ENABLE ? NC_TAG_WIDTH : CACHE_MEM_TAG_WIDTH));
 							// Trace: src/VX_cache_cluster.sv:40:5
@@ -9993,13 +7709,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [74:0] req_data;
+								wire [72:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [36:0] rsp_data;
+								wire [34:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -10014,7 +7730,7 @@ module Vortex (
 								localparam _param_A62F7_DATA_SIZE = WORD_SIZE;
 								localparam _param_A62F7_TAG_WIDTH = TAG_WIDTH;
 								genvar _arr_A62F7;
-								for (_arr_A62F7 = 0; _arr_A62F7 <= 3; _arr_A62F7 = _arr_A62F7 + 1) begin : core_bus_tmp_if
+								for (_arr_A62F7 = 0; _arr_A62F7 <= 0; _arr_A62F7 = _arr_A62F7 + 1) begin : core_bus_tmp_if
 									// removed import VX_gpu_pkg::*;
 									// Trace: src/VX_mem_bus_if.sv:2:15
 									localparam DATA_SIZE = _param_A62F7_DATA_SIZE;
@@ -10079,13 +7795,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [74:0] req_data;
+									wire [72:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [36:0] rsp_data;
+									wire [34:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -10117,8 +7833,8 @@ module Vortex (
 								localparam _param_856A9_TAG_WIDTH = TAG_WIDTH;
 								localparam _param_856A9_TAG_SEL_IDX = TAG_SEL_IDX;
 								localparam _param_856A9_ARBITER = "R";
-								localparam _param_856A9_REQ_OUT_BUF = 2;
-								localparam _param_856A9_RSP_OUT_BUF = CORE_OUT_BUF;
+								localparam _param_856A9_REQ_OUT_BUF = 0;
+								localparam _param_856A9_RSP_OUT_BUF = 0;
 								if (1) begin : core_arb
 									// removed import VX_gpu_pkg::*;
 									// Trace: src/VX_mem_arb.sv:2:15
@@ -10156,7 +7872,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:19:5
 									localparam DATA_WIDTH = 32;
 									// Trace: src/VX_mem_arb.sv:20:5
-									localparam LOG_NUM_REQS = 2;
+									localparam LOG_NUM_REQS = 0;
 									// Trace: src/VX_mem_arb.sv:21:5
 									localparam REQ_DATAW = 73;
 									// Trace: src/VX_mem_arb.sv:22:5
@@ -10164,17 +7880,17 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:23:5
 									localparam SEL_COUNT = NUM_OUTPUTS;
 									// Trace: src/VX_mem_arb.sv:24:5
-									wire [3:0] req_valid_in;
+									wire [0:0] req_valid_in;
 									// Trace: src/VX_mem_arb.sv:25:5
-									wire [291:0] req_data_in;
+									wire [72:0] req_data_in;
 									// Trace: src/VX_mem_arb.sv:26:5
-									wire [3:0] req_ready_in;
+									wire [0:0] req_ready_in;
 									// Trace: src/VX_mem_arb.sv:27:5
 									wire [0:0] req_valid_out;
 									// Trace: src/VX_mem_arb.sv:28:5
 									wire [72:0] req_data_out;
 									// Trace: src/VX_mem_arb.sv:29:5
-									wire [1:0] req_sel_out;
+									wire [0:0] req_sel_out;
 									// Trace: src/VX_mem_arb.sv:30:5
 									wire [0:0] req_ready_out;
 									// Trace: src/VX_mem_arb.sv:31:5
@@ -10215,28 +7931,20 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:55:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 										// Trace: src/VX_mem_arb.sv:56:9
-										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[74], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[73-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[43-:32], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[11-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:3], req_tag_out} = req_data_out[i * 73+:73];
+										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[72], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[71-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[41-:32], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[9-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[5-:3], req_tag_out} = req_data_out[i * 73+:73];
 										// Trace: src/VX_mem_arb.sv:64:9
 										assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_ready;
-										if (1) begin : g_req_tag_sel_out
-											// Trace: src/VX_mem_arb.sv:66:13
-											VX_bits_insert #(
-												.N(TAG_WIDTH),
-												.S(LOG_NUM_REQS),
-												.POS(TAG_SEL_IDX)
-											) bits_insert(
-												.data_in(req_tag_out),
-												.ins_in(req_sel_out[i * 2+:2]),
-												.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[4-:5])
-											);
+										if (1) begin : g_req_tag_out
+											// Trace: src/VX_mem_arb.sv:76:13
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[2-:3] = req_tag_out;
 										end
 									end
 									// Trace: src/VX_mem_arb.sv:79:5
-									wire [3:0] rsp_valid_out;
+									wire [0:0] rsp_valid_out;
 									// Trace: src/VX_mem_arb.sv:80:5
-									wire [139:0] rsp_data_out;
+									wire [34:0] rsp_data_out;
 									// Trace: src/VX_mem_arb.sv:81:5
-									wire [3:0] rsp_ready_out;
+									wire [0:0] rsp_ready_out;
 									// Trace: src/VX_mem_arb.sv:82:5
 									wire [0:0] rsp_valid_in;
 									// Trace: src/VX_mem_arb.sv:83:5
@@ -10244,47 +7952,34 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:84:5
 									wire [0:0] rsp_ready_in;
 									// Trace: src/VX_mem_arb.sv:85:5
-									if (1) begin : g_rsp_select
-										// Trace: src/VX_mem_arb.sv:86:9
-										wire [1:0] rsp_sel_in;
-										genvar _gv_i_185;
-										for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
-											localparam i = _gv_i_185;
-											// Trace: src/VX_mem_arb.sv:88:13
-											wire [2:0] rsp_tag_out;
-											// Trace: src/VX_mem_arb.sv:89:13
-											VX_bits_remove #(
-												.N(5),
-												.S(LOG_NUM_REQS),
-												.POS(TAG_SEL_IDX)
-											) bits_remove(
-												.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[4-:5]),
-												.sel_out(rsp_sel_in[i * 2+:2]),
-												.data_out(rsp_tag_out)
-											);
-											// Trace: src/VX_mem_arb.sv:98:13
+									if (1) begin : g_rsp_arb
+										genvar _gv_i_186;
+										for (_gv_i_186 = 0; _gv_i_186 < NUM_OUTPUTS; _gv_i_186 = _gv_i_186 + 1) begin : g_rsp_data_in
+											localparam i = _gv_i_186;
+											// Trace: src/VX_mem_arb.sv:120:13
 											assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
-											// Trace: src/VX_mem_arb.sv:99:13
-											assign rsp_data_in[i * 35+:35] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[36-:32], rsp_tag_out};
-											// Trace: src/VX_mem_arb.sv:100:13
+											// Trace: src/VX_mem_arb.sv:121:13
+											assign rsp_data_in[i * 35+:35] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
+											// Trace: src/VX_mem_arb.sv:122:13
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 										end
-										// Trace: src/VX_mem_arb.sv:102:9
-										VX_stream_switch #(
+										// Trace: src/VX_mem_arb.sv:124:9
+										VX_stream_arb #(
 											.NUM_INPUTS(NUM_OUTPUTS),
 											.NUM_OUTPUTS(NUM_INPUTS),
 											.DATAW(RSP_DATAW),
+											.ARBITER(ARBITER),
 											.OUT_BUF(RSP_OUT_BUF)
-										) rsp_switch(
+										) req_arb(
 											.clk(clk),
 											.reset(reset),
-											.sel_in(rsp_sel_in),
 											.valid_in(rsp_valid_in),
 											.ready_in(rsp_ready_in),
 											.data_in(rsp_data_in),
 											.data_out(rsp_data_out),
 											.valid_out(rsp_valid_out),
-											.ready_out(rsp_ready_out)
+											.ready_out(rsp_ready_out),
+											.sel_out()
 										);
 									end
 									// Trace: src/VX_mem_arb.sv:142:5
@@ -10344,7 +8039,7 @@ module Vortex (
 								localparam _param_665FE_MREQ_SIZE = MREQ_SIZE;
 								localparam _param_665FE_TAG_WIDTH = ARB_TAG_WIDTH;
 								localparam _param_665FE_TAG_SEL_IDX = TAG_SEL_IDX;
-								localparam _param_665FE_CORE_OUT_BUF = 2;
+								localparam _param_665FE_CORE_OUT_BUF = CORE_OUT_BUF;
 								localparam _param_665FE_MEM_OUT_BUF = MEM_OUT_BUF;
 								localparam _param_665FE_NC_ENABLE = NC_ENABLE;
 								localparam _param_665FE_PASSTHRU = PASSTHRU;
@@ -10406,9 +8101,9 @@ module Vortex (
 									// Trace: src/VX_cache_wrap.sv:30:5
 									localparam CACHE_MEM_TAG_WIDTH = 5;
 									// Trace: src/VX_cache_wrap.sv:32:5
-									localparam BYPASS_TAG_WIDTH = 9;
+									localparam BYPASS_TAG_WIDTH = 7;
 									// Trace: src/VX_cache_wrap.sv:34:5
-									localparam NC_TAG_WIDTH = 10;
+									localparam NC_TAG_WIDTH = 8;
 									// Trace: src/VX_cache_wrap.sv:35:5
 									localparam MEM_TAG_WIDTH = (PASSTHRU ? BYPASS_TAG_WIDTH : (NC_ENABLE ? NC_TAG_WIDTH : CACHE_MEM_TAG_WIDTH));
 									// Trace: src/VX_cache_wrap.sv:36:5
@@ -10442,13 +8137,13 @@ module Vortex (
 										// Trace: src/VX_mem_bus_if.sv:24:5
 										wire req_valid;
 										// Trace: src/VX_mem_bus_if.sv:25:5
-										wire [74:0] req_data;
+										wire [72:0] req_data;
 										// Trace: src/VX_mem_bus_if.sv:26:5
 										wire req_ready;
 										// Trace: src/VX_mem_bus_if.sv:27:5
 										wire rsp_valid;
 										// Trace: src/VX_mem_bus_if.sv:28:5
-										wire [36:0] rsp_data;
+										wire [34:0] rsp_data;
 										// Trace: src/VX_mem_bus_if.sv:29:5
 										wire rsp_ready;
 										// Trace: src/VX_mem_bus_if.sv:30:5
@@ -10604,13 +8299,13 @@ module Vortex (
 											localparam WSEL_BITS = 4;
 											// Trace: src/VX_cache_bypass.sv:26:5
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam CORE_TAG_ID_WIDTH = 4;
+											localparam CORE_TAG_ID_WIDTH = 2;
 											// Trace: src/VX_cache_bypass.sv:27:5
-											localparam MEM_TAG_ID_WIDTH = 4;
+											localparam MEM_TAG_ID_WIDTH = 2;
 											// Trace: src/VX_cache_bypass.sv:28:5
-											localparam MEM_TAG_NC1_WIDTH = 5;
+											localparam MEM_TAG_NC1_WIDTH = 3;
 											// Trace: src/VX_cache_bypass.sv:29:5
-											localparam MEM_TAG_NC2_WIDTH = 9;
+											localparam MEM_TAG_NC2_WIDTH = 7;
 											// Trace: src/VX_cache_bypass.sv:30:5
 											localparam MEM_TAG_OUT_WIDTH = (CACHE_ENABLE ? MEM_TAG_NC2_WIDTH : MEM_TAG_NC2_WIDTH);
 											// Trace: src/VX_cache_bypass.sv:31:5
@@ -10642,13 +8337,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [74:0] req_data;
+												wire [72:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [36:0] rsp_data;
+												wire [34:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -10663,7 +8358,7 @@ module Vortex (
 												localparam i = _gv_i_56;
 												if (CACHE_ENABLE) begin : g_cache
 													// Trace: src/VX_cache_bypass.sv:38:13
-													assign core_req_nc_sel[i] = ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_core_bus_in_if].req_data[6];
+													assign core_req_nc_sel[i] = ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_core_bus_in_if].req_data[4];
 												end
 												else begin : g_no_cache
 													// Trace: src/VX_cache_bypass.sv:40:13
@@ -10722,19 +8417,19 @@ module Vortex (
 												// Trace: src/VX_mem_switch.sv:22:5
 												localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
 												localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-												localparam REQ_DATAW = 75;
+												localparam REQ_DATAW = 73;
 												// Trace: src/VX_mem_switch.sv:23:5
-												localparam RSP_DATAW = 37;
+												localparam RSP_DATAW = 35;
 												// Trace: src/VX_mem_switch.sv:24:5
 												wire [0:0] req_valid_in;
 												// Trace: src/VX_mem_switch.sv:25:5
-												wire [74:0] req_data_in;
+												wire [72:0] req_data_in;
 												// Trace: src/VX_mem_switch.sv:26:5
 												wire [0:0] req_ready_in;
 												// Trace: src/VX_mem_switch.sv:27:5
 												wire [NUM_OUTPUTS - 1:0] req_valid_out;
 												// Trace: src/VX_mem_switch.sv:28:5
-												wire [(NUM_OUTPUTS * 75) - 1:0] req_data_out;
+												wire [(NUM_OUTPUTS * 73) - 1:0] req_data_out;
 												// Trace: src/VX_mem_switch.sv:29:5
 												wire [NUM_OUTPUTS - 1:0] req_ready_out;
 												// Trace: src/VX_mem_switch.sv:30:5
@@ -10744,7 +8439,7 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:31:9
 													assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].req_valid;
 													// Trace: src/VX_mem_switch.sv:32:9
-													assign req_data_in[i * 75+:75] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].req_data;
+													assign req_data_in[i * 73+:73] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].req_data;
 													// Trace: src/VX_mem_switch.sv:33:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 												end
@@ -10772,20 +8467,20 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:52:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 													// Trace: src/VX_mem_switch.sv:53:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 75+:75];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 73+:73];
 													// Trace: src/VX_mem_switch.sv:54:9
 													assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_ready;
 												end
 												// Trace: src/VX_mem_switch.sv:56:5
 												wire [NUM_OUTPUTS - 1:0] rsp_valid_in;
 												// Trace: src/VX_mem_switch.sv:57:5
-												wire [(NUM_OUTPUTS * 37) - 1:0] rsp_data_in;
+												wire [(NUM_OUTPUTS * 35) - 1:0] rsp_data_in;
 												// Trace: src/VX_mem_switch.sv:58:5
 												wire [NUM_OUTPUTS - 1:0] rsp_ready_in;
 												// Trace: src/VX_mem_switch.sv:59:5
 												wire [0:0] rsp_valid_out;
 												// Trace: src/VX_mem_switch.sv:60:5
-												wire [36:0] rsp_data_out;
+												wire [34:0] rsp_data_out;
 												// Trace: src/VX_mem_switch.sv:61:5
 												wire [0:0] rsp_ready_out;
 												// Trace: src/VX_mem_switch.sv:62:5
@@ -10795,7 +8490,7 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:63:9
 													assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_valid;
 													// Trace: src/VX_mem_switch.sv:64:9
-													assign rsp_data_in[i * 37+:37] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
+													assign rsp_data_in[i * 35+:35] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
 													// Trace: src/VX_mem_switch.sv:65:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 												end
@@ -10824,7 +8519,7 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:85:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 													// Trace: src/VX_mem_switch.sv:86:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 37+:37];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 35+:35];
 													// Trace: src/VX_mem_switch.sv:87:9
 													assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_ready;
 												end
@@ -10861,13 +8556,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [74:0] req_data;
+												wire [72:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [36:0] rsp_data;
+												wire [34:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -10941,13 +8636,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [74:0] req_data;
+												wire [72:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [36:0] rsp_data;
+												wire [34:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -11004,21 +8699,21 @@ module Vortex (
 												// Trace: src/VX_mem_arb.sv:20:5
 												localparam LOG_NUM_REQS = 0;
 												// Trace: src/VX_mem_arb.sv:21:5
-												localparam REQ_DATAW = 75;
+												localparam REQ_DATAW = 73;
 												// Trace: src/VX_mem_arb.sv:22:5
-												localparam RSP_DATAW = 37;
+												localparam RSP_DATAW = 35;
 												// Trace: src/VX_mem_arb.sv:23:5
 												localparam SEL_COUNT = NUM_OUTPUTS;
 												// Trace: src/VX_mem_arb.sv:24:5
 												wire [0:0] req_valid_in;
 												// Trace: src/VX_mem_arb.sv:25:5
-												wire [74:0] req_data_in;
+												wire [72:0] req_data_in;
 												// Trace: src/VX_mem_arb.sv:26:5
 												wire [0:0] req_ready_in;
 												// Trace: src/VX_mem_arb.sv:27:5
 												wire [0:0] req_valid_out;
 												// Trace: src/VX_mem_arb.sv:28:5
-												wire [74:0] req_data_out;
+												wire [72:0] req_data_out;
 												// Trace: src/VX_mem_arb.sv:29:5
 												wire [0:0] req_sel_out;
 												// Trace: src/VX_mem_arb.sv:30:5
@@ -11030,7 +8725,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:32:9
 													assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_valid;
 													// Trace: src/VX_mem_arb.sv:33:9
-													assign req_data_in[i * 75+:75] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
+													assign req_data_in[i * 73+:73] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
 													// Trace: src/VX_mem_arb.sv:34:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 												end
@@ -11057,28 +8752,28 @@ module Vortex (
 												for (_gv_i_184 = 0; _gv_i_184 < NUM_OUTPUTS; _gv_i_184 = _gv_i_184 + 1) begin : g_bus_out_if
 													localparam i = _gv_i_184;
 													// Trace: src/VX_mem_arb.sv:54:9
-													wire [4:0] req_tag_out;
+													wire [2:0] req_tag_out;
 													// Trace: src/VX_mem_arb.sv:55:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:56:9
-													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[74], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[73-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[43-:32], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[11-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[7-:3], req_tag_out} = req_data_out[i * 75+:75];
+													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[72], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[71-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[41-:32], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[9-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[5-:3], req_tag_out} = req_data_out[i * 73+:73];
 													// Trace: src/VX_mem_arb.sv:64:9
 													assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_ready;
 													if (1) begin : g_req_tag_out
 														// Trace: src/VX_mem_arb.sv:76:13
-														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[4-:5] = req_tag_out;
+														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[2-:3] = req_tag_out;
 													end
 												end
 												// Trace: src/VX_mem_arb.sv:79:5
 												wire [0:0] rsp_valid_out;
 												// Trace: src/VX_mem_arb.sv:80:5
-												wire [36:0] rsp_data_out;
+												wire [34:0] rsp_data_out;
 												// Trace: src/VX_mem_arb.sv:81:5
 												wire [0:0] rsp_ready_out;
 												// Trace: src/VX_mem_arb.sv:82:5
 												wire [0:0] rsp_valid_in;
 												// Trace: src/VX_mem_arb.sv:83:5
-												wire [36:0] rsp_data_in;
+												wire [34:0] rsp_data_in;
 												// Trace: src/VX_mem_arb.sv:84:5
 												wire [0:0] rsp_ready_in;
 												// Trace: src/VX_mem_arb.sv:85:5
@@ -11089,7 +8784,7 @@ module Vortex (
 														// Trace: src/VX_mem_arb.sv:120:13
 														assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_valid;
 														// Trace: src/VX_mem_arb.sv:121:13
-														assign rsp_data_in[i * 37+:37] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data;
+														assign rsp_data_in[i * 35+:35] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data;
 														// Trace: src/VX_mem_arb.sv:122:13
 														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 													end
@@ -11119,7 +8814,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:143:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:144:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 37+:37];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 35+:35];
 													// Trace: src/VX_mem_arb.sv:145:9
 													assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_ready;
 												end
@@ -11155,13 +8850,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [614:0] req_data;
+												wire [612:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [520:0] rsp_data;
+												wire [518:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -11184,7 +8879,7 @@ module Vortex (
 												// Trace: src/VX_cache_bypass.sv:110:9
 												wire [31:0] core_req_nc_arb_data;
 												// Trace: src/VX_cache_bypass.sv:111:9
-												wire [4:0] core_req_nc_arb_tag;
+												wire [2:0] core_req_nc_arb_tag;
 												// Trace: src/VX_cache_bypass.sv:112:9
 												assign {core_req_nc_arb_rw, core_req_nc_arb_addr, core_req_nc_arb_data, core_req_nc_arb_byteen, core_req_nc_arb_flags, core_req_nc_arb_tag} = core_bus_nc_arb_if[i].req_data;
 												// Trace: src/VX_cache_bypass.sv:120:9
@@ -11196,9 +8891,9 @@ module Vortex (
 												// Trace: src/VX_cache_bypass.sv:123:9
 												wire [31:0] core_rsp_nc_arb_data_w;
 												// Trace: src/VX_cache_bypass.sv:124:9
-												wire [8:0] core_req_nc_arb_tag_w;
+												wire [6:0] core_req_nc_arb_tag_w;
 												// Trace: src/VX_cache_bypass.sv:125:9
-												wire [4:0] core_rsp_nc_arb_tag_w;
+												wire [2:0] core_rsp_nc_arb_tag_w;
 												if (1) begin : g_multi_word_line
 													// Trace: src/VX_cache_bypass.sv:127:13
 													wire [3:0] rsp_wsel;
@@ -11231,14 +8926,14 @@ module Vortex (
 														.S(WSEL_BITS),
 														.POS(TAG_SEL_IDX)
 													) wsel_remove(
-														.data_in(mem_bus_out_nc_if[i].rsp_data[8-:9]),
+														.data_in(mem_bus_out_nc_if[i].rsp_data[6-:7]),
 														.sel_out(rsp_wsel),
 														.data_out(core_rsp_nc_arb_tag_w)
 													);
 													// Trace: src/VX_cache_bypass.sv:153:13
 													assign core_req_nc_arb_addr_w = core_req_nc_arb_addr[WSEL_BITS+:MEM_ADDR_WIDTH];
 													// Trace: src/VX_cache_bypass.sv:154:13
-													assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[9 + (rsp_wsel * CORE_DATA_WIDTH)+:CORE_DATA_WIDTH];
+													assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[7 + (rsp_wsel * CORE_DATA_WIDTH)+:CORE_DATA_WIDTH];
 												end
 												// Trace: src/VX_cache_bypass.sv:163:9
 												assign mem_bus_out_nc_if[i].req_valid = core_bus_nc_arb_if[i].req_valid;
@@ -11282,13 +8977,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [614:0] req_data;
+												wire [612:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [520:0] rsp_data;
+												wire [518:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -11301,52 +8996,52 @@ module Vortex (
 												// Trace: src/VX_cache_bypass.sv:186:5
 												assign mem_bus_out_src_if[0 + i].req_valid = mem_bus_out_nc_if[i].req_valid;
 												// Trace: src/VX_cache_bypass.sv:187:5
-												assign mem_bus_out_src_if[0 + i].req_data[614] = mem_bus_out_nc_if[i].req_data[614];
+												assign mem_bus_out_src_if[0 + i].req_data[612] = mem_bus_out_nc_if[i].req_data[612];
 												// Trace: src/VX_cache_bypass.sv:188:5
-												assign mem_bus_out_src_if[0 + i].req_data[613-:26] = mem_bus_out_nc_if[i].req_data[613-:26];
+												assign mem_bus_out_src_if[0 + i].req_data[611-:26] = mem_bus_out_nc_if[i].req_data[611-:26];
 												// Trace: src/VX_cache_bypass.sv:189:5
-												assign mem_bus_out_src_if[0 + i].req_data[587-:512] = mem_bus_out_nc_if[i].req_data[587-:512];
+												assign mem_bus_out_src_if[0 + i].req_data[585-:512] = mem_bus_out_nc_if[i].req_data[585-:512];
 												// Trace: src/VX_cache_bypass.sv:190:5
-												assign mem_bus_out_src_if[0 + i].req_data[75-:64] = mem_bus_out_nc_if[i].req_data[75-:64];
+												assign mem_bus_out_src_if[0 + i].req_data[73-:64] = mem_bus_out_nc_if[i].req_data[73-:64];
 												// Trace: src/VX_cache_bypass.sv:191:5
-												assign mem_bus_out_src_if[0 + i].req_data[11-:3] = mem_bus_out_nc_if[i].req_data[11-:3];
+												assign mem_bus_out_src_if[0 + i].req_data[9-:3] = mem_bus_out_nc_if[i].req_data[9-:3];
 												if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk1
 													if (1) begin : genblk1
 														if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:195:17
-															assign mem_bus_out_src_if[0 + i].req_data[8-:9] = {mem_bus_out_nc_if[i].req_data[8-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[7-:8]};
+															assign mem_bus_out_src_if[0 + i].req_data[6-:7] = {mem_bus_out_nc_if[i].req_data[6-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[5-:6]};
 														end
 														else begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:197:17
-															assign mem_bus_out_src_if[0 + i].req_data[8-:9] = {mem_bus_out_nc_if[i].req_data[8-:1], mem_bus_out_nc_if[i].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
+															assign mem_bus_out_src_if[0 + i].req_data[6-:7] = {mem_bus_out_nc_if[i].req_data[6-:1], mem_bus_out_nc_if[i].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
 														end
 													end
 												end
 												else begin : genblk1
 													// Trace: src/VX_cache_bypass.sv:207:9
-													assign mem_bus_out_src_if[0 + i].req_data[8-:9] = mem_bus_out_nc_if[i].req_data[8-:9];
+													assign mem_bus_out_src_if[0 + i].req_data[6-:7] = mem_bus_out_nc_if[i].req_data[6-:7];
 												end
 												// Trace: src/VX_cache_bypass.sv:209:5
 												assign mem_bus_out_nc_if[i].req_ready = mem_bus_out_src_if[0 + i].req_ready;
 												// Trace: src/VX_cache_bypass.sv:210:5
 												assign mem_bus_out_nc_if[i].rsp_valid = mem_bus_out_src_if[0 + i].rsp_valid;
 												// Trace: src/VX_cache_bypass.sv:211:5
-												assign mem_bus_out_nc_if[i].rsp_data[520-:512] = mem_bus_out_src_if[0 + i].rsp_data[520-:512];
+												assign mem_bus_out_nc_if[i].rsp_data[518-:512] = mem_bus_out_src_if[0 + i].rsp_data[518-:512];
 												if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk2
 													if (1) begin : genblk1
 														if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:215:17
-															assign mem_bus_out_nc_if[i].rsp_data[8-:9] = {mem_bus_out_src_if[0 + i].rsp_data[8-:1], mem_bus_out_src_if[0 + i].rsp_data[7:0]};
+															assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[6-:1], mem_bus_out_src_if[0 + i].rsp_data[5:0]};
 														end
 														else begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:217:17
-															assign mem_bus_out_nc_if[i].rsp_data[8-:9] = {mem_bus_out_src_if[0 + i].rsp_data[8-:1], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[7-:8]};
+															assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[6-:1], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[5-:6]};
 														end
 													end
 												end
 												else begin : genblk2
 													// Trace: src/VX_cache_bypass.sv:227:9
-													assign mem_bus_out_nc_if[i].rsp_data[8-:9] = mem_bus_out_src_if[0 + i].rsp_data[8-:9];
+													assign mem_bus_out_nc_if[i].rsp_data[6-:7] = mem_bus_out_src_if[0 + i].rsp_data[6-:7];
 												end
 												// Trace: src/VX_cache_bypass.sv:229:5
 												assign mem_bus_out_src_if[0 + i].rsp_ready = mem_bus_out_nc_if[i].rsp_ready;
@@ -11354,52 +9049,52 @@ module Vortex (
 													// Trace: src/VX_cache_bypass.sv:233:5
 													assign mem_bus_out_src_if[1 + i].req_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_valid;
 													// Trace: src/VX_cache_bypass.sv:234:5
-													assign mem_bus_out_src_if[1 + i].req_data[614] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610];
+													assign mem_bus_out_src_if[1 + i].req_data[612] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610];
 													// Trace: src/VX_cache_bypass.sv:235:5
-													assign mem_bus_out_src_if[1 + i].req_data[613-:26] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[609-:26];
+													assign mem_bus_out_src_if[1 + i].req_data[611-:26] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[609-:26];
 													// Trace: src/VX_cache_bypass.sv:236:5
-													assign mem_bus_out_src_if[1 + i].req_data[587-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[583-:512];
+													assign mem_bus_out_src_if[1 + i].req_data[585-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[583-:512];
 													// Trace: src/VX_cache_bypass.sv:237:5
-													assign mem_bus_out_src_if[1 + i].req_data[75-:64] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[71-:64];
+													assign mem_bus_out_src_if[1 + i].req_data[73-:64] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[71-:64];
 													// Trace: src/VX_cache_bypass.sv:238:5
-													assign mem_bus_out_src_if[1 + i].req_data[11-:3] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[7-:3];
+													assign mem_bus_out_src_if[1 + i].req_data[9-:3] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[7-:3];
 													if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk1
 														if (1) begin : genblk1
 															if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:242:17
-																assign mem_bus_out_src_if[1 + i].req_data[8-:9] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[3-:4]};
+																assign mem_bus_out_src_if[1 + i].req_data[6-:7] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[3-:4]};
 															end
 															else begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:244:17
-																assign mem_bus_out_src_if[1 + i].req_data[8-:9] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
+																assign mem_bus_out_src_if[1 + i].req_data[6-:7] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
 															end
 														end
 													end
 													else begin : genblk1
 														// Trace: src/VX_cache_bypass.sv:254:9
-														assign mem_bus_out_src_if[1 + i].req_data[8-:9] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5];
+														assign mem_bus_out_src_if[1 + i].req_data[6-:7] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5];
 													end
 													// Trace: src/VX_cache_bypass.sv:256:5
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_ready = mem_bus_out_src_if[1 + i].req_ready;
 													// Trace: src/VX_cache_bypass.sv:257:5
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_valid = mem_bus_out_src_if[1 + i].rsp_valid;
 													// Trace: src/VX_cache_bypass.sv:258:5
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[516-:512] = mem_bus_out_src_if[1 + i].rsp_data[520-:512];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[516-:512] = mem_bus_out_src_if[1 + i].rsp_data[518-:512];
 													if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk2
 														if (1) begin : genblk1
 															if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:262:17
-																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[8-:1], mem_bus_out_src_if[1 + i].rsp_data[3:0]};
+																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[6-:1], mem_bus_out_src_if[1 + i].rsp_data[3:0]};
 															end
 															else begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:264:17
-																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[8-:1], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[1 + i].rsp_data[7-:8]};
+																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[6-:1], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[1 + i].rsp_data[5-:6]};
 															end
 														end
 													end
 													else begin : genblk2
 														// Trace: src/VX_cache_bypass.sv:274:9
-														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = mem_bus_out_src_if[1 + i].rsp_data[8-:9];
+														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = mem_bus_out_src_if[1 + i].rsp_data[6-:7];
 													end
 													// Trace: src/VX_cache_bypass.sv:276:5
 													assign mem_bus_out_src_if[1 + i].rsp_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_ready;
@@ -11489,7 +9184,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:32:9
 													assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_valid;
 													// Trace: src/VX_mem_arb.sv:33:9
-													assign req_data_in[i * 615+:615] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_data;
+													assign req_data_in[i * 613+:613] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_data;
 													// Trace: src/VX_mem_arb.sv:34:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 												end
@@ -11520,7 +9215,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:55:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:56:9
-													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[610], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[609-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[583-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[71-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:3], req_tag_out} = req_data_out[i * 615+:615];
+													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[610], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[609-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[583-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[71-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:3], req_tag_out} = req_data_out[i * 613+:613];
 													// Trace: src/VX_mem_arb.sv:64:9
 													assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_ready;
 													if (NUM_INPUTS > NUM_OUTPUTS) begin : g_req_tag_sel_out
@@ -11574,7 +9269,7 @@ module Vortex (
 														// Trace: src/VX_mem_arb.sv:98:13
 														assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 														// Trace: src/VX_mem_arb.sv:99:13
-														assign rsp_data_in[i * 521+:521] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[516-:512], rsp_tag_out};
+														assign rsp_data_in[i * 519+:519] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[516-:512], rsp_tag_out};
 														// Trace: src/VX_mem_arb.sv:100:13
 														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 													end
@@ -11603,7 +9298,7 @@ module Vortex (
 														// Trace: src/VX_mem_arb.sv:120:13
 														assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 														// Trace: src/VX_mem_arb.sv:121:13
-														assign rsp_data_in[i * 521+:521] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
+														assign rsp_data_in[i * 519+:519] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
 														// Trace: src/VX_mem_arb.sv:122:13
 														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 													end
@@ -11633,7 +9328,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:143:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:144:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 521+:521];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
 													// Trace: src/VX_mem_arb.sv:145:9
 													assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_ready;
 												end
@@ -11820,9 +9515,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:38:5
 											localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
 											localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-											localparam CORE_REQ_DATAW = 75;
+											localparam CORE_REQ_DATAW = 73;
 											// Trace: src/VX_cache.sv:39:5
-											localparam CORE_RSP_DATAW = 37;
+											localparam CORE_RSP_DATAW = 35;
 											// Trace: src/VX_cache.sv:40:5
 											localparam BANK_MEM_TAG_WIDTH = 5;
 											// Trace: src/VX_cache.sv:41:5
@@ -11872,13 +9567,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [74:0] req_data;
+												wire [72:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [36:0] rsp_data;
+												wire [34:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -11958,7 +9653,7 @@ module Vortex (
 												for (_gv_i_215 = 0; _gv_i_215 < NUM_REQS; _gv_i_215 = _gv_i_215 + 1) begin : g_flush_req_mask
 													localparam i = _gv_i_215;
 													// Trace: src/VX_cache_init.sv:67:9
-													assign flush_req_mask[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_valid && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[5];
+													assign flush_req_mask[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_valid && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[3];
 												end
 												// Trace: src/VX_cache_init.sv:69:5
 												wire flush_req_enable = |flush_req_mask;
@@ -12003,7 +9698,7 @@ module Vortex (
 													if (1) begin : g_uuid
 														// Trace: src/VX_cache_init.sv:87:13
 														wire [1:1] sv2v_tmp_EFEFC;
-														assign sv2v_tmp_EFEFC = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[4-:1];
+														assign sv2v_tmp_EFEFC = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.icache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[2-:1];
 														always @(*) core_bus_out_uuid[i+:1] = sv2v_tmp_EFEFC;
 													end
 												end
@@ -12032,7 +9727,7 @@ module Vortex (
 																// Trace: src/VX_cache_init.sv:103:21
 																state_n = STATE_FLUSH;
 																// Trace: src/VX_cache_init.sv:104:21
-																begin : sv2v_autoblock_2
+																begin : sv2v_autoblock_1
 																	// Trace: src/VX_cache_init.sv:104:26
 																	integer i;
 																	// Trace: src/VX_cache_init.sv:104:26
@@ -12157,9 +9852,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:79:5
 											wire [0:0] mem_rsp_queue_ready;
 											// Trace: src/VX_cache.sv:80:5
-											genvar _gv_i_230;
-											for (_gv_i_230 = 0; _gv_i_230 < MEM_PORTS; _gv_i_230 = _gv_i_230 + 1) begin : g_mem_rsp_queue
-												localparam i = _gv_i_230;
+											genvar _gv_i_228;
+											for (_gv_i_228 = 0; _gv_i_228 < MEM_PORTS; _gv_i_228 = _gv_i_228 + 1) begin : g_mem_rsp_queue
+												localparam i = _gv_i_228;
 												// Trace: src/VX_cache.sv:81:9
 												VX_elastic_buffer #(
 													.DATAW(MEM_RSP_DATAW),
@@ -12181,9 +9876,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:97:5
 											wire [0:0] mem_rsp_queue_sel;
 											// Trace: src/VX_cache.sv:98:5
-											genvar _gv_i_231;
-											for (_gv_i_231 = 0; _gv_i_231 < MEM_PORTS; _gv_i_231 = _gv_i_231 + 1) begin : g_mem_rsp_queue_data_s
-												localparam i = _gv_i_231;
+											genvar _gv_i_229;
+											for (_gv_i_229 = 0; _gv_i_229 < MEM_PORTS; _gv_i_229 = _gv_i_229 + 1) begin : g_mem_rsp_queue_data_s
+												localparam i = _gv_i_229;
 												// Trace: src/VX_cache.sv:99:9
 												wire [4:0] mem_rsp_tag_s = mem_rsp_queue_data[(i * 517) + 4-:5];
 												// Trace: src/VX_cache.sv:100:9
@@ -12192,9 +9887,9 @@ module Vortex (
 												assign mem_rsp_queue_data_s[i * 517+:517] = {mem_rsp_data_s, mem_rsp_tag_s};
 											end
 											// Trace: src/VX_cache.sv:103:5
-											genvar _gv_i_232;
-											for (_gv_i_232 = 0; _gv_i_232 < MEM_PORTS; _gv_i_232 = _gv_i_232 + 1) begin : g_mem_rsp_queue_sel
-												localparam i = _gv_i_232;
+											genvar _gv_i_230;
+											for (_gv_i_230 = 0; _gv_i_230 < MEM_PORTS; _gv_i_230 = _gv_i_230 + 1) begin : g_mem_rsp_queue_sel
+												localparam i = _gv_i_230;
 												if (1) begin : g_singlebank
 													// Trace: src/VX_cache.sv:118:13
 													assign mem_rsp_queue_sel[i+:1] = 0;
@@ -12231,9 +9926,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:144:5
 											wire [4:0] per_bank_mem_rsp_tag;
 											// Trace: src/VX_cache.sv:145:5
-											genvar _gv_i_233;
-											for (_gv_i_233 = 0; _gv_i_233 < NUM_BANKS; _gv_i_233 = _gv_i_233 + 1) begin : g_per_bank_mem_rsp_data
-												localparam i = _gv_i_233;
+											genvar _gv_i_231;
+											for (_gv_i_231 = 0; _gv_i_231 < NUM_BANKS; _gv_i_231 = _gv_i_231 + 1) begin : g_per_bank_mem_rsp_data
+												localparam i = _gv_i_231;
 												// Trace: src/VX_cache.sv:146:9
 												assign {per_bank_mem_rsp_data[i * 512+:512], per_bank_mem_rsp_tag[i * 5+:5]} = per_bank_mem_rsp_pdata[i * 517+:517];
 											end
@@ -12250,7 +9945,7 @@ module Vortex (
 											// Trace: src/VX_cache.sv:156:5
 											wire [31:0] per_bank_core_req_data;
 											// Trace: src/VX_cache.sv:157:5
-											wire [4:0] per_bank_core_req_tag;
+											wire [2:0] per_bank_core_req_tag;
 											// Trace: src/VX_cache.sv:158:5
 											wire [0:0] per_bank_core_req_idx;
 											// Trace: src/VX_cache.sv:159:5
@@ -12262,7 +9957,7 @@ module Vortex (
 											// Trace: src/VX_cache.sv:162:5
 											wire [31:0] per_bank_core_rsp_data;
 											// Trace: src/VX_cache.sv:163:5
-											wire [4:0] per_bank_core_rsp_tag;
+											wire [2:0] per_bank_core_rsp_tag;
 											// Trace: src/VX_cache.sv:164:5
 											wire [0:0] per_bank_core_rsp_idx;
 											// Trace: src/VX_cache.sv:165:5
@@ -12294,7 +9989,7 @@ module Vortex (
 											// Trace: src/VX_cache.sv:178:5
 											wire [31:0] core_req_data;
 											// Trace: src/VX_cache.sv:179:5
-											wire [4:0] core_req_tag;
+											wire [2:0] core_req_tag;
 											// Trace: src/VX_cache.sv:180:5
 											wire [2:0] core_req_flags;
 											// Trace: src/VX_cache.sv:181:5
@@ -12306,61 +10001,61 @@ module Vortex (
 											// Trace: src/VX_cache.sv:184:5
 											wire [3:0] core_req_wsel;
 											// Trace: src/VX_cache.sv:185:5
-											wire [74:0] core_req_data_in;
+											wire [72:0] core_req_data_in;
 											// Trace: src/VX_cache.sv:186:5
-											wire [74:0] core_req_data_out;
+											wire [72:0] core_req_data_out;
 											// Trace: src/VX_cache.sv:187:5
-											genvar _gv_i_234;
-											for (_gv_i_234 = 0; _gv_i_234 < NUM_REQS; _gv_i_234 = _gv_i_234 + 1) begin : g_core_req
-												localparam i = _gv_i_234;
+											genvar _gv_i_232;
+											for (_gv_i_232 = 0; _gv_i_232 < NUM_REQS; _gv_i_232 = _gv_i_232 + 1) begin : g_core_req
+												localparam i = _gv_i_232;
 												// Trace: src/VX_cache.sv:188:9
 												assign core_req_valid[i] = core_bus2_if[i].req_valid;
 												// Trace: src/VX_cache.sv:189:9
-												assign core_req_rw[i] = core_bus2_if[i].req_data[74];
+												assign core_req_rw[i] = core_bus2_if[i].req_data[72];
 												// Trace: src/VX_cache.sv:190:9
-												assign core_req_byteen[i * 4+:4] = core_bus2_if[i].req_data[11-:4];
+												assign core_req_byteen[i * 4+:4] = core_bus2_if[i].req_data[9-:4];
 												// Trace: src/VX_cache.sv:191:9
-												assign core_req_addr[i * 30+:30] = core_bus2_if[i].req_data[73-:30];
+												assign core_req_addr[i * 30+:30] = core_bus2_if[i].req_data[71-:30];
 												// Trace: src/VX_cache.sv:192:9
-												assign core_req_data[i * 32+:32] = core_bus2_if[i].req_data[43-:32];
+												assign core_req_data[i * 32+:32] = core_bus2_if[i].req_data[41-:32];
 												// Trace: src/VX_cache.sv:193:9
-												assign core_req_tag[i * 5+:5] = core_bus2_if[i].req_data[4-:5];
+												assign core_req_tag[i * 3+:3] = core_bus2_if[i].req_data[2-:3];
 												// Trace: src/VX_cache.sv:194:9
-												assign core_req_flags[i * 3+:3] = sv2v_cast_3(core_bus2_if[i].req_data[7-:3]);
+												assign core_req_flags[i * 3+:3] = sv2v_cast_3(core_bus2_if[i].req_data[5-:3]);
 												// Trace: src/VX_cache.sv:195:9
 												assign core_bus2_if[i].req_ready = core_req_ready[i];
 											end
 											// Trace: src/VX_cache.sv:197:5
-											genvar _gv_i_235;
-											for (_gv_i_235 = 0; _gv_i_235 < NUM_REQS; _gv_i_235 = _gv_i_235 + 1) begin : g_core_req_wsel
-												localparam i = _gv_i_235;
+											genvar _gv_i_233;
+											for (_gv_i_233 = 0; _gv_i_233 < NUM_REQS; _gv_i_233 = _gv_i_233 + 1) begin : g_core_req_wsel
+												localparam i = _gv_i_233;
 												if (1) begin : g_wsel
 													// Trace: src/VX_cache.sv:199:13
 													assign core_req_wsel[i * 4+:4] = core_req_addr[i * 30+:WORD_SEL_BITS];
 												end
 											end
 											// Trace: src/VX_cache.sv:204:5
-											genvar _gv_i_236;
-											for (_gv_i_236 = 0; _gv_i_236 < NUM_REQS; _gv_i_236 = _gv_i_236 + 1) begin : g_core_req_line_addr
-												localparam i = _gv_i_236;
+											genvar _gv_i_234;
+											for (_gv_i_234 = 0; _gv_i_234 < NUM_REQS; _gv_i_234 = _gv_i_234 + 1) begin : g_core_req_line_addr
+												localparam i = _gv_i_234;
 												// Trace: src/VX_cache.sv:205:9
 												assign core_req_line_addr[i * 26+:26] = core_req_addr[(i * 30) + 4+:LINE_ADDR_WIDTH];
 											end
 											// Trace: src/VX_cache.sv:207:5
-											genvar _gv_i_237;
-											for (_gv_i_237 = 0; _gv_i_237 < NUM_REQS; _gv_i_237 = _gv_i_237 + 1) begin : g_core_req_bid
-												localparam i = _gv_i_237;
+											genvar _gv_i_235;
+											for (_gv_i_235 = 0; _gv_i_235 < NUM_REQS; _gv_i_235 = _gv_i_235 + 1) begin : g_core_req_bid
+												localparam i = _gv_i_235;
 												if (1) begin : g_singlebank
 													// Trace: src/VX_cache.sv:211:13
 													assign core_req_bid[i+:1] = 1'sb0;
 												end
 											end
 											// Trace: src/VX_cache.sv:214:5
-											genvar _gv_i_238;
-											for (_gv_i_238 = 0; _gv_i_238 < NUM_REQS; _gv_i_238 = _gv_i_238 + 1) begin : g_core_req_data_in
-												localparam i = _gv_i_238;
+											genvar _gv_i_236;
+											for (_gv_i_236 = 0; _gv_i_236 < NUM_REQS; _gv_i_236 = _gv_i_236 + 1) begin : g_core_req_data_in
+												localparam i = _gv_i_236;
 												// Trace: src/VX_cache.sv:215:9
-												assign core_req_data_in[i * 75+:75] = {core_req_line_addr[i * 26+:26], core_req_rw[i], core_req_wsel[i * 4+:4], core_req_byteen[i * 4+:4], core_req_data[i * 32+:32], core_req_tag[i * 5+:5], core_req_flags[i * 3+:3]};
+												assign core_req_data_in[i * 73+:73] = {core_req_line_addr[i * 26+:26], core_req_rw[i], core_req_wsel[i * 4+:4], core_req_byteen[i * 4+:4], core_req_data[i * 32+:32], core_req_tag[i * 3+:3], core_req_flags[i * 3+:3]};
 											end
 											// Trace: src/VX_cache.sv:225:5
 											assign per_bank_core_req_fire = per_bank_core_req_valid & per_bank_mem_req_ready;
@@ -12387,11 +10082,11 @@ module Vortex (
 												.ready_out(per_bank_core_req_ready)
 											);
 											// Trace: src/VX_cache.sv:246:5
-											genvar _gv_i_239;
-											for (_gv_i_239 = 0; _gv_i_239 < NUM_BANKS; _gv_i_239 = _gv_i_239 + 1) begin : g_core_req_data_out
-												localparam i = _gv_i_239;
+											genvar _gv_i_237;
+											for (_gv_i_237 = 0; _gv_i_237 < NUM_BANKS; _gv_i_237 = _gv_i_237 + 1) begin : g_core_req_data_out
+												localparam i = _gv_i_237;
 												// Trace: src/VX_cache.sv:247:9
-												assign {per_bank_core_req_addr[i * 26+:26], per_bank_core_req_rw[i], per_bank_core_req_wsel[i * 4+:4], per_bank_core_req_byteen[i * 4+:4], per_bank_core_req_data[i * 32+:32], per_bank_core_req_tag[i * 5+:5], per_bank_core_req_flags[i * 3+:3]} = core_req_data_out[i * 75+:75];
+												assign {per_bank_core_req_addr[i * 26+:26], per_bank_core_req_rw[i], per_bank_core_req_wsel[i * 4+:4], per_bank_core_req_byteen[i * 4+:4], per_bank_core_req_data[i * 32+:32], per_bank_core_req_tag[i * 3+:3], per_bank_core_req_flags[i * 3+:3]} = core_req_data_out[i * 73+:73];
 											end
 											// Trace: src/VX_cache.sv:257:5
 											genvar _gv_bank_id_1;
@@ -12426,13 +10121,13 @@ module Vortex (
 													.core_req_wsel(per_bank_core_req_wsel[bank_id * 4+:4]),
 													.core_req_byteen(per_bank_core_req_byteen[bank_id * 4+:4]),
 													.core_req_data(per_bank_core_req_data[bank_id * 32+:32]),
-													.core_req_tag(per_bank_core_req_tag[bank_id * 5+:5]),
+													.core_req_tag(per_bank_core_req_tag[bank_id * 3+:3]),
 													.core_req_idx(per_bank_core_req_idx[bank_id+:1]),
 													.core_req_flags(per_bank_core_req_flags[bank_id * 3+:3]),
 													.core_req_ready(per_bank_core_req_ready[bank_id]),
 													.core_rsp_valid(per_bank_core_rsp_valid[bank_id]),
 													.core_rsp_data(per_bank_core_rsp_data[bank_id * 32+:32]),
-													.core_rsp_tag(per_bank_core_rsp_tag[bank_id * 5+:5]),
+													.core_rsp_tag(per_bank_core_rsp_tag[bank_id * 3+:3]),
 													.core_rsp_idx(per_bank_core_rsp_idx[bank_id+:1]),
 													.core_rsp_ready(per_bank_core_rsp_ready[bank_id]),
 													.mem_req_valid(per_bank_mem_req_valid[bank_id]),
@@ -12453,23 +10148,23 @@ module Vortex (
 												);
 											end
 											// Trace: src/VX_cache.sv:312:5
-											wire [36:0] core_rsp_data_in;
+											wire [34:0] core_rsp_data_in;
 											// Trace: src/VX_cache.sv:313:5
-											wire [36:0] core_rsp_data_out;
+											wire [34:0] core_rsp_data_out;
 											// Trace: src/VX_cache.sv:314:5
 											wire [0:0] core_rsp_valid_s;
 											// Trace: src/VX_cache.sv:315:5
 											wire [31:0] core_rsp_data_s;
 											// Trace: src/VX_cache.sv:316:5
-											wire [4:0] core_rsp_tag_s;
+											wire [2:0] core_rsp_tag_s;
 											// Trace: src/VX_cache.sv:317:5
 											wire [0:0] core_rsp_ready_s;
 											// Trace: src/VX_cache.sv:318:5
-											genvar _gv_i_240;
-											for (_gv_i_240 = 0; _gv_i_240 < NUM_BANKS; _gv_i_240 = _gv_i_240 + 1) begin : g_core_rsp_data_in
-												localparam i = _gv_i_240;
+											genvar _gv_i_238;
+											for (_gv_i_238 = 0; _gv_i_238 < NUM_BANKS; _gv_i_238 = _gv_i_238 + 1) begin : g_core_rsp_data_in
+												localparam i = _gv_i_238;
 												// Trace: src/VX_cache.sv:319:9
-												assign core_rsp_data_in[i * 37+:37] = {per_bank_core_rsp_data[i * 32+:32], per_bank_core_rsp_tag[i * 5+:5]};
+												assign core_rsp_data_in[i * 35+:35] = {per_bank_core_rsp_data[i * 32+:32], per_bank_core_rsp_tag[i * 3+:3]};
 											end
 											// Trace: src/VX_cache.sv:321:5
 											VX_stream_xbar #(
@@ -12491,19 +10186,19 @@ module Vortex (
 												.sel_out()
 											);
 											// Trace: src/VX_cache.sv:339:5
-											genvar _gv_i_241;
-											for (_gv_i_241 = 0; _gv_i_241 < NUM_REQS; _gv_i_241 = _gv_i_241 + 1) begin : g_core_rsp_data_s
-												localparam i = _gv_i_241;
+											genvar _gv_i_239;
+											for (_gv_i_239 = 0; _gv_i_239 < NUM_REQS; _gv_i_239 = _gv_i_239 + 1) begin : g_core_rsp_data_s
+												localparam i = _gv_i_239;
 												// Trace: src/VX_cache.sv:340:9
-												assign {core_rsp_data_s[i * 32+:32], core_rsp_tag_s[i * 5+:5]} = core_rsp_data_out[i * 37+:37];
+												assign {core_rsp_data_s[i * 32+:32], core_rsp_tag_s[i * 3+:3]} = core_rsp_data_out[i * 35+:35];
 											end
 											// Trace: src/VX_cache.sv:342:5
-											genvar _gv_i_242;
-											for (_gv_i_242 = 0; _gv_i_242 < NUM_REQS; _gv_i_242 = _gv_i_242 + 1) begin : g_core_rsp_buf
-												localparam i = _gv_i_242;
+											genvar _gv_i_240;
+											for (_gv_i_240 = 0; _gv_i_240 < NUM_REQS; _gv_i_240 = _gv_i_240 + 1) begin : g_core_rsp_buf
+												localparam i = _gv_i_240;
 												// Trace: src/VX_cache.sv:343:9
 												VX_elastic_buffer #(
-													.DATAW(37),
+													.DATAW(35),
 													.SIZE((CORE_RSP_BUF_ENABLE ? ((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : 2) : 0)),
 													.OUT_REG(((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : (CORE_OUT_BUF & 7) - 2))
 												) core_rsp_buf(
@@ -12511,8 +10206,8 @@ module Vortex (
 													.reset(reset),
 													.valid_in(core_rsp_valid_s[i]),
 													.ready_in(core_rsp_ready_s[i]),
-													.data_in({core_rsp_data_s[i * 32+:32], core_rsp_tag_s[i * 5+:5]}),
-													.data_out({core_bus2_if[i].rsp_data[36-:32], core_bus2_if[i].rsp_data[4-:5]}),
+													.data_in({core_rsp_data_s[i * 32+:32], core_rsp_tag_s[i * 3+:3]}),
+													.data_out({core_bus2_if[i].rsp_data[34-:32], core_bus2_if[i].rsp_data[2-:3]}),
 													.valid_out(core_bus2_if[i].rsp_valid),
 													.ready_out(core_bus2_if[i].rsp_ready)
 												);
@@ -12520,9 +10215,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:358:5
 											wire [610:0] per_bank_mem_req_pdata;
 											// Trace: src/VX_cache.sv:359:5
-											genvar _gv_i_243;
-											for (_gv_i_243 = 0; _gv_i_243 < NUM_BANKS; _gv_i_243 = _gv_i_243 + 1) begin : g_per_bank_mem_req_pdata
-												localparam i = _gv_i_243;
+											genvar _gv_i_241;
+											for (_gv_i_241 = 0; _gv_i_241 < NUM_BANKS; _gv_i_241 = _gv_i_241 + 1) begin : g_per_bank_mem_req_pdata
+												localparam i = _gv_i_241;
 												// Trace: src/VX_cache.sv:360:9
 												assign per_bank_mem_req_pdata[i * 611+:611] = {per_bank_mem_req_rw[i], per_bank_mem_req_addr[i * 26+:26], per_bank_mem_req_data[i * 512+:512], per_bank_mem_req_byteen[i * 64+:64], per_bank_mem_req_flags[i * 3+:3], per_bank_mem_req_tag[i * 5+:5]};
 											end
@@ -12552,9 +10247,9 @@ module Vortex (
 												.sel_out(mem_req_sel_out)
 											);
 											// Trace: src/VX_cache.sv:389:5
-											genvar _gv_i_244;
-											for (_gv_i_244 = 0; _gv_i_244 < MEM_PORTS; _gv_i_244 = _gv_i_244 + 1) begin : g_mem_req_buf
-												localparam i = _gv_i_244;
+											genvar _gv_i_242;
+											for (_gv_i_242 = 0; _gv_i_242 < MEM_PORTS; _gv_i_242 = _gv_i_242 + 1) begin : g_mem_req_buf
+												localparam i = _gv_i_242;
 												// Trace: src/VX_cache.sv:390:9
 												wire mem_req_rw;
 												// Trace: src/VX_cache.sv:391:9
@@ -12977,7 +10672,7 @@ module Vortex (
 						localparam _param_F6DD5_DATA_SIZE = VX_gpu_pkg_DCACHE_WORD_SIZE;
 						localparam _param_F6DD5_TAG_WIDTH = VX_gpu_pkg_DCACHE_TAG_WIDTH;
 						genvar _arr_F6DD5;
-						for (_arr_F6DD5 = 0; _arr_F6DD5 <= 3; _arr_F6DD5 = _arr_F6DD5 + 1) begin : per_core_dcache_bus_if
+						for (_arr_F6DD5 = 0; _arr_F6DD5 <= 0; _arr_F6DD5 = _arr_F6DD5 + 1) begin : per_core_dcache_bus_if
 							// removed import VX_gpu_pkg::*;
 							// Trace: src/VX_mem_bus_if.sv:2:15
 							localparam DATA_SIZE = _param_F6DD5_DATA_SIZE;
@@ -13015,7 +10710,7 @@ module Vortex (
 						end
 						// Trace: src/VX_socket.sv:57:5
 						localparam VX_gpu_pkg_DCACHE_LINE_SIZE = 64;
-						localparam VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH = 8;
+						localparam VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH = 6;
 						// expanded interface instance: dcache_mem_bus_if
 						localparam _param_28DB2_DATA_SIZE = VX_gpu_pkg_DCACHE_LINE_SIZE;
 						localparam _param_28DB2_TAG_WIDTH = VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH;
@@ -13044,13 +10739,13 @@ module Vortex (
 							// Trace: src/VX_mem_bus_if.sv:24:5
 							wire req_valid;
 							// Trace: src/VX_mem_bus_if.sv:25:5
-							wire [613:0] req_data;
+							wire [611:0] req_data;
 							// Trace: src/VX_mem_bus_if.sv:26:5
 							wire req_ready;
 							// Trace: src/VX_mem_bus_if.sv:27:5
 							wire rsp_valid;
 							// Trace: src/VX_mem_bus_if.sv:28:5
-							wire [519:0] rsp_data;
+							wire [517:0] rsp_data;
 							// Trace: src/VX_mem_bus_if.sv:29:5
 							wire rsp_ready;
 							// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13073,7 +10768,7 @@ module Vortex (
 						localparam _bbase_CC492_mem_bus_if = 0;
 						localparam _param_CC492_INSTANCE_ID = "";
 						localparam _param_CC492_NUM_UNITS = 1;
-						localparam _param_CC492_NUM_INPUTS = 4;
+						localparam _param_CC492_NUM_INPUTS = 1;
 						localparam _param_CC492_TAG_SEL_IDX = 0;
 						localparam _param_CC492_CACHE_SIZE = 16384;
 						localparam _param_CC492_LINE_SIZE = VX_gpu_pkg_DCACHE_LINE_SIZE;
@@ -13156,13 +10851,13 @@ module Vortex (
 							// Trace: src/VX_cache_cluster.sv:32:5
 							localparam PASSTHRU = 1'd0;
 							// Trace: src/VX_cache_cluster.sv:33:5
-							localparam ARB_TAG_WIDTH = 5;
+							localparam ARB_TAG_WIDTH = 3;
 							// Trace: src/VX_cache_cluster.sv:34:5
 							localparam CACHE_MEM_TAG_WIDTH = 5;
 							// Trace: src/VX_cache_cluster.sv:36:5
-							localparam BYPASS_TAG_WIDTH = 7;
+							localparam BYPASS_TAG_WIDTH = 5;
 							// Trace: src/VX_cache_cluster.sv:38:5
-							localparam NC_TAG_WIDTH = 8;
+							localparam NC_TAG_WIDTH = 6;
 							// Trace: src/VX_cache_cluster.sv:39:5
 							localparam MEM_TAG_WIDTH = (PASSTHRU ? BYPASS_TAG_WIDTH : (NC_ENABLE ? NC_TAG_WIDTH : CACHE_MEM_TAG_WIDTH));
 							// Trace: src/VX_cache_cluster.sv:40:5
@@ -13194,13 +10889,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [613:0] req_data;
+								wire [611:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [519:0] rsp_data;
+								wire [517:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13235,13 +10930,13 @@ module Vortex (
 								// Trace: src/VX_mem_bus_if.sv:24:5
 								wire req_valid;
 								// Trace: src/VX_mem_bus_if.sv:25:5
-								wire [180:0] req_data;
+								wire [178:0] req_data;
 								// Trace: src/VX_mem_bus_if.sv:26:5
 								wire req_ready;
 								// Trace: src/VX_mem_bus_if.sv:27:5
 								wire rsp_valid;
 								// Trace: src/VX_mem_bus_if.sv:28:5
-								wire [132:0] rsp_data;
+								wire [130:0] rsp_data;
 								// Trace: src/VX_mem_bus_if.sv:29:5
 								wire rsp_ready;
 								// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13256,7 +10951,7 @@ module Vortex (
 								localparam _param_A62F7_DATA_SIZE = WORD_SIZE;
 								localparam _param_A62F7_TAG_WIDTH = TAG_WIDTH;
 								genvar _arr_A62F7;
-								for (_arr_A62F7 = 0; _arr_A62F7 <= 3; _arr_A62F7 = _arr_A62F7 + 1) begin : core_bus_tmp_if
+								for (_arr_A62F7 = 0; _arr_A62F7 <= 0; _arr_A62F7 = _arr_A62F7 + 1) begin : core_bus_tmp_if
 									// removed import VX_gpu_pkg::*;
 									// Trace: src/VX_mem_bus_if.sv:2:15
 									localparam DATA_SIZE = _param_A62F7_DATA_SIZE;
@@ -13321,13 +11016,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [180:0] req_data;
+									wire [178:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [132:0] rsp_data;
+									wire [130:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13359,8 +11054,8 @@ module Vortex (
 								localparam _param_856A9_TAG_WIDTH = TAG_WIDTH;
 								localparam _param_856A9_TAG_SEL_IDX = TAG_SEL_IDX;
 								localparam _param_856A9_ARBITER = "R";
-								localparam _param_856A9_REQ_OUT_BUF = 2;
-								localparam _param_856A9_RSP_OUT_BUF = CORE_OUT_BUF;
+								localparam _param_856A9_REQ_OUT_BUF = 0;
+								localparam _param_856A9_RSP_OUT_BUF = 0;
 								if (1) begin : core_arb
 									// removed import VX_gpu_pkg::*;
 									// Trace: src/VX_mem_arb.sv:2:15
@@ -13398,7 +11093,7 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:19:5
 									localparam DATA_WIDTH = 128;
 									// Trace: src/VX_mem_arb.sv:20:5
-									localparam LOG_NUM_REQS = 2;
+									localparam LOG_NUM_REQS = 0;
 									// Trace: src/VX_mem_arb.sv:21:5
 									localparam REQ_DATAW = 179;
 									// Trace: src/VX_mem_arb.sv:22:5
@@ -13406,17 +11101,17 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:23:5
 									localparam SEL_COUNT = NUM_OUTPUTS;
 									// Trace: src/VX_mem_arb.sv:24:5
-									wire [3:0] req_valid_in;
+									wire [0:0] req_valid_in;
 									// Trace: src/VX_mem_arb.sv:25:5
-									wire [715:0] req_data_in;
+									wire [178:0] req_data_in;
 									// Trace: src/VX_mem_arb.sv:26:5
-									wire [3:0] req_ready_in;
+									wire [0:0] req_ready_in;
 									// Trace: src/VX_mem_arb.sv:27:5
 									wire [0:0] req_valid_out;
 									// Trace: src/VX_mem_arb.sv:28:5
 									wire [178:0] req_data_out;
 									// Trace: src/VX_mem_arb.sv:29:5
-									wire [1:0] req_sel_out;
+									wire [0:0] req_sel_out;
 									// Trace: src/VX_mem_arb.sv:30:5
 									wire [0:0] req_ready_out;
 									// Trace: src/VX_mem_arb.sv:31:5
@@ -13457,28 +11152,20 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:55:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 										// Trace: src/VX_mem_arb.sv:56:9
-										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[180], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[179-:28], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[151-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[23-:16], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:3], req_tag_out} = req_data_out[i * 179+:179];
+										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[178], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[177-:28], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[149-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[21-:16], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[5-:3], req_tag_out} = req_data_out[i * 179+:179];
 										// Trace: src/VX_mem_arb.sv:64:9
 										assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_ready;
-										if (1) begin : g_req_tag_sel_out
-											// Trace: src/VX_mem_arb.sv:66:13
-											VX_bits_insert #(
-												.N(TAG_WIDTH),
-												.S(LOG_NUM_REQS),
-												.POS(TAG_SEL_IDX)
-											) bits_insert(
-												.data_in(req_tag_out),
-												.ins_in(req_sel_out[i * 2+:2]),
-												.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[4-:5])
-											);
+										if (1) begin : g_req_tag_out
+											// Trace: src/VX_mem_arb.sv:76:13
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].req_data[2-:3] = req_tag_out;
 										end
 									end
 									// Trace: src/VX_mem_arb.sv:79:5
-									wire [3:0] rsp_valid_out;
+									wire [0:0] rsp_valid_out;
 									// Trace: src/VX_mem_arb.sv:80:5
-									wire [523:0] rsp_data_out;
+									wire [130:0] rsp_data_out;
 									// Trace: src/VX_mem_arb.sv:81:5
-									wire [3:0] rsp_ready_out;
+									wire [0:0] rsp_ready_out;
 									// Trace: src/VX_mem_arb.sv:82:5
 									wire [0:0] rsp_valid_in;
 									// Trace: src/VX_mem_arb.sv:83:5
@@ -13486,47 +11173,34 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:84:5
 									wire [0:0] rsp_ready_in;
 									// Trace: src/VX_mem_arb.sv:85:5
-									if (1) begin : g_rsp_select
-										// Trace: src/VX_mem_arb.sv:86:9
-										wire [1:0] rsp_sel_in;
-										genvar _gv_i_185;
-										for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
-											localparam i = _gv_i_185;
-											// Trace: src/VX_mem_arb.sv:88:13
-											wire [2:0] rsp_tag_out;
-											// Trace: src/VX_mem_arb.sv:89:13
-											VX_bits_remove #(
-												.N(5),
-												.S(LOG_NUM_REQS),
-												.POS(TAG_SEL_IDX)
-											) bits_remove(
-												.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[4-:5]),
-												.sel_out(rsp_sel_in[i * 2+:2]),
-												.data_out(rsp_tag_out)
-											);
-											// Trace: src/VX_mem_arb.sv:98:13
+									if (1) begin : g_rsp_arb
+										genvar _gv_i_186;
+										for (_gv_i_186 = 0; _gv_i_186 < NUM_OUTPUTS; _gv_i_186 = _gv_i_186 + 1) begin : g_rsp_data_in
+											localparam i = _gv_i_186;
+											// Trace: src/VX_mem_arb.sv:120:13
 											assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
-											// Trace: src/VX_mem_arb.sv:99:13
-											assign rsp_data_in[i * 131+:131] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[132-:128], rsp_tag_out};
-											// Trace: src/VX_mem_arb.sv:100:13
+											// Trace: src/VX_mem_arb.sv:121:13
+											assign rsp_data_in[i * 131+:131] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
+											// Trace: src/VX_mem_arb.sv:122:13
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_core_arb[_gv_i_191].arb_core_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 										end
-										// Trace: src/VX_mem_arb.sv:102:9
-										VX_stream_switch #(
+										// Trace: src/VX_mem_arb.sv:124:9
+										VX_stream_arb #(
 											.NUM_INPUTS(NUM_OUTPUTS),
 											.NUM_OUTPUTS(NUM_INPUTS),
 											.DATAW(RSP_DATAW),
+											.ARBITER(ARBITER),
 											.OUT_BUF(RSP_OUT_BUF)
-										) rsp_switch(
+										) req_arb(
 											.clk(clk),
 											.reset(reset),
-											.sel_in(rsp_sel_in),
 											.valid_in(rsp_valid_in),
 											.ready_in(rsp_ready_in),
 											.data_in(rsp_data_in),
 											.data_out(rsp_data_out),
 											.valid_out(rsp_valid_out),
-											.ready_out(rsp_ready_out)
+											.ready_out(rsp_ready_out),
+											.sel_out()
 										);
 									end
 									// Trace: src/VX_mem_arb.sv:142:5
@@ -13586,7 +11260,7 @@ module Vortex (
 								localparam _param_665FE_MREQ_SIZE = MREQ_SIZE;
 								localparam _param_665FE_TAG_WIDTH = ARB_TAG_WIDTH;
 								localparam _param_665FE_TAG_SEL_IDX = TAG_SEL_IDX;
-								localparam _param_665FE_CORE_OUT_BUF = 2;
+								localparam _param_665FE_CORE_OUT_BUF = CORE_OUT_BUF;
 								localparam _param_665FE_MEM_OUT_BUF = MEM_OUT_BUF;
 								localparam _param_665FE_NC_ENABLE = NC_ENABLE;
 								localparam _param_665FE_PASSTHRU = PASSTHRU;
@@ -13648,9 +11322,9 @@ module Vortex (
 									// Trace: src/VX_cache_wrap.sv:30:5
 									localparam CACHE_MEM_TAG_WIDTH = 5;
 									// Trace: src/VX_cache_wrap.sv:32:5
-									localparam BYPASS_TAG_WIDTH = 7;
+									localparam BYPASS_TAG_WIDTH = 5;
 									// Trace: src/VX_cache_wrap.sv:34:5
-									localparam NC_TAG_WIDTH = 8;
+									localparam NC_TAG_WIDTH = 6;
 									// Trace: src/VX_cache_wrap.sv:35:5
 									localparam MEM_TAG_WIDTH = (PASSTHRU ? BYPASS_TAG_WIDTH : (NC_ENABLE ? NC_TAG_WIDTH : CACHE_MEM_TAG_WIDTH));
 									// Trace: src/VX_cache_wrap.sv:36:5
@@ -13684,13 +11358,13 @@ module Vortex (
 										// Trace: src/VX_mem_bus_if.sv:24:5
 										wire req_valid;
 										// Trace: src/VX_mem_bus_if.sv:25:5
-										wire [180:0] req_data;
+										wire [178:0] req_data;
 										// Trace: src/VX_mem_bus_if.sv:26:5
 										wire req_ready;
 										// Trace: src/VX_mem_bus_if.sv:27:5
 										wire rsp_valid;
 										// Trace: src/VX_mem_bus_if.sv:28:5
-										wire [132:0] rsp_data;
+										wire [130:0] rsp_data;
 										// Trace: src/VX_mem_bus_if.sv:29:5
 										wire rsp_ready;
 										// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13766,13 +11440,13 @@ module Vortex (
 										// Trace: src/VX_mem_bus_if.sv:24:5
 										wire req_valid;
 										// Trace: src/VX_mem_bus_if.sv:25:5
-										wire [613:0] req_data;
+										wire [611:0] req_data;
 										// Trace: src/VX_mem_bus_if.sv:26:5
 										wire req_ready;
 										// Trace: src/VX_mem_bus_if.sv:27:5
 										wire rsp_valid;
 										// Trace: src/VX_mem_bus_if.sv:28:5
-										wire [519:0] rsp_data;
+										wire [517:0] rsp_data;
 										// Trace: src/VX_mem_bus_if.sv:29:5
 										wire rsp_ready;
 										// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13846,13 +11520,13 @@ module Vortex (
 											localparam WSEL_BITS = 2;
 											// Trace: src/VX_cache_bypass.sv:26:5
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam CORE_TAG_ID_WIDTH = 4;
+											localparam CORE_TAG_ID_WIDTH = 2;
 											// Trace: src/VX_cache_bypass.sv:27:5
-											localparam MEM_TAG_ID_WIDTH = 4;
+											localparam MEM_TAG_ID_WIDTH = 2;
 											// Trace: src/VX_cache_bypass.sv:28:5
-											localparam MEM_TAG_NC1_WIDTH = 5;
+											localparam MEM_TAG_NC1_WIDTH = 3;
 											// Trace: src/VX_cache_bypass.sv:29:5
-											localparam MEM_TAG_NC2_WIDTH = 7;
+											localparam MEM_TAG_NC2_WIDTH = 5;
 											// Trace: src/VX_cache_bypass.sv:30:5
 											localparam MEM_TAG_OUT_WIDTH = (CACHE_ENABLE ? MEM_TAG_NC2_WIDTH : MEM_TAG_NC2_WIDTH);
 											// Trace: src/VX_cache_bypass.sv:31:5
@@ -13884,13 +11558,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [180:0] req_data;
+												wire [178:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [132:0] rsp_data;
+												wire [130:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -13905,7 +11579,7 @@ module Vortex (
 												localparam i = _gv_i_56;
 												if (CACHE_ENABLE) begin : g_cache
 													// Trace: src/VX_cache_bypass.sv:38:13
-													assign core_req_nc_sel[i] = ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_core_bus_in_if].req_data[6];
+													assign core_req_nc_sel[i] = ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_core_bus_in_if].req_data[4];
 												end
 												else begin : g_no_cache
 													// Trace: src/VX_cache_bypass.sv:40:13
@@ -13964,19 +11638,19 @@ module Vortex (
 												// Trace: src/VX_mem_switch.sv:22:5
 												localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
 												localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-												localparam REQ_DATAW = 181;
+												localparam REQ_DATAW = 179;
 												// Trace: src/VX_mem_switch.sv:23:5
-												localparam RSP_DATAW = 133;
+												localparam RSP_DATAW = 131;
 												// Trace: src/VX_mem_switch.sv:24:5
 												wire [0:0] req_valid_in;
 												// Trace: src/VX_mem_switch.sv:25:5
-												wire [180:0] req_data_in;
+												wire [178:0] req_data_in;
 												// Trace: src/VX_mem_switch.sv:26:5
 												wire [0:0] req_ready_in;
 												// Trace: src/VX_mem_switch.sv:27:5
 												wire [NUM_OUTPUTS - 1:0] req_valid_out;
 												// Trace: src/VX_mem_switch.sv:28:5
-												wire [(NUM_OUTPUTS * 181) - 1:0] req_data_out;
+												wire [(NUM_OUTPUTS * 179) - 1:0] req_data_out;
 												// Trace: src/VX_mem_switch.sv:29:5
 												wire [NUM_OUTPUTS - 1:0] req_ready_out;
 												// Trace: src/VX_mem_switch.sv:30:5
@@ -13986,7 +11660,7 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:31:9
 													assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].req_valid;
 													// Trace: src/VX_mem_switch.sv:32:9
-													assign req_data_in[i * 181+:181] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].req_data;
+													assign req_data_in[i * 179+:179] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].req_data;
 													// Trace: src/VX_mem_switch.sv:33:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 												end
@@ -14014,20 +11688,20 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:52:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 													// Trace: src/VX_mem_switch.sv:53:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 181+:181];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_data = req_data_out[i * 179+:179];
 													// Trace: src/VX_mem_switch.sv:54:9
 													assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].req_ready;
 												end
 												// Trace: src/VX_mem_switch.sv:56:5
 												wire [NUM_OUTPUTS - 1:0] rsp_valid_in;
 												// Trace: src/VX_mem_switch.sv:57:5
-												wire [(NUM_OUTPUTS * 133) - 1:0] rsp_data_in;
+												wire [(NUM_OUTPUTS * 131) - 1:0] rsp_data_in;
 												// Trace: src/VX_mem_switch.sv:58:5
 												wire [NUM_OUTPUTS - 1:0] rsp_ready_in;
 												// Trace: src/VX_mem_switch.sv:59:5
 												wire [0:0] rsp_valid_out;
 												// Trace: src/VX_mem_switch.sv:60:5
-												wire [132:0] rsp_data_out;
+												wire [130:0] rsp_data_out;
 												// Trace: src/VX_mem_switch.sv:61:5
 												wire [0:0] rsp_ready_out;
 												// Trace: src/VX_mem_switch.sv:62:5
@@ -14037,7 +11711,7 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:63:9
 													assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_valid;
 													// Trace: src/VX_mem_switch.sv:64:9
-													assign rsp_data_in[i * 133+:133] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
+													assign rsp_data_in[i * 131+:131] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_data;
 													// Trace: src/VX_mem_switch.sv:65:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_switch_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 												end
@@ -14066,7 +11740,7 @@ module Vortex (
 													// Trace: src/VX_mem_switch.sv:85:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 													// Trace: src/VX_mem_switch.sv:86:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 133+:133];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 131+:131];
 													// Trace: src/VX_mem_switch.sv:87:9
 													assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.arb_core_bus_if[i + _mbase_bus_in_if].rsp_ready;
 												end
@@ -14103,13 +11777,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [180:0] req_data;
+												wire [178:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [132:0] rsp_data;
+												wire [130:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -14183,13 +11857,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [180:0] req_data;
+												wire [178:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [132:0] rsp_data;
+												wire [130:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -14246,21 +11920,21 @@ module Vortex (
 												// Trace: src/VX_mem_arb.sv:20:5
 												localparam LOG_NUM_REQS = 0;
 												// Trace: src/VX_mem_arb.sv:21:5
-												localparam REQ_DATAW = 181;
+												localparam REQ_DATAW = 179;
 												// Trace: src/VX_mem_arb.sv:22:5
-												localparam RSP_DATAW = 133;
+												localparam RSP_DATAW = 131;
 												// Trace: src/VX_mem_arb.sv:23:5
 												localparam SEL_COUNT = NUM_OUTPUTS;
 												// Trace: src/VX_mem_arb.sv:24:5
 												wire [0:0] req_valid_in;
 												// Trace: src/VX_mem_arb.sv:25:5
-												wire [180:0] req_data_in;
+												wire [178:0] req_data_in;
 												// Trace: src/VX_mem_arb.sv:26:5
 												wire [0:0] req_ready_in;
 												// Trace: src/VX_mem_arb.sv:27:5
 												wire [0:0] req_valid_out;
 												// Trace: src/VX_mem_arb.sv:28:5
-												wire [180:0] req_data_out;
+												wire [178:0] req_data_out;
 												// Trace: src/VX_mem_arb.sv:29:5
 												wire [0:0] req_sel_out;
 												// Trace: src/VX_mem_arb.sv:30:5
@@ -14272,7 +11946,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:32:9
 													assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_valid;
 													// Trace: src/VX_mem_arb.sv:33:9
-													assign req_data_in[i * 181+:181] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
+													assign req_data_in[i * 179+:179] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_data;
 													// Trace: src/VX_mem_arb.sv:34:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 												end
@@ -14299,28 +11973,28 @@ module Vortex (
 												for (_gv_i_184 = 0; _gv_i_184 < NUM_OUTPUTS; _gv_i_184 = _gv_i_184 + 1) begin : g_bus_out_if
 													localparam i = _gv_i_184;
 													// Trace: src/VX_mem_arb.sv:54:9
-													wire [4:0] req_tag_out;
+													wire [2:0] req_tag_out;
 													// Trace: src/VX_mem_arb.sv:55:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:56:9
-													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[180], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[179-:28], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[151-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[23-:16], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[7-:3], req_tag_out} = req_data_out[i * 181+:181];
+													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[178], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[177-:28], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[149-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[21-:16], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[5-:3], req_tag_out} = req_data_out[i * 179+:179];
 													// Trace: src/VX_mem_arb.sv:64:9
 													assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_ready;
 													if (1) begin : g_req_tag_out
 														// Trace: src/VX_mem_arb.sv:76:13
-														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[4-:5] = req_tag_out;
+														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].req_data[2-:3] = req_tag_out;
 													end
 												end
 												// Trace: src/VX_mem_arb.sv:79:5
 												wire [0:0] rsp_valid_out;
 												// Trace: src/VX_mem_arb.sv:80:5
-												wire [132:0] rsp_data_out;
+												wire [130:0] rsp_data_out;
 												// Trace: src/VX_mem_arb.sv:81:5
 												wire [0:0] rsp_ready_out;
 												// Trace: src/VX_mem_arb.sv:82:5
 												wire [0:0] rsp_valid_in;
 												// Trace: src/VX_mem_arb.sv:83:5
-												wire [132:0] rsp_data_in;
+												wire [130:0] rsp_data_in;
 												// Trace: src/VX_mem_arb.sv:84:5
 												wire [0:0] rsp_ready_in;
 												// Trace: src/VX_mem_arb.sv:85:5
@@ -14331,7 +12005,7 @@ module Vortex (
 														// Trace: src/VX_mem_arb.sv:120:13
 														assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_valid;
 														// Trace: src/VX_mem_arb.sv:121:13
-														assign rsp_data_in[i * 133+:133] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data;
+														assign rsp_data_in[i * 131+:131] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_data;
 														// Trace: src/VX_mem_arb.sv:122:13
 														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_nc_arb_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 													end
@@ -14361,7 +12035,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:143:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:144:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 133+:133];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 131+:131];
 													// Trace: src/VX_mem_arb.sv:145:9
 													assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.core_bus_in_nc_if[i + _mbase_bus_in_if].rsp_ready;
 												end
@@ -14397,13 +12071,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [612:0] req_data;
+												wire [610:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [518:0] rsp_data;
+												wire [516:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -14426,7 +12100,7 @@ module Vortex (
 												// Trace: src/VX_cache_bypass.sv:110:9
 												wire [127:0] core_req_nc_arb_data;
 												// Trace: src/VX_cache_bypass.sv:111:9
-												wire [4:0] core_req_nc_arb_tag;
+												wire [2:0] core_req_nc_arb_tag;
 												// Trace: src/VX_cache_bypass.sv:112:9
 												assign {core_req_nc_arb_rw, core_req_nc_arb_addr, core_req_nc_arb_data, core_req_nc_arb_byteen, core_req_nc_arb_flags, core_req_nc_arb_tag} = core_bus_nc_arb_if[i].req_data;
 												// Trace: src/VX_cache_bypass.sv:120:9
@@ -14438,9 +12112,9 @@ module Vortex (
 												// Trace: src/VX_cache_bypass.sv:123:9
 												wire [127:0] core_rsp_nc_arb_data_w;
 												// Trace: src/VX_cache_bypass.sv:124:9
-												wire [6:0] core_req_nc_arb_tag_w;
+												wire [4:0] core_req_nc_arb_tag_w;
 												// Trace: src/VX_cache_bypass.sv:125:9
-												wire [4:0] core_rsp_nc_arb_tag_w;
+												wire [2:0] core_rsp_nc_arb_tag_w;
 												if (1) begin : g_multi_word_line
 													// Trace: src/VX_cache_bypass.sv:127:13
 													wire [1:0] rsp_wsel;
@@ -14473,14 +12147,14 @@ module Vortex (
 														.S(WSEL_BITS),
 														.POS(TAG_SEL_IDX)
 													) wsel_remove(
-														.data_in(mem_bus_out_nc_if[i].rsp_data[6-:7]),
+														.data_in(mem_bus_out_nc_if[i].rsp_data[4-:5]),
 														.sel_out(rsp_wsel),
 														.data_out(core_rsp_nc_arb_tag_w)
 													);
 													// Trace: src/VX_cache_bypass.sv:153:13
 													assign core_req_nc_arb_addr_w = core_req_nc_arb_addr[WSEL_BITS+:MEM_ADDR_WIDTH];
 													// Trace: src/VX_cache_bypass.sv:154:13
-													assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[7 + (rsp_wsel * CORE_DATA_WIDTH)+:CORE_DATA_WIDTH];
+													assign core_rsp_nc_arb_data_w = mem_bus_out_nc_if[i].rsp_data[5 + (rsp_wsel * CORE_DATA_WIDTH)+:CORE_DATA_WIDTH];
 												end
 												// Trace: src/VX_cache_bypass.sv:163:9
 												assign mem_bus_out_nc_if[i].req_valid = core_bus_nc_arb_if[i].req_valid;
@@ -14524,13 +12198,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [612:0] req_data;
+												wire [610:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [518:0] rsp_data;
+												wire [516:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -14543,52 +12217,52 @@ module Vortex (
 												// Trace: src/VX_cache_bypass.sv:186:5
 												assign mem_bus_out_src_if[0 + i].req_valid = mem_bus_out_nc_if[i].req_valid;
 												// Trace: src/VX_cache_bypass.sv:187:5
-												assign mem_bus_out_src_if[0 + i].req_data[612] = mem_bus_out_nc_if[i].req_data[612];
+												assign mem_bus_out_src_if[0 + i].req_data[610] = mem_bus_out_nc_if[i].req_data[610];
 												// Trace: src/VX_cache_bypass.sv:188:5
-												assign mem_bus_out_src_if[0 + i].req_data[611-:26] = mem_bus_out_nc_if[i].req_data[611-:26];
+												assign mem_bus_out_src_if[0 + i].req_data[609-:26] = mem_bus_out_nc_if[i].req_data[609-:26];
 												// Trace: src/VX_cache_bypass.sv:189:5
-												assign mem_bus_out_src_if[0 + i].req_data[585-:512] = mem_bus_out_nc_if[i].req_data[585-:512];
+												assign mem_bus_out_src_if[0 + i].req_data[583-:512] = mem_bus_out_nc_if[i].req_data[583-:512];
 												// Trace: src/VX_cache_bypass.sv:190:5
-												assign mem_bus_out_src_if[0 + i].req_data[73-:64] = mem_bus_out_nc_if[i].req_data[73-:64];
+												assign mem_bus_out_src_if[0 + i].req_data[71-:64] = mem_bus_out_nc_if[i].req_data[71-:64];
 												// Trace: src/VX_cache_bypass.sv:191:5
-												assign mem_bus_out_src_if[0 + i].req_data[9-:3] = mem_bus_out_nc_if[i].req_data[9-:3];
+												assign mem_bus_out_src_if[0 + i].req_data[7-:3] = mem_bus_out_nc_if[i].req_data[7-:3];
 												if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk1
 													if (1) begin : genblk1
 														if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:195:17
-															assign mem_bus_out_src_if[0 + i].req_data[6-:7] = {mem_bus_out_nc_if[i].req_data[6-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[5-:6]};
+															assign mem_bus_out_src_if[0 + i].req_data[4-:5] = {mem_bus_out_nc_if[i].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_NC2_WIDTH {1'b0}}, mem_bus_out_nc_if[i].req_data[3-:4]};
 														end
 														else begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:197:17
-															assign mem_bus_out_src_if[0 + i].req_data[6-:7] = {mem_bus_out_nc_if[i].req_data[6-:1], mem_bus_out_nc_if[i].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
+															assign mem_bus_out_src_if[0 + i].req_data[4-:5] = {mem_bus_out_nc_if[i].req_data[4-:1], mem_bus_out_nc_if[i].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
 														end
 													end
 												end
 												else begin : genblk1
 													// Trace: src/VX_cache_bypass.sv:207:9
-													assign mem_bus_out_src_if[0 + i].req_data[6-:7] = mem_bus_out_nc_if[i].req_data[6-:7];
+													assign mem_bus_out_src_if[0 + i].req_data[4-:5] = mem_bus_out_nc_if[i].req_data[4-:5];
 												end
 												// Trace: src/VX_cache_bypass.sv:209:5
 												assign mem_bus_out_nc_if[i].req_ready = mem_bus_out_src_if[0 + i].req_ready;
 												// Trace: src/VX_cache_bypass.sv:210:5
 												assign mem_bus_out_nc_if[i].rsp_valid = mem_bus_out_src_if[0 + i].rsp_valid;
 												// Trace: src/VX_cache_bypass.sv:211:5
-												assign mem_bus_out_nc_if[i].rsp_data[518-:512] = mem_bus_out_src_if[0 + i].rsp_data[518-:512];
+												assign mem_bus_out_nc_if[i].rsp_data[516-:512] = mem_bus_out_src_if[0 + i].rsp_data[516-:512];
 												if (MEM_TAG_OUT_WIDTH != MEM_TAG_NC2_WIDTH) begin : genblk2
 													if (1) begin : genblk1
 														if (MEM_TAG_OUT_WIDTH > MEM_TAG_NC2_WIDTH) begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:215:17
-															assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[6-:1], mem_bus_out_src_if[0 + i].rsp_data[5:0]};
+															assign mem_bus_out_nc_if[i].rsp_data[4-:5] = {mem_bus_out_src_if[0 + i].rsp_data[4-:1], mem_bus_out_src_if[0 + i].rsp_data[3:0]};
 														end
 														else begin : genblk1
 															// Trace: src/VX_cache_bypass.sv:217:17
-															assign mem_bus_out_nc_if[i].rsp_data[6-:7] = {mem_bus_out_src_if[0 + i].rsp_data[6-:1], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[5-:6]};
+															assign mem_bus_out_nc_if[i].rsp_data[4-:5] = {mem_bus_out_src_if[0 + i].rsp_data[4-:1], {MEM_TAG_NC2_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[0 + i].rsp_data[3-:4]};
 														end
 													end
 												end
 												else begin : genblk2
 													// Trace: src/VX_cache_bypass.sv:227:9
-													assign mem_bus_out_nc_if[i].rsp_data[6-:7] = mem_bus_out_src_if[0 + i].rsp_data[6-:7];
+													assign mem_bus_out_nc_if[i].rsp_data[4-:5] = mem_bus_out_src_if[0 + i].rsp_data[4-:5];
 												end
 												// Trace: src/VX_cache_bypass.sv:229:5
 												assign mem_bus_out_src_if[0 + i].rsp_ready = mem_bus_out_nc_if[i].rsp_ready;
@@ -14596,52 +12270,52 @@ module Vortex (
 													// Trace: src/VX_cache_bypass.sv:233:5
 													assign mem_bus_out_src_if[1 + i].req_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_valid;
 													// Trace: src/VX_cache_bypass.sv:234:5
-													assign mem_bus_out_src_if[1 + i].req_data[612] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610];
+													assign mem_bus_out_src_if[1 + i].req_data[610] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[610];
 													// Trace: src/VX_cache_bypass.sv:235:5
-													assign mem_bus_out_src_if[1 + i].req_data[611-:26] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[609-:26];
+													assign mem_bus_out_src_if[1 + i].req_data[609-:26] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[609-:26];
 													// Trace: src/VX_cache_bypass.sv:236:5
-													assign mem_bus_out_src_if[1 + i].req_data[585-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[583-:512];
+													assign mem_bus_out_src_if[1 + i].req_data[583-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[583-:512];
 													// Trace: src/VX_cache_bypass.sv:237:5
-													assign mem_bus_out_src_if[1 + i].req_data[73-:64] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[71-:64];
+													assign mem_bus_out_src_if[1 + i].req_data[71-:64] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[71-:64];
 													// Trace: src/VX_cache_bypass.sv:238:5
-													assign mem_bus_out_src_if[1 + i].req_data[9-:3] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[7-:3];
+													assign mem_bus_out_src_if[1 + i].req_data[7-:3] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[7-:3];
 													if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk1
 														if (1) begin : genblk1
 															if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:242:17
-																assign mem_bus_out_src_if[1 + i].req_data[6-:7] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[3-:4]};
+																assign mem_bus_out_src_if[1 + i].req_data[4-:5] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], {MEM_TAG_OUT_WIDTH - MEM_TAG_IN_WIDTH {1'b0}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[3-:4]};
 															end
 															else begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:244:17
-																assign mem_bus_out_src_if[1 + i].req_data[6-:7] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
+																assign mem_bus_out_src_if[1 + i].req_data[4-:5] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[(MEM_TAG_OUT_WIDTH - VX_gpu_pkg_UUID_WIDTH) - 1:0]};
 															end
 														end
 													end
 													else begin : genblk1
 														// Trace: src/VX_cache_bypass.sv:254:9
-														assign mem_bus_out_src_if[1 + i].req_data[6-:7] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5];
+														assign mem_bus_out_src_if[1 + i].req_data[4-:5] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_data[4-:5];
 													end
 													// Trace: src/VX_cache_bypass.sv:256:5
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].req_ready = mem_bus_out_src_if[1 + i].req_ready;
 													// Trace: src/VX_cache_bypass.sv:257:5
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_valid = mem_bus_out_src_if[1 + i].rsp_valid;
 													// Trace: src/VX_cache_bypass.sv:258:5
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[516-:512] = mem_bus_out_src_if[1 + i].rsp_data[518-:512];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[516-:512] = mem_bus_out_src_if[1 + i].rsp_data[516-:512];
 													if (MEM_TAG_OUT_WIDTH != MEM_TAG_IN_WIDTH) begin : genblk2
 														if (1) begin : genblk1
 															if (MEM_TAG_OUT_WIDTH > MEM_TAG_IN_WIDTH) begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:262:17
-																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[6-:1], mem_bus_out_src_if[1 + i].rsp_data[3:0]};
+																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[4-:1], mem_bus_out_src_if[1 + i].rsp_data[3:0]};
 															end
 															else begin : genblk1
 																// Trace: src/VX_cache_bypass.sv:264:17
-																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[6-:1], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[1 + i].rsp_data[5-:6]};
+																assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = {mem_bus_out_src_if[1 + i].rsp_data[4-:1], {MEM_TAG_IN_WIDTH - MEM_TAG_OUT_WIDTH {1'b0}}, mem_bus_out_src_if[1 + i].rsp_data[3-:4]};
 															end
 														end
 													end
 													else begin : genblk2
 														// Trace: src/VX_cache_bypass.sv:274:9
-														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = mem_bus_out_src_if[1 + i].rsp_data[6-:7];
+														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_data[4-:5] = mem_bus_out_src_if[1 + i].rsp_data[4-:5];
 													end
 													// Trace: src/VX_cache_bypass.sv:276:5
 													assign mem_bus_out_src_if[1 + i].rsp_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_cache_if[i + _mbase_mem_bus_in_if].rsp_ready;
@@ -14731,7 +12405,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:32:9
 													assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_valid;
 													// Trace: src/VX_mem_arb.sv:33:9
-													assign req_data_in[i * 613+:613] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_data;
+													assign req_data_in[i * 611+:611] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_data;
 													// Trace: src/VX_mem_arb.sv:34:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 												end
@@ -14762,7 +12436,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:55:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:56:9
-													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[613], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[612-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[586-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[74-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[10-:3], req_tag_out} = req_data_out[i * 613+:613];
+													assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[611], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[610-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[584-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[72-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[8-:3], req_tag_out} = req_data_out[i * 611+:611];
 													// Trace: src/VX_mem_arb.sv:64:9
 													assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_ready;
 													if (NUM_INPUTS > NUM_OUTPUTS) begin : g_req_tag_sel_out
@@ -14774,12 +12448,12 @@ module Vortex (
 														) bits_insert(
 															.data_in(req_tag_out),
 															.ins_in(req_sel_out[i * 1+:1]),
-															.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:8])
+															.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[5-:6])
 														);
 													end
 													else begin : g_req_tag_out
 														// Trace: src/VX_mem_arb.sv:76:13
-														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:8] = req_tag_out;
+														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[5-:6] = req_tag_out;
 													end
 												end
 												// Trace: src/VX_mem_arb.sv:79:5
@@ -14809,14 +12483,14 @@ module Vortex (
 															.S(LOG_NUM_REQS),
 															.POS(TAG_SEL_IDX)
 														) bits_remove(
-															.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[7-:8]),
+															.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[5-:6]),
 															.sel_out(rsp_sel_in[i * 1+:1]),
 															.data_out(rsp_tag_out)
 														);
 														// Trace: src/VX_mem_arb.sv:98:13
 														assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 														// Trace: src/VX_mem_arb.sv:99:13
-														assign rsp_data_in[i * 519+:519] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[519-:512], rsp_tag_out};
+														assign rsp_data_in[i * 517+:517] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data[517-:512], rsp_tag_out};
 														// Trace: src/VX_mem_arb.sv:100:13
 														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 													end
@@ -14845,7 +12519,7 @@ module Vortex (
 														// Trace: src/VX_mem_arb.sv:120:13
 														assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 														// Trace: src/VX_mem_arb.sv:121:13
-														assign rsp_data_in[i * 519+:519] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
+														assign rsp_data_in[i * 517+:517] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
 														// Trace: src/VX_mem_arb.sv:122:13
 														assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 													end
@@ -14875,7 +12549,7 @@ module Vortex (
 													// Trace: src/VX_mem_arb.sv:143:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 													// Trace: src/VX_mem_arb.sv:144:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 519+:519];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 517+:517];
 													// Trace: src/VX_mem_arb.sv:145:9
 													assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.g_bypass.cache_bypass.mem_bus_out_src_if[i + _mbase_bus_in_if].rsp_ready;
 												end
@@ -14942,25 +12616,25 @@ module Vortex (
 											// Trace: src/VX_cache_wrap.sv:98:5
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_valid = mem_bus_tmp_if[i].req_valid;
 											// Trace: src/VX_cache_wrap.sv:99:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[613] = 0;
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[611] = 0;
 											// Trace: src/VX_cache_wrap.sv:100:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[612-:26] = mem_bus_tmp_if[i].req_data[612-:26];
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[610-:26] = mem_bus_tmp_if[i].req_data[610-:26];
 											// Trace: src/VX_cache_wrap.sv:101:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[586-:512] = 1'sb0;
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[584-:512] = 1'sb0;
 											// Trace: src/VX_cache_wrap.sv:102:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[74-:64] = 1'sb1;
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[72-:64] = 1'sb1;
 											// Trace: src/VX_cache_wrap.sv:103:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[10-:3] = mem_bus_tmp_if[i].req_data[10-:3];
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[8-:3] = mem_bus_tmp_if[i].req_data[8-:3];
 											// Trace: src/VX_cache_wrap.sv:104:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[7-:8] = mem_bus_tmp_if[i].req_data[7-:8];
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_data[5-:6] = mem_bus_tmp_if[i].req_data[5-:6];
 											// Trace: src/VX_cache_wrap.sv:105:5
 											assign mem_bus_tmp_if[i].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].req_ready;
 											// Trace: src/VX_cache_wrap.sv:106:5
 											assign mem_bus_tmp_if[i].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].rsp_valid;
 											// Trace: src/VX_cache_wrap.sv:107:5
-											assign mem_bus_tmp_if[i].rsp_data[519-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[519-:512];
+											assign mem_bus_tmp_if[i].rsp_data[517-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[517-:512];
 											// Trace: src/VX_cache_wrap.sv:108:5
-											assign mem_bus_tmp_if[i].rsp_data[7-:8] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[7-:8];
+											assign mem_bus_tmp_if[i].rsp_data[5-:6] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[5-:6];
 											// Trace: src/VX_cache_wrap.sv:109:5
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.cache_mem_bus_if[i + _mbase_mem_bus_if].rsp_ready = mem_bus_tmp_if[i].rsp_ready;
 										end
@@ -15062,9 +12736,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:38:5
 											localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
 											localparam VX_gpu_pkg_MEM_FLAGS_WIDTH = 3;
-											localparam CORE_REQ_DATAW = 181;
+											localparam CORE_REQ_DATAW = 179;
 											// Trace: src/VX_cache.sv:39:5
-											localparam CORE_RSP_DATAW = 133;
+											localparam CORE_RSP_DATAW = 131;
 											// Trace: src/VX_cache.sv:40:5
 											localparam BANK_MEM_TAG_WIDTH = 5;
 											// Trace: src/VX_cache.sv:41:5
@@ -15114,13 +12788,13 @@ module Vortex (
 												// Trace: src/VX_mem_bus_if.sv:24:5
 												wire req_valid;
 												// Trace: src/VX_mem_bus_if.sv:25:5
-												wire [180:0] req_data;
+												wire [178:0] req_data;
 												// Trace: src/VX_mem_bus_if.sv:26:5
 												wire req_ready;
 												// Trace: src/VX_mem_bus_if.sv:27:5
 												wire rsp_valid;
 												// Trace: src/VX_mem_bus_if.sv:28:5
-												wire [132:0] rsp_data;
+												wire [130:0] rsp_data;
 												// Trace: src/VX_mem_bus_if.sv:29:5
 												wire rsp_ready;
 												// Trace: src/VX_mem_bus_if.sv:30:5
@@ -15200,7 +12874,7 @@ module Vortex (
 												for (_gv_i_215 = 0; _gv_i_215 < NUM_REQS; _gv_i_215 = _gv_i_215 + 1) begin : g_flush_req_mask
 													localparam i = _gv_i_215;
 													// Trace: src/VX_cache_init.sv:67:9
-													assign flush_req_mask[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_valid && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[5];
+													assign flush_req_mask[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_valid && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[3];
 												end
 												// Trace: src/VX_cache_init.sv:69:5
 												wire flush_req_enable = |flush_req_mask;
@@ -15245,7 +12919,7 @@ module Vortex (
 													if (1) begin : g_uuid
 														// Trace: src/VX_cache_init.sv:87:13
 														wire [1:1] sv2v_tmp_FD406;
-														assign sv2v_tmp_FD406 = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[4-:1];
+														assign sv2v_tmp_FD406 = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_cache_wrap[_gv_i_192].cache_wrap.core_bus_cache_if[i + _mbase_core_bus_in_if].req_data[2-:1];
 														always @(*) core_bus_out_uuid[i+:1] = sv2v_tmp_FD406;
 													end
 												end
@@ -15274,7 +12948,7 @@ module Vortex (
 																// Trace: src/VX_cache_init.sv:103:21
 																state_n = STATE_FLUSH;
 																// Trace: src/VX_cache_init.sv:104:21
-																begin : sv2v_autoblock_3
+																begin : sv2v_autoblock_2
 																	// Trace: src/VX_cache_init.sv:104:26
 																	integer i;
 																	// Trace: src/VX_cache_init.sv:104:26
@@ -15399,9 +13073,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:79:5
 											wire [0:0] mem_rsp_queue_ready;
 											// Trace: src/VX_cache.sv:80:5
-											genvar _gv_i_230;
-											for (_gv_i_230 = 0; _gv_i_230 < MEM_PORTS; _gv_i_230 = _gv_i_230 + 1) begin : g_mem_rsp_queue
-												localparam i = _gv_i_230;
+											genvar _gv_i_228;
+											for (_gv_i_228 = 0; _gv_i_228 < MEM_PORTS; _gv_i_228 = _gv_i_228 + 1) begin : g_mem_rsp_queue
+												localparam i = _gv_i_228;
 												// Trace: src/VX_cache.sv:81:9
 												VX_elastic_buffer #(
 													.DATAW(MEM_RSP_DATAW),
@@ -15423,9 +13097,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:97:5
 											wire [0:0] mem_rsp_queue_sel;
 											// Trace: src/VX_cache.sv:98:5
-											genvar _gv_i_231;
-											for (_gv_i_231 = 0; _gv_i_231 < MEM_PORTS; _gv_i_231 = _gv_i_231 + 1) begin : g_mem_rsp_queue_data_s
-												localparam i = _gv_i_231;
+											genvar _gv_i_229;
+											for (_gv_i_229 = 0; _gv_i_229 < MEM_PORTS; _gv_i_229 = _gv_i_229 + 1) begin : g_mem_rsp_queue_data_s
+												localparam i = _gv_i_229;
 												// Trace: src/VX_cache.sv:99:9
 												wire [4:0] mem_rsp_tag_s = mem_rsp_queue_data[(i * 517) + 4-:5];
 												// Trace: src/VX_cache.sv:100:9
@@ -15434,9 +13108,9 @@ module Vortex (
 												assign mem_rsp_queue_data_s[i * 517+:517] = {mem_rsp_data_s, mem_rsp_tag_s};
 											end
 											// Trace: src/VX_cache.sv:103:5
-											genvar _gv_i_232;
-											for (_gv_i_232 = 0; _gv_i_232 < MEM_PORTS; _gv_i_232 = _gv_i_232 + 1) begin : g_mem_rsp_queue_sel
-												localparam i = _gv_i_232;
+											genvar _gv_i_230;
+											for (_gv_i_230 = 0; _gv_i_230 < MEM_PORTS; _gv_i_230 = _gv_i_230 + 1) begin : g_mem_rsp_queue_sel
+												localparam i = _gv_i_230;
 												if (1) begin : g_singlebank
 													// Trace: src/VX_cache.sv:118:13
 													assign mem_rsp_queue_sel[i+:1] = 0;
@@ -15473,9 +13147,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:144:5
 											wire [4:0] per_bank_mem_rsp_tag;
 											// Trace: src/VX_cache.sv:145:5
-											genvar _gv_i_233;
-											for (_gv_i_233 = 0; _gv_i_233 < NUM_BANKS; _gv_i_233 = _gv_i_233 + 1) begin : g_per_bank_mem_rsp_data
-												localparam i = _gv_i_233;
+											genvar _gv_i_231;
+											for (_gv_i_231 = 0; _gv_i_231 < NUM_BANKS; _gv_i_231 = _gv_i_231 + 1) begin : g_per_bank_mem_rsp_data
+												localparam i = _gv_i_231;
 												// Trace: src/VX_cache.sv:146:9
 												assign {per_bank_mem_rsp_data[i * 512+:512], per_bank_mem_rsp_tag[i * 5+:5]} = per_bank_mem_rsp_pdata[i * 517+:517];
 											end
@@ -15492,7 +13166,7 @@ module Vortex (
 											// Trace: src/VX_cache.sv:156:5
 											wire [127:0] per_bank_core_req_data;
 											// Trace: src/VX_cache.sv:157:5
-											wire [4:0] per_bank_core_req_tag;
+											wire [2:0] per_bank_core_req_tag;
 											// Trace: src/VX_cache.sv:158:5
 											wire [0:0] per_bank_core_req_idx;
 											// Trace: src/VX_cache.sv:159:5
@@ -15504,7 +13178,7 @@ module Vortex (
 											// Trace: src/VX_cache.sv:162:5
 											wire [127:0] per_bank_core_rsp_data;
 											// Trace: src/VX_cache.sv:163:5
-											wire [4:0] per_bank_core_rsp_tag;
+											wire [2:0] per_bank_core_rsp_tag;
 											// Trace: src/VX_cache.sv:164:5
 											wire [0:0] per_bank_core_rsp_idx;
 											// Trace: src/VX_cache.sv:165:5
@@ -15536,7 +13210,7 @@ module Vortex (
 											// Trace: src/VX_cache.sv:178:5
 											wire [127:0] core_req_data;
 											// Trace: src/VX_cache.sv:179:5
-											wire [4:0] core_req_tag;
+											wire [2:0] core_req_tag;
 											// Trace: src/VX_cache.sv:180:5
 											wire [2:0] core_req_flags;
 											// Trace: src/VX_cache.sv:181:5
@@ -15548,61 +13222,61 @@ module Vortex (
 											// Trace: src/VX_cache.sv:184:5
 											wire [1:0] core_req_wsel;
 											// Trace: src/VX_cache.sv:185:5
-											wire [180:0] core_req_data_in;
+											wire [178:0] core_req_data_in;
 											// Trace: src/VX_cache.sv:186:5
-											wire [180:0] core_req_data_out;
+											wire [178:0] core_req_data_out;
 											// Trace: src/VX_cache.sv:187:5
-											genvar _gv_i_234;
-											for (_gv_i_234 = 0; _gv_i_234 < NUM_REQS; _gv_i_234 = _gv_i_234 + 1) begin : g_core_req
-												localparam i = _gv_i_234;
+											genvar _gv_i_232;
+											for (_gv_i_232 = 0; _gv_i_232 < NUM_REQS; _gv_i_232 = _gv_i_232 + 1) begin : g_core_req
+												localparam i = _gv_i_232;
 												// Trace: src/VX_cache.sv:188:9
 												assign core_req_valid[i] = core_bus2_if[i].req_valid;
 												// Trace: src/VX_cache.sv:189:9
-												assign core_req_rw[i] = core_bus2_if[i].req_data[180];
+												assign core_req_rw[i] = core_bus2_if[i].req_data[178];
 												// Trace: src/VX_cache.sv:190:9
-												assign core_req_byteen[i * 16+:16] = core_bus2_if[i].req_data[23-:16];
+												assign core_req_byteen[i * 16+:16] = core_bus2_if[i].req_data[21-:16];
 												// Trace: src/VX_cache.sv:191:9
-												assign core_req_addr[i * 28+:28] = core_bus2_if[i].req_data[179-:28];
+												assign core_req_addr[i * 28+:28] = core_bus2_if[i].req_data[177-:28];
 												// Trace: src/VX_cache.sv:192:9
-												assign core_req_data[i * 128+:128] = core_bus2_if[i].req_data[151-:128];
+												assign core_req_data[i * 128+:128] = core_bus2_if[i].req_data[149-:128];
 												// Trace: src/VX_cache.sv:193:9
-												assign core_req_tag[i * 5+:5] = core_bus2_if[i].req_data[4-:5];
+												assign core_req_tag[i * 3+:3] = core_bus2_if[i].req_data[2-:3];
 												// Trace: src/VX_cache.sv:194:9
-												assign core_req_flags[i * 3+:3] = sv2v_cast_3(core_bus2_if[i].req_data[7-:3]);
+												assign core_req_flags[i * 3+:3] = sv2v_cast_3(core_bus2_if[i].req_data[5-:3]);
 												// Trace: src/VX_cache.sv:195:9
 												assign core_bus2_if[i].req_ready = core_req_ready[i];
 											end
 											// Trace: src/VX_cache.sv:197:5
-											genvar _gv_i_235;
-											for (_gv_i_235 = 0; _gv_i_235 < NUM_REQS; _gv_i_235 = _gv_i_235 + 1) begin : g_core_req_wsel
-												localparam i = _gv_i_235;
+											genvar _gv_i_233;
+											for (_gv_i_233 = 0; _gv_i_233 < NUM_REQS; _gv_i_233 = _gv_i_233 + 1) begin : g_core_req_wsel
+												localparam i = _gv_i_233;
 												if (1) begin : g_wsel
 													// Trace: src/VX_cache.sv:199:13
 													assign core_req_wsel[i * 2+:2] = core_req_addr[i * 28+:WORD_SEL_BITS];
 												end
 											end
 											// Trace: src/VX_cache.sv:204:5
-											genvar _gv_i_236;
-											for (_gv_i_236 = 0; _gv_i_236 < NUM_REQS; _gv_i_236 = _gv_i_236 + 1) begin : g_core_req_line_addr
-												localparam i = _gv_i_236;
+											genvar _gv_i_234;
+											for (_gv_i_234 = 0; _gv_i_234 < NUM_REQS; _gv_i_234 = _gv_i_234 + 1) begin : g_core_req_line_addr
+												localparam i = _gv_i_234;
 												// Trace: src/VX_cache.sv:205:9
 												assign core_req_line_addr[i * 26+:26] = core_req_addr[(i * 28) + 2+:LINE_ADDR_WIDTH];
 											end
 											// Trace: src/VX_cache.sv:207:5
-											genvar _gv_i_237;
-											for (_gv_i_237 = 0; _gv_i_237 < NUM_REQS; _gv_i_237 = _gv_i_237 + 1) begin : g_core_req_bid
-												localparam i = _gv_i_237;
+											genvar _gv_i_235;
+											for (_gv_i_235 = 0; _gv_i_235 < NUM_REQS; _gv_i_235 = _gv_i_235 + 1) begin : g_core_req_bid
+												localparam i = _gv_i_235;
 												if (1) begin : g_singlebank
 													// Trace: src/VX_cache.sv:211:13
 													assign core_req_bid[i+:1] = 1'sb0;
 												end
 											end
 											// Trace: src/VX_cache.sv:214:5
-											genvar _gv_i_238;
-											for (_gv_i_238 = 0; _gv_i_238 < NUM_REQS; _gv_i_238 = _gv_i_238 + 1) begin : g_core_req_data_in
-												localparam i = _gv_i_238;
+											genvar _gv_i_236;
+											for (_gv_i_236 = 0; _gv_i_236 < NUM_REQS; _gv_i_236 = _gv_i_236 + 1) begin : g_core_req_data_in
+												localparam i = _gv_i_236;
 												// Trace: src/VX_cache.sv:215:9
-												assign core_req_data_in[i * 181+:181] = {core_req_line_addr[i * 26+:26], core_req_rw[i], core_req_wsel[i * 2+:2], core_req_byteen[i * 16+:16], core_req_data[i * 128+:128], core_req_tag[i * 5+:5], core_req_flags[i * 3+:3]};
+												assign core_req_data_in[i * 179+:179] = {core_req_line_addr[i * 26+:26], core_req_rw[i], core_req_wsel[i * 2+:2], core_req_byteen[i * 16+:16], core_req_data[i * 128+:128], core_req_tag[i * 3+:3], core_req_flags[i * 3+:3]};
 											end
 											// Trace: src/VX_cache.sv:225:5
 											assign per_bank_core_req_fire = per_bank_core_req_valid & per_bank_mem_req_ready;
@@ -15629,11 +13303,11 @@ module Vortex (
 												.ready_out(per_bank_core_req_ready)
 											);
 											// Trace: src/VX_cache.sv:246:5
-											genvar _gv_i_239;
-											for (_gv_i_239 = 0; _gv_i_239 < NUM_BANKS; _gv_i_239 = _gv_i_239 + 1) begin : g_core_req_data_out
-												localparam i = _gv_i_239;
+											genvar _gv_i_237;
+											for (_gv_i_237 = 0; _gv_i_237 < NUM_BANKS; _gv_i_237 = _gv_i_237 + 1) begin : g_core_req_data_out
+												localparam i = _gv_i_237;
 												// Trace: src/VX_cache.sv:247:9
-												assign {per_bank_core_req_addr[i * 26+:26], per_bank_core_req_rw[i], per_bank_core_req_wsel[i * 2+:2], per_bank_core_req_byteen[i * 16+:16], per_bank_core_req_data[i * 128+:128], per_bank_core_req_tag[i * 5+:5], per_bank_core_req_flags[i * 3+:3]} = core_req_data_out[i * 181+:181];
+												assign {per_bank_core_req_addr[i * 26+:26], per_bank_core_req_rw[i], per_bank_core_req_wsel[i * 2+:2], per_bank_core_req_byteen[i * 16+:16], per_bank_core_req_data[i * 128+:128], per_bank_core_req_tag[i * 3+:3], per_bank_core_req_flags[i * 3+:3]} = core_req_data_out[i * 179+:179];
 											end
 											// Trace: src/VX_cache.sv:257:5
 											genvar _gv_bank_id_1;
@@ -15668,13 +13342,13 @@ module Vortex (
 													.core_req_wsel(per_bank_core_req_wsel[bank_id * 2+:2]),
 													.core_req_byteen(per_bank_core_req_byteen[bank_id * 16+:16]),
 													.core_req_data(per_bank_core_req_data[bank_id * 128+:128]),
-													.core_req_tag(per_bank_core_req_tag[bank_id * 5+:5]),
+													.core_req_tag(per_bank_core_req_tag[bank_id * 3+:3]),
 													.core_req_idx(per_bank_core_req_idx[bank_id+:1]),
 													.core_req_flags(per_bank_core_req_flags[bank_id * 3+:3]),
 													.core_req_ready(per_bank_core_req_ready[bank_id]),
 													.core_rsp_valid(per_bank_core_rsp_valid[bank_id]),
 													.core_rsp_data(per_bank_core_rsp_data[bank_id * 128+:128]),
-													.core_rsp_tag(per_bank_core_rsp_tag[bank_id * 5+:5]),
+													.core_rsp_tag(per_bank_core_rsp_tag[bank_id * 3+:3]),
 													.core_rsp_idx(per_bank_core_rsp_idx[bank_id+:1]),
 													.core_rsp_ready(per_bank_core_rsp_ready[bank_id]),
 													.mem_req_valid(per_bank_mem_req_valid[bank_id]),
@@ -15695,23 +13369,23 @@ module Vortex (
 												);
 											end
 											// Trace: src/VX_cache.sv:312:5
-											wire [132:0] core_rsp_data_in;
+											wire [130:0] core_rsp_data_in;
 											// Trace: src/VX_cache.sv:313:5
-											wire [132:0] core_rsp_data_out;
+											wire [130:0] core_rsp_data_out;
 											// Trace: src/VX_cache.sv:314:5
 											wire [0:0] core_rsp_valid_s;
 											// Trace: src/VX_cache.sv:315:5
 											wire [127:0] core_rsp_data_s;
 											// Trace: src/VX_cache.sv:316:5
-											wire [4:0] core_rsp_tag_s;
+											wire [2:0] core_rsp_tag_s;
 											// Trace: src/VX_cache.sv:317:5
 											wire [0:0] core_rsp_ready_s;
 											// Trace: src/VX_cache.sv:318:5
-											genvar _gv_i_240;
-											for (_gv_i_240 = 0; _gv_i_240 < NUM_BANKS; _gv_i_240 = _gv_i_240 + 1) begin : g_core_rsp_data_in
-												localparam i = _gv_i_240;
+											genvar _gv_i_238;
+											for (_gv_i_238 = 0; _gv_i_238 < NUM_BANKS; _gv_i_238 = _gv_i_238 + 1) begin : g_core_rsp_data_in
+												localparam i = _gv_i_238;
 												// Trace: src/VX_cache.sv:319:9
-												assign core_rsp_data_in[i * 133+:133] = {per_bank_core_rsp_data[i * 128+:128], per_bank_core_rsp_tag[i * 5+:5]};
+												assign core_rsp_data_in[i * 131+:131] = {per_bank_core_rsp_data[i * 128+:128], per_bank_core_rsp_tag[i * 3+:3]};
 											end
 											// Trace: src/VX_cache.sv:321:5
 											VX_stream_xbar #(
@@ -15733,19 +13407,19 @@ module Vortex (
 												.sel_out()
 											);
 											// Trace: src/VX_cache.sv:339:5
-											genvar _gv_i_241;
-											for (_gv_i_241 = 0; _gv_i_241 < NUM_REQS; _gv_i_241 = _gv_i_241 + 1) begin : g_core_rsp_data_s
-												localparam i = _gv_i_241;
+											genvar _gv_i_239;
+											for (_gv_i_239 = 0; _gv_i_239 < NUM_REQS; _gv_i_239 = _gv_i_239 + 1) begin : g_core_rsp_data_s
+												localparam i = _gv_i_239;
 												// Trace: src/VX_cache.sv:340:9
-												assign {core_rsp_data_s[i * 128+:128], core_rsp_tag_s[i * 5+:5]} = core_rsp_data_out[i * 133+:133];
+												assign {core_rsp_data_s[i * 128+:128], core_rsp_tag_s[i * 3+:3]} = core_rsp_data_out[i * 131+:131];
 											end
 											// Trace: src/VX_cache.sv:342:5
-											genvar _gv_i_242;
-											for (_gv_i_242 = 0; _gv_i_242 < NUM_REQS; _gv_i_242 = _gv_i_242 + 1) begin : g_core_rsp_buf
-												localparam i = _gv_i_242;
+											genvar _gv_i_240;
+											for (_gv_i_240 = 0; _gv_i_240 < NUM_REQS; _gv_i_240 = _gv_i_240 + 1) begin : g_core_rsp_buf
+												localparam i = _gv_i_240;
 												// Trace: src/VX_cache.sv:343:9
 												VX_elastic_buffer #(
-													.DATAW(133),
+													.DATAW(131),
 													.SIZE((CORE_RSP_BUF_ENABLE ? ((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : 2) : 0)),
 													.OUT_REG(((CORE_OUT_BUF & 7) < 2 ? CORE_OUT_BUF & 7 : (CORE_OUT_BUF & 7) - 2))
 												) core_rsp_buf(
@@ -15753,8 +13427,8 @@ module Vortex (
 													.reset(reset),
 													.valid_in(core_rsp_valid_s[i]),
 													.ready_in(core_rsp_ready_s[i]),
-													.data_in({core_rsp_data_s[i * 128+:128], core_rsp_tag_s[i * 5+:5]}),
-													.data_out({core_bus2_if[i].rsp_data[132-:128], core_bus2_if[i].rsp_data[4-:5]}),
+													.data_in({core_rsp_data_s[i * 128+:128], core_rsp_tag_s[i * 3+:3]}),
+													.data_out({core_bus2_if[i].rsp_data[130-:128], core_bus2_if[i].rsp_data[2-:3]}),
 													.valid_out(core_bus2_if[i].rsp_valid),
 													.ready_out(core_bus2_if[i].rsp_ready)
 												);
@@ -15762,9 +13436,9 @@ module Vortex (
 											// Trace: src/VX_cache.sv:358:5
 											wire [610:0] per_bank_mem_req_pdata;
 											// Trace: src/VX_cache.sv:359:5
-											genvar _gv_i_243;
-											for (_gv_i_243 = 0; _gv_i_243 < NUM_BANKS; _gv_i_243 = _gv_i_243 + 1) begin : g_per_bank_mem_req_pdata
-												localparam i = _gv_i_243;
+											genvar _gv_i_241;
+											for (_gv_i_241 = 0; _gv_i_241 < NUM_BANKS; _gv_i_241 = _gv_i_241 + 1) begin : g_per_bank_mem_req_pdata
+												localparam i = _gv_i_241;
 												// Trace: src/VX_cache.sv:360:9
 												assign per_bank_mem_req_pdata[i * 611+:611] = {per_bank_mem_req_rw[i], per_bank_mem_req_addr[i * 26+:26], per_bank_mem_req_data[i * 512+:512], per_bank_mem_req_byteen[i * 64+:64], per_bank_mem_req_flags[i * 3+:3], per_bank_mem_req_tag[i * 5+:5]};
 											end
@@ -15794,9 +13468,9 @@ module Vortex (
 												.sel_out(mem_req_sel_out)
 											);
 											// Trace: src/VX_cache.sv:389:5
-											genvar _gv_i_244;
-											for (_gv_i_244 = 0; _gv_i_244 < MEM_PORTS; _gv_i_244 = _gv_i_244 + 1) begin : g_mem_req_buf
-												localparam i = _gv_i_244;
+											genvar _gv_i_242;
+											for (_gv_i_242 = 0; _gv_i_242 < MEM_PORTS; _gv_i_242 = _gv_i_242 + 1) begin : g_mem_req_buf
+												localparam i = _gv_i_242;
 												// Trace: src/VX_cache.sv:390:9
 												wire mem_req_rw;
 												// Trace: src/VX_cache.sv:391:9
@@ -15924,13 +13598,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [613:0] req_data;
+									wire [611:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [519:0] rsp_data;
+									wire [517:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -15965,13 +13639,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [613:0] req_data;
+									wire [611:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [519:0] rsp_data;
+									wire [517:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -16070,7 +13744,7 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:32:9
 										assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].req_valid;
 										// Trace: src/VX_mem_arb.sv:33:9
-										assign req_data_in[i * 614+:614] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].req_data;
+										assign req_data_in[i * 612+:612] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].req_data;
 										// Trace: src/VX_mem_arb.sv:34:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 									end
@@ -16101,12 +13775,12 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:55:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 										// Trace: src/VX_mem_arb.sv:56:9
-										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[613], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[612-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[586-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[74-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[10-:3], req_tag_out} = req_data_out[i * 614+:614];
+										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[611], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[610-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[584-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[72-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[8-:3], req_tag_out} = req_data_out[i * 612+:612];
 										// Trace: src/VX_mem_arb.sv:64:9
 										assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_ready;
 										if (1) begin : g_req_tag_out
 											// Trace: src/VX_mem_arb.sv:76:13
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[7-:8] = req_tag_out;
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].req_data[5-:6] = req_tag_out;
 										end
 									end
 									// Trace: src/VX_mem_arb.sv:79:5
@@ -16129,7 +13803,7 @@ module Vortex (
 											// Trace: src/VX_mem_arb.sv:120:13
 											assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_valid;
 											// Trace: src/VX_mem_arb.sv:121:13
-											assign rsp_data_in[i * 520+:520] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
+											assign rsp_data_in[i * 518+:518] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_data;
 											// Trace: src/VX_mem_arb.sv:122:13
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].mem_bus_tmp_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 										end
@@ -16159,7 +13833,7 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:143:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 										// Trace: src/VX_mem_arb.sv:144:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 520+:520];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 518+:518];
 										// Trace: src/VX_mem_arb.sv:145:9
 										assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache.g_mem_bus_if[_gv_i_193].arb_core_bus_tmp_if[i + _mbase_bus_in_if].rsp_ready;
 									end
@@ -16184,25 +13858,25 @@ module Vortex (
 									// Trace: src/VX_cache_cluster.sv:160:5
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_valid = mem_bus_tmp_if[0].req_valid;
 									// Trace: src/VX_cache_cluster.sv:161:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[613] = 0;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[611] = 0;
 									// Trace: src/VX_cache_cluster.sv:162:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[612-:26] = mem_bus_tmp_if[0].req_data[612-:26];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[610-:26] = mem_bus_tmp_if[0].req_data[610-:26];
 									// Trace: src/VX_cache_cluster.sv:163:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[586-:512] = 1'sb0;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[584-:512] = 1'sb0;
 									// Trace: src/VX_cache_cluster.sv:164:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[74-:64] = 1'sb1;
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[72-:64] = 1'sb1;
 									// Trace: src/VX_cache_cluster.sv:165:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[10-:3] = mem_bus_tmp_if[0].req_data[10-:3];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[8-:3] = mem_bus_tmp_if[0].req_data[8-:3];
 									// Trace: src/VX_cache_cluster.sv:166:5
-									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[7-:8] = mem_bus_tmp_if[0].req_data[7-:8];
+									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_data[5-:6] = mem_bus_tmp_if[0].req_data[5-:6];
 									// Trace: src/VX_cache_cluster.sv:167:5
 									assign mem_bus_tmp_if[0].req_ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].req_ready;
 									// Trace: src/VX_cache_cluster.sv:168:5
 									assign mem_bus_tmp_if[0].rsp_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].rsp_valid;
 									// Trace: src/VX_cache_cluster.sv:169:5
-									assign mem_bus_tmp_if[0].rsp_data[519-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[519-:512];
+									assign mem_bus_tmp_if[0].rsp_data[517-:512] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[517-:512];
 									// Trace: src/VX_cache_cluster.sv:170:5
-									assign mem_bus_tmp_if[0].rsp_data[7-:8] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[7-:8];
+									assign mem_bus_tmp_if[0].rsp_data[5-:6] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].rsp_data[5-:6];
 									// Trace: src/VX_cache_cluster.sv:171:5
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.dcache_mem_bus_if[i + _mbase_mem_bus_if].rsp_ready = mem_bus_tmp_if[0].rsp_ready;
 								end
@@ -16213,7 +13887,7 @@ module Vortex (
 						// Trace: src/VX_socket.sv:97:5
 						genvar _gv_i_180;
 						localparam VX_gpu_pkg_L1_MEM_TAG_WIDTH = VX_gpu_pkg_DCACHE_MEM_TAG_WIDTH;
-						localparam VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH = 9;
+						localparam VX_gpu_pkg_L1_MEM_ARB_TAG_WIDTH = 7;
 						for (_gv_i_180 = 0; _gv_i_180 < VX_gpu_pkg_DCACHE_NUM_REQS; _gv_i_180 = _gv_i_180 + 1) begin : g_mem_bus_if
 							localparam i = _gv_i_180;
 							if (i == 0) begin : g_i0
@@ -16246,13 +13920,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [613:0] req_data;
+									wire [611:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [519:0] rsp_data;
+									wire [517:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -16287,13 +13961,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [614:0] req_data;
+									wire [612:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [520:0] rsp_data;
+									wire [518:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -16302,20 +13976,20 @@ module Vortex (
 								// Trace: src/VX_socket.sv:108:5
 								assign l1_mem_bus_if[0].req_valid = icache_mem_bus_if[0].req_valid;
 								// Trace: src/VX_socket.sv:109:5
-								assign l1_mem_bus_if[0].req_data[613] = icache_mem_bus_if[0].req_data[610];
+								assign l1_mem_bus_if[0].req_data[611] = icache_mem_bus_if[0].req_data[610];
 								// Trace: src/VX_socket.sv:110:5
-								assign l1_mem_bus_if[0].req_data[612-:26] = icache_mem_bus_if[0].req_data[609-:26];
+								assign l1_mem_bus_if[0].req_data[610-:26] = icache_mem_bus_if[0].req_data[609-:26];
 								// Trace: src/VX_socket.sv:111:5
-								assign l1_mem_bus_if[0].req_data[586-:512] = icache_mem_bus_if[0].req_data[583-:512];
+								assign l1_mem_bus_if[0].req_data[584-:512] = icache_mem_bus_if[0].req_data[583-:512];
 								// Trace: src/VX_socket.sv:112:5
-								assign l1_mem_bus_if[0].req_data[74-:64] = icache_mem_bus_if[0].req_data[71-:64];
+								assign l1_mem_bus_if[0].req_data[72-:64] = icache_mem_bus_if[0].req_data[71-:64];
 								// Trace: src/VX_socket.sv:113:5
-								assign l1_mem_bus_if[0].req_data[10-:3] = icache_mem_bus_if[0].req_data[7-:3];
+								assign l1_mem_bus_if[0].req_data[8-:3] = icache_mem_bus_if[0].req_data[7-:3];
 								if (1) begin : genblk1
 									if (1) begin : genblk1
 										if (1) begin : genblk1
 											// Trace: src/VX_socket.sv:117:17
-											assign l1_mem_bus_if[0].req_data[7-:8] = {icache_mem_bus_if[0].req_data[4-:1], {3 {1'b0}}, icache_mem_bus_if[0].req_data[3-:4]};
+											assign l1_mem_bus_if[0].req_data[5-:6] = {icache_mem_bus_if[0].req_data[4-:1], 1'b0, icache_mem_bus_if[0].req_data[3-:4]};
 										end
 									end
 								end
@@ -16324,12 +13998,12 @@ module Vortex (
 								// Trace: src/VX_socket.sv:132:5
 								assign icache_mem_bus_if[0].rsp_valid = l1_mem_bus_if[0].rsp_valid;
 								// Trace: src/VX_socket.sv:133:5
-								assign icache_mem_bus_if[0].rsp_data[516-:512] = l1_mem_bus_if[0].rsp_data[519-:512];
+								assign icache_mem_bus_if[0].rsp_data[516-:512] = l1_mem_bus_if[0].rsp_data[517-:512];
 								if (1) begin : genblk2
 									if (1) begin : genblk1
 										if (1) begin : genblk1
 											// Trace: src/VX_socket.sv:137:17
-											assign icache_mem_bus_if[0].rsp_data[4-:5] = {l1_mem_bus_if[0].rsp_data[7-:1], l1_mem_bus_if[0].rsp_data[3:0]};
+											assign icache_mem_bus_if[0].rsp_data[4-:5] = {l1_mem_bus_if[0].rsp_data[5-:1], l1_mem_bus_if[0].rsp_data[3:0]};
 										end
 									end
 								end
@@ -16338,28 +14012,28 @@ module Vortex (
 								// Trace: src/VX_socket.sv:154:5
 								assign l1_mem_bus_if[1].req_valid = dcache_mem_bus_if[0].req_valid;
 								// Trace: src/VX_socket.sv:155:5
-								assign l1_mem_bus_if[1].req_data[613] = dcache_mem_bus_if[0].req_data[613];
+								assign l1_mem_bus_if[1].req_data[611] = dcache_mem_bus_if[0].req_data[611];
 								// Trace: src/VX_socket.sv:156:5
-								assign l1_mem_bus_if[1].req_data[612-:26] = dcache_mem_bus_if[0].req_data[612-:26];
+								assign l1_mem_bus_if[1].req_data[610-:26] = dcache_mem_bus_if[0].req_data[610-:26];
 								// Trace: src/VX_socket.sv:157:5
-								assign l1_mem_bus_if[1].req_data[586-:512] = dcache_mem_bus_if[0].req_data[586-:512];
+								assign l1_mem_bus_if[1].req_data[584-:512] = dcache_mem_bus_if[0].req_data[584-:512];
 								// Trace: src/VX_socket.sv:158:5
-								assign l1_mem_bus_if[1].req_data[74-:64] = dcache_mem_bus_if[0].req_data[74-:64];
+								assign l1_mem_bus_if[1].req_data[72-:64] = dcache_mem_bus_if[0].req_data[72-:64];
 								// Trace: src/VX_socket.sv:159:5
-								assign l1_mem_bus_if[1].req_data[10-:3] = dcache_mem_bus_if[0].req_data[10-:3];
+								assign l1_mem_bus_if[1].req_data[8-:3] = dcache_mem_bus_if[0].req_data[8-:3];
 								if (1) begin : genblk3
 									// Trace: src/VX_socket.sv:175:9
-									assign l1_mem_bus_if[1].req_data[7-:8] = dcache_mem_bus_if[0].req_data[7-:8];
+									assign l1_mem_bus_if[1].req_data[5-:6] = dcache_mem_bus_if[0].req_data[5-:6];
 								end
 								// Trace: src/VX_socket.sv:177:5
 								assign dcache_mem_bus_if[0].req_ready = l1_mem_bus_if[1].req_ready;
 								// Trace: src/VX_socket.sv:178:5
 								assign dcache_mem_bus_if[0].rsp_valid = l1_mem_bus_if[1].rsp_valid;
 								// Trace: src/VX_socket.sv:179:5
-								assign dcache_mem_bus_if[0].rsp_data[519-:512] = l1_mem_bus_if[1].rsp_data[519-:512];
+								assign dcache_mem_bus_if[0].rsp_data[517-:512] = l1_mem_bus_if[1].rsp_data[517-:512];
 								if (1) begin : genblk4
 									// Trace: src/VX_socket.sv:195:9
-									assign dcache_mem_bus_if[0].rsp_data[7-:8] = l1_mem_bus_if[1].rsp_data[7-:8];
+									assign dcache_mem_bus_if[0].rsp_data[5-:6] = l1_mem_bus_if[1].rsp_data[5-:6];
 								end
 								// Trace: src/VX_socket.sv:197:5
 								assign l1_mem_bus_if[1].rsp_ready = dcache_mem_bus_if[0].rsp_ready;
@@ -16414,21 +14088,21 @@ module Vortex (
 									// Trace: src/VX_mem_arb.sv:20:5
 									localparam LOG_NUM_REQS = 1;
 									// Trace: src/VX_mem_arb.sv:21:5
-									localparam REQ_DATAW = 614;
+									localparam REQ_DATAW = 612;
 									// Trace: src/VX_mem_arb.sv:22:5
-									localparam RSP_DATAW = 520;
+									localparam RSP_DATAW = 518;
 									// Trace: src/VX_mem_arb.sv:23:5
 									localparam SEL_COUNT = NUM_OUTPUTS;
 									// Trace: src/VX_mem_arb.sv:24:5
 									wire [1:0] req_valid_in;
 									// Trace: src/VX_mem_arb.sv:25:5
-									wire [1227:0] req_data_in;
+									wire [1223:0] req_data_in;
 									// Trace: src/VX_mem_arb.sv:26:5
 									wire [1:0] req_ready_in;
 									// Trace: src/VX_mem_arb.sv:27:5
 									wire [0:0] req_valid_out;
 									// Trace: src/VX_mem_arb.sv:28:5
-									wire [613:0] req_data_out;
+									wire [611:0] req_data_out;
 									// Trace: src/VX_mem_arb.sv:29:5
 									wire [0:0] req_sel_out;
 									// Trace: src/VX_mem_arb.sv:30:5
@@ -16440,7 +14114,7 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:32:9
 										assign req_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].req_valid;
 										// Trace: src/VX_mem_arb.sv:33:9
-										assign req_data_in[i * 614+:614] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].req_data;
+										assign req_data_in[i * 612+:612] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].req_data;
 										// Trace: src/VX_mem_arb.sv:34:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].req_ready = req_ready_in[i];
 									end
@@ -16467,11 +14141,11 @@ module Vortex (
 									for (_gv_i_184 = 0; _gv_i_184 < NUM_OUTPUTS; _gv_i_184 = _gv_i_184 + 1) begin : g_bus_out_if
 										localparam i = _gv_i_184;
 										// Trace: src/VX_mem_arb.sv:54:9
-										wire [7:0] req_tag_out;
+										wire [5:0] req_tag_out;
 										// Trace: src/VX_mem_arb.sv:55:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_valid = req_valid_out[i];
 										// Trace: src/VX_mem_arb.sv:56:9
-										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[614], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[613-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[587-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[75-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[11-:3], req_tag_out} = req_data_out[i * 614+:614];
+										assign {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[612], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[611-:26], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[585-:512], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[73-:64], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[9-:3], req_tag_out} = req_data_out[i * 612+:612];
 										// Trace: src/VX_mem_arb.sv:64:9
 										assign req_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_ready;
 										if (1) begin : g_req_tag_sel_out
@@ -16483,20 +14157,20 @@ module Vortex (
 											) bits_insert(
 												.data_in(req_tag_out),
 												.ins_in(req_sel_out[i+:1]),
-												.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[8-:9])
+												.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].req_data[6-:7])
 											);
 										end
 									end
 									// Trace: src/VX_mem_arb.sv:79:5
 									wire [1:0] rsp_valid_out;
 									// Trace: src/VX_mem_arb.sv:80:5
-									wire [1039:0] rsp_data_out;
+									wire [1035:0] rsp_data_out;
 									// Trace: src/VX_mem_arb.sv:81:5
 									wire [1:0] rsp_ready_out;
 									// Trace: src/VX_mem_arb.sv:82:5
 									wire [0:0] rsp_valid_in;
 									// Trace: src/VX_mem_arb.sv:83:5
-									wire [519:0] rsp_data_in;
+									wire [517:0] rsp_data_in;
 									// Trace: src/VX_mem_arb.sv:84:5
 									wire [0:0] rsp_ready_in;
 									// Trace: src/VX_mem_arb.sv:85:5
@@ -16507,21 +14181,21 @@ module Vortex (
 										for (_gv_i_185 = 0; _gv_i_185 < NUM_OUTPUTS; _gv_i_185 = _gv_i_185 + 1) begin : g_rsp_data_in
 											localparam i = _gv_i_185;
 											// Trace: src/VX_mem_arb.sv:88:13
-											wire [7:0] rsp_tag_out;
+											wire [5:0] rsp_tag_out;
 											// Trace: src/VX_mem_arb.sv:89:13
 											VX_bits_remove #(
-												.N(9),
+												.N(7),
 												.S(LOG_NUM_REQS),
 												.POS(TAG_SEL_IDX)
 											) bits_remove(
-												.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].rsp_data[8-:9]),
+												.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].rsp_data[6-:7]),
 												.sel_out(rsp_sel_in[i+:1]),
 												.data_out(rsp_tag_out)
 											);
 											// Trace: src/VX_mem_arb.sv:98:13
 											assign rsp_valid_in[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].rsp_valid;
 											// Trace: src/VX_mem_arb.sv:99:13
-											assign rsp_data_in[i * 520+:520] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].rsp_data[520-:512], rsp_tag_out};
+											assign rsp_data_in[i * 518+:518] = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].rsp_data[518-:512], rsp_tag_out};
 											// Trace: src/VX_mem_arb.sv:100:13
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_arb_bus_if[i + _mbase_bus_out_if].rsp_ready = rsp_ready_in[i];
 										end
@@ -16550,7 +14224,7 @@ module Vortex (
 										// Trace: src/VX_mem_arb.sv:143:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].rsp_valid = rsp_valid_out[i];
 										// Trace: src/VX_mem_arb.sv:144:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 520+:520];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].rsp_data = rsp_data_out[i * 518+:518];
 										// Trace: src/VX_mem_arb.sv:145:9
 										assign rsp_ready_out[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_mem_bus_if[_gv_i_180].g_i0.l1_mem_bus_if[i + _mbase_bus_in_if].rsp_ready;
 									end
@@ -16599,13 +14273,13 @@ module Vortex (
 									// Trace: src/VX_mem_bus_if.sv:24:5
 									wire req_valid;
 									// Trace: src/VX_mem_bus_if.sv:25:5
-									wire [614:0] req_data;
+									wire [612:0] req_data;
 									// Trace: src/VX_mem_bus_if.sv:26:5
 									wire req_ready;
 									// Trace: src/VX_mem_bus_if.sv:27:5
 									wire rsp_valid;
 									// Trace: src/VX_mem_bus_if.sv:28:5
-									wire [520:0] rsp_data;
+									wire [518:0] rsp_data;
 									// Trace: src/VX_mem_bus_if.sv:29:5
 									wire rsp_ready;
 									// Trace: src/VX_mem_bus_if.sv:30:5
@@ -16614,20 +14288,20 @@ module Vortex (
 								// Trace: src/VX_socket.sv:226:5
 								assign l1_mem_arb_bus_if.req_valid = dcache_mem_bus_if[i].req_valid;
 								// Trace: src/VX_socket.sv:227:5
-								assign l1_mem_arb_bus_if.req_data[614] = dcache_mem_bus_if[i].req_data[613];
+								assign l1_mem_arb_bus_if.req_data[612] = dcache_mem_bus_if[i].req_data[611];
 								// Trace: src/VX_socket.sv:228:5
-								assign l1_mem_arb_bus_if.req_data[613-:26] = dcache_mem_bus_if[i].req_data[612-:26];
+								assign l1_mem_arb_bus_if.req_data[611-:26] = dcache_mem_bus_if[i].req_data[610-:26];
 								// Trace: src/VX_socket.sv:229:5
-								assign l1_mem_arb_bus_if.req_data[587-:512] = dcache_mem_bus_if[i].req_data[586-:512];
+								assign l1_mem_arb_bus_if.req_data[585-:512] = dcache_mem_bus_if[i].req_data[584-:512];
 								// Trace: src/VX_socket.sv:230:5
-								assign l1_mem_arb_bus_if.req_data[75-:64] = dcache_mem_bus_if[i].req_data[74-:64];
+								assign l1_mem_arb_bus_if.req_data[73-:64] = dcache_mem_bus_if[i].req_data[72-:64];
 								// Trace: src/VX_socket.sv:231:5
-								assign l1_mem_arb_bus_if.req_data[11-:3] = dcache_mem_bus_if[i].req_data[10-:3];
+								assign l1_mem_arb_bus_if.req_data[9-:3] = dcache_mem_bus_if[i].req_data[8-:3];
 								if (1) begin : genblk1
 									if (1) begin : genblk1
 										if (1) begin : genblk1
 											// Trace: src/VX_socket.sv:235:17
-											assign l1_mem_arb_bus_if.req_data[8-:9] = {dcache_mem_bus_if[i].req_data[7-:1], 1'b0, dcache_mem_bus_if[i].req_data[6-:7]};
+											assign l1_mem_arb_bus_if.req_data[6-:7] = {dcache_mem_bus_if[i].req_data[5-:1], 1'b0, dcache_mem_bus_if[i].req_data[4-:5]};
 										end
 									end
 								end
@@ -16636,12 +14310,12 @@ module Vortex (
 								// Trace: src/VX_socket.sv:250:5
 								assign dcache_mem_bus_if[i].rsp_valid = l1_mem_arb_bus_if.rsp_valid;
 								// Trace: src/VX_socket.sv:251:5
-								assign dcache_mem_bus_if[i].rsp_data[519-:512] = l1_mem_arb_bus_if.rsp_data[520-:512];
+								assign dcache_mem_bus_if[i].rsp_data[517-:512] = l1_mem_arb_bus_if.rsp_data[518-:512];
 								if (1) begin : genblk2
 									if (1) begin : genblk1
 										if (1) begin : genblk1
 											// Trace: src/VX_socket.sv:255:17
-											assign dcache_mem_bus_if[i].rsp_data[7-:8] = {l1_mem_arb_bus_if.rsp_data[8-:1], l1_mem_arb_bus_if.rsp_data[6:0]};
+											assign dcache_mem_bus_if[i].rsp_data[5-:6] = {l1_mem_arb_bus_if.rsp_data[6-:1], l1_mem_arb_bus_if.rsp_data[4:0]};
 										end
 									end
 								end
@@ -16662,12 +14336,12 @@ module Vortex (
 							end
 						end
 						// Trace: src/VX_socket.sv:279:5
-						wire [3:0] per_core_busy;
+						wire [0:0] per_core_busy;
 						// Trace: src/VX_socket.sv:280:5
 						genvar _gv_core_id_1;
 						localparam VX_gpu_pkg_VX_DCR_ADDR_WIDTH = 12;
 						localparam VX_gpu_pkg_VX_DCR_DATA_WIDTH = 32;
-						for (_gv_core_id_1 = 0; _gv_core_id_1 < 4; _gv_core_id_1 = _gv_core_id_1 + 1) begin : g_cores
+						for (_gv_core_id_1 = 0; _gv_core_id_1 < 1; _gv_core_id_1 = _gv_core_id_1 + 1) begin : g_cores
 							localparam core_id = _gv_core_id_1;
 							// Trace: src/VX_socket.sv:281:5
 							wire [0:0] core_reset;
@@ -16696,23 +14370,14 @@ module Vortex (
 								// Trace: src/VX_dcr_bus_if.sv:10:5
 							end
 							if (1) begin : genblk1
-								// Trace: src/VX_socket.sv:290:9
-								VX_pipe_register #(
-									.DATAW(45),
-									.DEPTH(1'd1)
-								) pipe_reg(
-									.clk(clk),
-									.reset(1'b0),
-									.enable(1'b1),
-									.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket_dcr_bus_if.write_valid && 1'b1, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket_dcr_bus_if.write_addr, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket_dcr_bus_if.write_data}),
-									.data_out({core_dcr_bus_if.write_valid, core_dcr_bus_if.write_addr, core_dcr_bus_if.write_data})
-								);
+								// Trace: src/VX_socket.sv:301:9
+								assign {core_dcr_bus_if.write_valid, core_dcr_bus_if.write_addr, core_dcr_bus_if.write_data} = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket_dcr_bus_if.write_valid && 1'b1, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket_dcr_bus_if.write_addr, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket_dcr_bus_if.write_data};
 							end
 							// Trace: src/VX_socket.sv:304:9
 							// expanded module instance: core
 							localparam _bbase_588EE_dcache_bus_if = core_id * VX_gpu_pkg_DCACHE_NUM_REQS;
 							localparam _bbase_588EE_icache_bus_if = core_id;
-							localparam _param_588EE_CORE_ID = (SOCKET_ID * 4) + core_id;
+							localparam _param_588EE_CORE_ID = (SOCKET_ID * 1) + core_id;
 							localparam _param_588EE_INSTANCE_ID = "";
 							if (1) begin : core
 								// removed import VX_gpu_pkg::*;
@@ -16782,9 +14447,9 @@ module Vortex (
 									wire valid;
 									// Trace: src/VX_decode_if.sv:3:5
 									localparam VX_gpu_pkg_EX_SFU = 2;
-									localparam VX_gpu_pkg_EX_FPU = 3;
-									localparam VX_gpu_pkg_EX_TCU = 3;
-									localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+									localparam VX_gpu_pkg_EX_FPU = 2;
+									localparam VX_gpu_pkg_EX_TCU = 2;
+									localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 									localparam VX_gpu_pkg_EX_BITS = 2;
 									localparam VX_gpu_pkg_INST_OP_BITS = 4;
 									localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -16803,7 +14468,7 @@ module Vortex (
 									// removed localparam type VX_gpu_pkg_lsu_args_t
 									// removed localparam type VX_gpu_pkg_wctl_args_t
 									// removed localparam type VX_gpu_pkg_op_args_t
-									localparam VX_gpu_pkg_REG_TYPES = 2;
+									localparam VX_gpu_pkg_REG_TYPES = 1;
 									localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 									localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 									// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -16944,12 +14609,12 @@ module Vortex (
 								end
 								// Trace: src/VX_core.sv:22:5
 								localparam VX_gpu_pkg_EX_SFU = 2;
-								localparam VX_gpu_pkg_EX_FPU = 3;
-								localparam VX_gpu_pkg_EX_TCU = 3;
-								localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+								localparam VX_gpu_pkg_EX_FPU = 2;
+								localparam VX_gpu_pkg_EX_TCU = 2;
+								localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 								// expanded interface instance: dispatch_if
 								genvar _arr_B1D72;
-								for (_arr_B1D72 = 0; _arr_B1D72 <= 3; _arr_B1D72 = _arr_B1D72 + 1) begin : dispatch_if
+								for (_arr_B1D72 = 0; _arr_B1D72 <= 2; _arr_B1D72 = _arr_B1D72 + 1) begin : dispatch_if
 									// removed import VX_gpu_pkg::*;
 									// Trace: src/VX_dispatch_if.sv:2:5
 									wire valid;
@@ -16958,10 +14623,10 @@ module Vortex (
 									localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 									localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 									localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-									localparam VX_gpu_pkg_REG_TYPES = 2;
+									localparam VX_gpu_pkg_REG_TYPES = 1;
 									localparam VX_gpu_pkg_RV_REGS = 32;
-									localparam VX_gpu_pkg_NUM_REGS = 64;
-									localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+									localparam VX_gpu_pkg_NUM_REGS = 32;
+									localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 									localparam VX_gpu_pkg_PC_BITS = 30;
 									localparam VX_gpu_pkg_SIMD_COUNT = 1;
 									localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
@@ -16979,7 +14644,7 @@ module Vortex (
 									// removed localparam type VX_gpu_pkg_wctl_args_t
 									// removed localparam type VX_gpu_pkg_op_args_t
 									// removed localparam type VX_gpu_pkg_dispatch_t
-									wire [471:0] data;
+									wire [470:0] data;
 									// Trace: src/VX_dispatch_if.sv:4:5
 									wire ready;
 									// Trace: src/VX_dispatch_if.sv:5:5
@@ -16988,15 +14653,15 @@ module Vortex (
 								// Trace: src/VX_core.sv:23:5
 								// expanded interface instance: commit_if
 								genvar _arr_56FA2;
-								for (_arr_56FA2 = 0; _arr_56FA2 <= 3; _arr_56FA2 = _arr_56FA2 + 1) begin : commit_if
+								for (_arr_56FA2 = 0; _arr_56FA2 <= 2; _arr_56FA2 = _arr_56FA2 + 1) begin : commit_if
 									// removed import VX_gpu_pkg::*;
 									// Trace: src/VX_commit_if.sv:2:5
 									wire valid;
 									// Trace: src/VX_commit_if.sv:3:5
-									localparam VX_gpu_pkg_REG_TYPES = 2;
+									localparam VX_gpu_pkg_REG_TYPES = 1;
 									localparam VX_gpu_pkg_RV_REGS = 32;
-									localparam VX_gpu_pkg_NUM_REGS = 64;
-									localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+									localparam VX_gpu_pkg_NUM_REGS = 32;
+									localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 									localparam VX_gpu_pkg_NW_BITS = 2;
 									localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 									localparam VX_gpu_pkg_PC_BITS = 30;
@@ -17005,7 +14670,7 @@ module Vortex (
 									localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 									localparam VX_gpu_pkg_UUID_WIDTH = 1;
 									// removed localparam type VX_gpu_pkg_commit_t
-									wire [174:0] data;
+									wire [173:0] data;
 									// Trace: src/VX_commit_if.sv:4:5
 									wire ready;
 									// Trace: src/VX_commit_if.sv:5:5
@@ -17022,17 +14687,17 @@ module Vortex (
 									localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 									localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 									localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-									localparam VX_gpu_pkg_REG_TYPES = 2;
+									localparam VX_gpu_pkg_REG_TYPES = 1;
 									localparam VX_gpu_pkg_RV_REGS = 32;
-									localparam VX_gpu_pkg_NUM_REGS = 64;
-									localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+									localparam VX_gpu_pkg_NUM_REGS = 32;
+									localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 									localparam VX_gpu_pkg_PC_BITS = 30;
 									localparam VX_gpu_pkg_SIMD_COUNT = 1;
 									localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
 									localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 									localparam VX_gpu_pkg_UUID_WIDTH = 1;
 									// removed localparam type VX_gpu_pkg_writeback_t
-									wire [173:0] data;
+									wire [172:0] data;
 									// Trace: src/VX_writeback_if.sv:4:5
 									// Trace: src/VX_writeback_if.sv:8:5
 								end
@@ -17287,7 +14952,7 @@ module Vortex (
 											// Trace: src/VX_schedule.sv:75:13
 											active_warps_n = active_warps_n | wspawn[33-:4];
 											// Trace: src/VX_schedule.sv:76:13
-											begin : sv2v_autoblock_4
+											begin : sv2v_autoblock_3
 												// Trace: src/VX_schedule.sv:76:18
 												integer i;
 												// Trace: src/VX_schedule.sv:76:18
@@ -17367,7 +15032,7 @@ module Vortex (
 													stalled_warps_n[Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.wid] = 0;
 											end
 										end
-										begin : sv2v_autoblock_5
+										begin : sv2v_autoblock_4
 											// Trace: src/VX_schedule.sv:122:14
 											integer i;
 											// Trace: src/VX_schedule.sv:122:14
@@ -17755,9 +15420,9 @@ module Vortex (
 									// removed modport instance decode_sched_if
 									// Trace: src/VX_decode.sv:10:5
 									localparam VX_gpu_pkg_EX_SFU = 2;
-									localparam VX_gpu_pkg_EX_FPU = 3;
-									localparam VX_gpu_pkg_EX_TCU = 3;
-									localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+									localparam VX_gpu_pkg_EX_FPU = 2;
+									localparam VX_gpu_pkg_EX_TCU = 2;
+									localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 									localparam VX_gpu_pkg_EX_BITS = 2;
 									localparam VX_gpu_pkg_INST_OP_BITS = 4;
 									localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -17776,7 +15441,7 @@ module Vortex (
 									// removed localparam type VX_gpu_pkg_lsu_args_t
 									// removed localparam type VX_gpu_pkg_wctl_args_t
 									// removed localparam type VX_gpu_pkg_op_args_t
-									localparam VX_gpu_pkg_REG_TYPES = 2;
+									localparam VX_gpu_pkg_REG_TYPES = 1;
 									localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 									localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 									// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -17999,22 +15664,7 @@ module Vortex (
 									localparam VX_gpu_pkg_INST_BR_JAL = 4'b1000;
 									localparam VX_gpu_pkg_INST_BR_JALR = 4'b1001;
 									localparam VX_gpu_pkg_INST_EXT1 = 7'b0001011;
-									localparam VX_gpu_pkg_INST_FCI = 7'b1010011;
 									localparam VX_gpu_pkg_INST_FENCE = 7'b0001111;
-									localparam VX_gpu_pkg_INST_FL = 7'b0000111;
-									localparam VX_gpu_pkg_INST_FMADD = 7'b1000011;
-									localparam VX_gpu_pkg_INST_FMSUB = 7'b1000111;
-									localparam VX_gpu_pkg_INST_FNMADD = 7'b1001111;
-									localparam VX_gpu_pkg_INST_FNMSUB = 7'b1001011;
-									localparam VX_gpu_pkg_INST_FPU_CMP = 4'b1100;
-									localparam VX_gpu_pkg_INST_FPU_DIV = 4'b0100;
-									localparam VX_gpu_pkg_INST_FPU_F2I = 4'b1000;
-									localparam VX_gpu_pkg_INST_FPU_F2U = 4'b1001;
-									localparam VX_gpu_pkg_INST_FPU_I2F = 4'b1010;
-									localparam VX_gpu_pkg_INST_FPU_MISC = 4'b1110;
-									localparam VX_gpu_pkg_INST_FPU_SQRT = 4'b0101;
-									localparam VX_gpu_pkg_INST_FPU_U2F = 4'b1011;
-									localparam VX_gpu_pkg_INST_FS = 7'b0100111;
 									localparam VX_gpu_pkg_INST_I = 7'b0010011;
 									localparam VX_gpu_pkg_INST_JAL = 7'b1101111;
 									localparam VX_gpu_pkg_INST_JALR = 7'b1100111;
@@ -18338,414 +15988,150 @@ module Vortex (
 													// Trace: src/VX_decode.sv:246:5
 													use_rd = 1;
 												end
-											VX_gpu_pkg_INST_FL, VX_gpu_pkg_INST_L: begin
+											VX_gpu_pkg_INST_L: begin
+												// Trace: src/VX_decode.sv:250:17
+												ex_type = VX_gpu_pkg_EX_LSU;
 												// Trace: src/VX_decode.sv:251:17
-												ex_type = VX_gpu_pkg_EX_LSU;
-												// Trace: src/VX_decode.sv:252:17
 												op_type = sv2v_cast_4({1'b0, funct3});
-												// Trace: src/VX_decode.sv:253:17
+												// Trace: src/VX_decode.sv:252:17
 												op_args[13] = 0;
+												// Trace: src/VX_decode.sv:253:17
+												op_args[12] = opcode[2];
 												// Trace: src/VX_decode.sv:254:17
-												op_args[12] = opcode[2];
-												// Trace: src/VX_decode.sv:255:17
 												op_args[11-:12] = u_12;
+												// Trace: src/VX_decode.sv:255:5
+												rs1_v[4-:5] = rs1;
 												// Trace: src/VX_decode.sv:256:5
-												rs1_v[4-:5] = rs1;
+												rs1_v[5-:1] = 0;
 												// Trace: src/VX_decode.sv:257:5
-												rs1_v[5-:1] = 0;
+												use_rs1 = 1;
 												// Trace: src/VX_decode.sv:258:5
-												use_rs1 = 1;
+												rd_v[4-:5] = rd;
 												// Trace: src/VX_decode.sv:259:5
-												rd_v[4-:5] = rd;
-												// Trace: src/VX_decode.sv:260:5
 												rd_v[5-:1] = 0;
-												// Trace: src/VX_decode.sv:261:5
+												// Trace: src/VX_decode.sv:260:5
 												use_rd = 1;
-												// Trace: src/VX_decode.sv:262:17
-												rd_v[5-:1] = opcode[2];
 											end
-											VX_gpu_pkg_INST_FS, VX_gpu_pkg_INST_S: begin
-												// Trace: src/VX_decode.sv:266:17
+											VX_gpu_pkg_INST_S: begin
+												// Trace: src/VX_decode.sv:263:17
 												ex_type = VX_gpu_pkg_EX_LSU;
-												// Trace: src/VX_decode.sv:267:17
+												// Trace: src/VX_decode.sv:264:17
 												op_type = sv2v_cast_4({1'b1, funct3});
-												// Trace: src/VX_decode.sv:268:17
+												// Trace: src/VX_decode.sv:265:17
 												op_args[13] = 1;
-												// Trace: src/VX_decode.sv:269:17
+												// Trace: src/VX_decode.sv:266:17
 												op_args[12] = opcode[2];
-												// Trace: src/VX_decode.sv:270:17
+												// Trace: src/VX_decode.sv:267:17
 												op_args[11-:12] = s_imm;
-												// Trace: src/VX_decode.sv:271:5
+												// Trace: src/VX_decode.sv:268:5
 												rs1_v[4-:5] = rs1;
-												// Trace: src/VX_decode.sv:272:5
+												// Trace: src/VX_decode.sv:269:5
 												rs1_v[5-:1] = 0;
-												// Trace: src/VX_decode.sv:273:5
+												// Trace: src/VX_decode.sv:270:5
 												use_rs1 = 1;
-												// Trace: src/VX_decode.sv:274:5
+												// Trace: src/VX_decode.sv:271:5
 												rs2_v[4-:5] = rs2;
-												// Trace: src/VX_decode.sv:275:5
+												// Trace: src/VX_decode.sv:272:5
 												rs2_v[5-:1] = 0;
-												// Trace: src/VX_decode.sv:276:5
+												// Trace: src/VX_decode.sv:273:5
 												use_rs2 = 1;
-												// Trace: src/VX_decode.sv:277:17
-												rs2_v[5-:1] = opcode[2];
-											end
-											VX_gpu_pkg_INST_FMADD, VX_gpu_pkg_INST_FMSUB, VX_gpu_pkg_INST_FNMSUB, VX_gpu_pkg_INST_FNMADD: begin
-												// Trace: src/VX_decode.sv:284:17
-												ex_type = VX_gpu_pkg_EX_FPU;
-												// Trace: src/VX_decode.sv:285:17
-												op_type = sv2v_cast_4({3'b001, opcode[3]});
-												// Trace: src/VX_decode.sv:286:17
-												op_args[4-:3] = funct3;
-												// Trace: src/VX_decode.sv:287:17
-												op_args[0] = funct2[0];
-												// Trace: src/VX_decode.sv:288:17
-												op_args[1] = opcode[3] ^ opcode[2];
-												// Trace: src/VX_decode.sv:289:5
-												rd_v[4-:5] = rd;
-												// Trace: src/VX_decode.sv:290:5
-												rd_v[5-:1] = 1;
-												// Trace: src/VX_decode.sv:291:5
-												use_rd = 1;
-												// Trace: src/VX_decode.sv:292:5
-												rs1_v[4-:5] = rs1;
-												// Trace: src/VX_decode.sv:293:5
-												rs1_v[5-:1] = 1;
-												// Trace: src/VX_decode.sv:294:5
-												use_rs1 = 1;
-												// Trace: src/VX_decode.sv:295:5
-												rs2_v[4-:5] = rs2;
-												// Trace: src/VX_decode.sv:296:5
-												rs2_v[5-:1] = 1;
-												// Trace: src/VX_decode.sv:297:5
-												use_rs2 = 1;
-												// Trace: src/VX_decode.sv:298:5
-												rs3_v[4-:5] = rs3;
-												// Trace: src/VX_decode.sv:299:5
-												rs3_v[5-:1] = 1;
-												// Trace: src/VX_decode.sv:300:5
-												use_rs3 = 1;
-											end
-											VX_gpu_pkg_INST_FCI: begin
-												// Trace: src/VX_decode.sv:303:17
-												ex_type = VX_gpu_pkg_EX_FPU;
-												// Trace: src/VX_decode.sv:304:17
-												op_args[4-:3] = funct3;
-												// Trace: src/VX_decode.sv:305:17
-												op_args[0] = funct2[0];
-												// Trace: src/VX_decode.sv:306:17
-												op_args[1] = rs2[1];
-												// Trace: src/VX_decode.sv:307:17
-												case (funct5)
-													5'b00000, 5'b00001, 5'b00010: begin
-														// Trace: src/VX_decode.sv:312:25
-														op_type = sv2v_cast_4({3'b000, funct5[1]});
-														// Trace: src/VX_decode.sv:313:25
-														op_args[1] = funct5[0];
-														// Trace: src/VX_decode.sv:314:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:315:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:316:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:317:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:318:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:319:5
-														use_rs1 = 1;
-														// Trace: src/VX_decode.sv:320:5
-														rs2_v[4-:5] = rs2;
-														// Trace: src/VX_decode.sv:321:5
-														rs2_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:322:5
-														use_rs2 = 1;
-													end
-													5'b00100: begin
-														// Trace: src/VX_decode.sv:325:25
-														op_type = VX_gpu_pkg_INST_FPU_MISC;
-														// Trace: src/VX_decode.sv:326:25
-														op_args[4-:3] = sv2v_cast_3(funct3[1:0]);
-														// Trace: src/VX_decode.sv:327:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:328:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:329:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:330:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:331:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:332:5
-														use_rs1 = 1;
-														// Trace: src/VX_decode.sv:333:5
-														rs2_v[4-:5] = rs2;
-														// Trace: src/VX_decode.sv:334:5
-														rs2_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:335:5
-														use_rs2 = 1;
-													end
-													5'b00101: begin
-														// Trace: src/VX_decode.sv:338:25
-														op_type = VX_gpu_pkg_INST_FPU_MISC;
-														// Trace: src/VX_decode.sv:339:25
-														op_args[4-:3] = sv2v_cast_3_signed((funct3[0] ? 7 : 6));
-														// Trace: src/VX_decode.sv:340:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:341:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:342:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:343:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:344:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:345:5
-														use_rs1 = 1;
-														// Trace: src/VX_decode.sv:346:5
-														rs2_v[4-:5] = rs2;
-														// Trace: src/VX_decode.sv:347:5
-														rs2_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:348:5
-														use_rs2 = 1;
-													end
-													5'b00011: begin
-														// Trace: src/VX_decode.sv:351:25
-														op_type = VX_gpu_pkg_INST_FPU_DIV;
-														// Trace: src/VX_decode.sv:352:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:353:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:354:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:355:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:356:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:357:5
-														use_rs1 = 1;
-														// Trace: src/VX_decode.sv:358:5
-														rs2_v[4-:5] = rs2;
-														// Trace: src/VX_decode.sv:359:5
-														rs2_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:360:5
-														use_rs2 = 1;
-													end
-													5'b01011: begin
-														// Trace: src/VX_decode.sv:363:25
-														op_type = VX_gpu_pkg_INST_FPU_SQRT;
-														// Trace: src/VX_decode.sv:364:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:365:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:366:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:367:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:368:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:369:5
-														use_rs1 = 1;
-													end
-													5'b10100: begin
-														// Trace: src/VX_decode.sv:372:25
-														op_type = VX_gpu_pkg_INST_FPU_CMP;
-														// Trace: src/VX_decode.sv:373:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:374:5
-														rd_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:375:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:376:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:377:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:378:5
-														use_rs1 = 1;
-														// Trace: src/VX_decode.sv:379:5
-														rs2_v[4-:5] = rs2;
-														// Trace: src/VX_decode.sv:380:5
-														rs2_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:381:5
-														use_rs2 = 1;
-													end
-													5'b11000: begin
-														// Trace: src/VX_decode.sv:384:25
-														op_type = (rs2[0] ? VX_gpu_pkg_INST_FPU_F2U : VX_gpu_pkg_INST_FPU_F2I);
-														// Trace: src/VX_decode.sv:385:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:386:5
-														rd_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:387:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:388:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:389:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:390:5
-														use_rs1 = 1;
-													end
-													5'b11010: begin
-														// Trace: src/VX_decode.sv:393:25
-														op_type = (rs2[0] ? VX_gpu_pkg_INST_FPU_U2F : VX_gpu_pkg_INST_FPU_I2F);
-														// Trace: src/VX_decode.sv:394:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:395:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:396:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:397:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:398:5
-														rs1_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:399:5
-														use_rs1 = 1;
-													end
-													5'b11100: begin
-														// Trace: src/VX_decode.sv:402:25
-														if (funct3[0]) begin
-															// Trace: src/VX_decode.sv:403:29
-															op_type = VX_gpu_pkg_INST_FPU_MISC;
-															// Trace: src/VX_decode.sv:404:29
-															op_args[4-:3] = 3'sd3;
-														end
-														else begin
-															// Trace: src/VX_decode.sv:406:29
-															op_type = VX_gpu_pkg_INST_FPU_MISC;
-															// Trace: src/VX_decode.sv:407:29
-															op_args[4-:3] = 3'sd4;
-														end
-														// Trace: src/VX_decode.sv:409:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:410:5
-														rd_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:411:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:412:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:413:5
-														rs1_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:414:5
-														use_rs1 = 1;
-													end
-													5'b11110: begin
-														// Trace: src/VX_decode.sv:417:25
-														op_type = VX_gpu_pkg_INST_FPU_MISC;
-														// Trace: src/VX_decode.sv:418:25
-														op_args[4-:3] = 3'sd5;
-														// Trace: src/VX_decode.sv:419:5
-														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:420:5
-														rd_v[5-:1] = 1;
-														// Trace: src/VX_decode.sv:421:5
-														use_rd = 1;
-														// Trace: src/VX_decode.sv:422:5
-														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:423:5
-														rs1_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:424:5
-														use_rs1 = 1;
-													end
-													default:
-														;
-												endcase
 											end
 											VX_gpu_pkg_INST_EXT1:
-												// Trace: src/VX_decode.sv:430:17
+												// Trace: src/VX_decode.sv:276:17
 												case (funct7)
 													7'h00: begin
-														// Trace: src/VX_decode.sv:432:25
+														// Trace: src/VX_decode.sv:278:25
 														ex_type = VX_gpu_pkg_EX_SFU;
-														// Trace: src/VX_decode.sv:433:25
+														// Trace: src/VX_decode.sv:279:25
 														is_wstall = 1;
-														// Trace: src/VX_decode.sv:434:25
+														// Trace: src/VX_decode.sv:280:25
 														case (funct3)
 															3'h0: begin
-																// Trace: src/VX_decode.sv:436:33
+																// Trace: src/VX_decode.sv:282:33
 																op_type = VX_gpu_pkg_INST_SFU_TMC;
-																// Trace: src/VX_decode.sv:437:5
+																// Trace: src/VX_decode.sv:283:5
 																rs1_v[4-:5] = rs1;
-																// Trace: src/VX_decode.sv:438:5
+																// Trace: src/VX_decode.sv:284:5
 																rs1_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:439:5
+																// Trace: src/VX_decode.sv:285:5
 																use_rs1 = 1;
 															end
 															3'h1: begin
-																// Trace: src/VX_decode.sv:442:33
+																// Trace: src/VX_decode.sv:288:33
 																op_type = VX_gpu_pkg_INST_SFU_WSPAWN;
-																// Trace: src/VX_decode.sv:443:5
+																// Trace: src/VX_decode.sv:289:5
 																rs1_v[4-:5] = rs1;
-																// Trace: src/VX_decode.sv:444:5
+																// Trace: src/VX_decode.sv:290:5
 																rs1_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:445:5
+																// Trace: src/VX_decode.sv:291:5
 																use_rs1 = 1;
-																// Trace: src/VX_decode.sv:446:5
+																// Trace: src/VX_decode.sv:292:5
 																rs2_v[4-:5] = rs2;
-																// Trace: src/VX_decode.sv:447:5
+																// Trace: src/VX_decode.sv:293:5
 																rs2_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:448:5
+																// Trace: src/VX_decode.sv:294:5
 																use_rs2 = 1;
 															end
 															3'h2: begin
-																// Trace: src/VX_decode.sv:451:33
+																// Trace: src/VX_decode.sv:297:33
 																op_type = VX_gpu_pkg_INST_SFU_SPLIT;
-																// Trace: src/VX_decode.sv:452:33
+																// Trace: src/VX_decode.sv:298:33
 																op_args[0] = rs2[0];
-																// Trace: src/VX_decode.sv:453:5
+																// Trace: src/VX_decode.sv:299:5
 																rs1_v[4-:5] = rs1;
-																// Trace: src/VX_decode.sv:454:5
+																// Trace: src/VX_decode.sv:300:5
 																rs1_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:455:5
+																// Trace: src/VX_decode.sv:301:5
 																use_rs1 = 1;
-																// Trace: src/VX_decode.sv:456:5
+																// Trace: src/VX_decode.sv:302:5
 																rd_v[4-:5] = rd;
-																// Trace: src/VX_decode.sv:457:5
+																// Trace: src/VX_decode.sv:303:5
 																rd_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:458:5
+																// Trace: src/VX_decode.sv:304:5
 																use_rd = 1;
 															end
 															3'h3: begin
-																// Trace: src/VX_decode.sv:461:33
+																// Trace: src/VX_decode.sv:307:33
 																op_type = VX_gpu_pkg_INST_SFU_JOIN;
-																// Trace: src/VX_decode.sv:462:5
+																// Trace: src/VX_decode.sv:308:5
 																rs1_v[4-:5] = rs1;
-																// Trace: src/VX_decode.sv:463:5
+																// Trace: src/VX_decode.sv:309:5
 																rs1_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:464:5
+																// Trace: src/VX_decode.sv:310:5
 																use_rs1 = 1;
 															end
 															3'h4: begin
-																// Trace: src/VX_decode.sv:467:33
+																// Trace: src/VX_decode.sv:313:33
 																op_type = VX_gpu_pkg_INST_SFU_BAR;
-																// Trace: src/VX_decode.sv:468:5
+																// Trace: src/VX_decode.sv:314:5
 																rs1_v[4-:5] = rs1;
-																// Trace: src/VX_decode.sv:469:5
+																// Trace: src/VX_decode.sv:315:5
 																rs1_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:470:5
+																// Trace: src/VX_decode.sv:316:5
 																use_rs1 = 1;
-																// Trace: src/VX_decode.sv:471:5
+																// Trace: src/VX_decode.sv:317:5
 																rs2_v[4-:5] = rs2;
-																// Trace: src/VX_decode.sv:472:5
+																// Trace: src/VX_decode.sv:318:5
 																rs2_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:473:5
+																// Trace: src/VX_decode.sv:319:5
 																use_rs2 = 1;
 															end
 															3'h5: begin
-																// Trace: src/VX_decode.sv:476:33
+																// Trace: src/VX_decode.sv:322:33
 																op_type = VX_gpu_pkg_INST_SFU_PRED;
-																// Trace: src/VX_decode.sv:477:33
+																// Trace: src/VX_decode.sv:323:33
 																op_args[0] = rd[0];
-																// Trace: src/VX_decode.sv:478:5
+																// Trace: src/VX_decode.sv:324:5
 																rs1_v[4-:5] = rs1;
-																// Trace: src/VX_decode.sv:479:5
+																// Trace: src/VX_decode.sv:325:5
 																rs1_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:480:5
+																// Trace: src/VX_decode.sv:326:5
 																use_rs1 = 1;
-																// Trace: src/VX_decode.sv:481:5
+																// Trace: src/VX_decode.sv:327:5
 																rs2_v[4-:5] = rs2;
-																// Trace: src/VX_decode.sv:482:5
+																// Trace: src/VX_decode.sv:328:5
 																rs2_v[5-:1] = 0;
-																// Trace: src/VX_decode.sv:483:5
+																// Trace: src/VX_decode.sv:329:5
 																use_rs2 = 1;
 															end
 															default:
@@ -18753,34 +16139,34 @@ module Vortex (
 														endcase
 													end
 													7'h01: begin
-														// Trace: src/VX_decode.sv:489:25
+														// Trace: src/VX_decode.sv:335:25
 														ex_type = VX_gpu_pkg_EX_ALU;
-														// Trace: src/VX_decode.sv:490:25
+														// Trace: src/VX_decode.sv:336:25
 														op_args[33-:2] = VX_gpu_pkg_ALU_TYPE_OTHER;
-														// Trace: src/VX_decode.sv:491:25
+														// Trace: src/VX_decode.sv:337:25
 														use_rd = 1;
-														// Trace: src/VX_decode.sv:492:5
+														// Trace: src/VX_decode.sv:338:5
 														rd_v[4-:5] = rd;
-														// Trace: src/VX_decode.sv:493:5
+														// Trace: src/VX_decode.sv:339:5
 														rd_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:494:5
+														// Trace: src/VX_decode.sv:340:5
 														use_rd = 1;
-														// Trace: src/VX_decode.sv:495:5
+														// Trace: src/VX_decode.sv:341:5
 														rs1_v[4-:5] = rs1;
-														// Trace: src/VX_decode.sv:496:5
+														// Trace: src/VX_decode.sv:342:5
 														rs1_v[5-:1] = 0;
-														// Trace: src/VX_decode.sv:497:5
+														// Trace: src/VX_decode.sv:343:5
 														use_rs1 = 1;
-														// Trace: src/VX_decode.sv:498:25
+														// Trace: src/VX_decode.sv:344:25
 														if (funct3[2]) begin
-															// Trace: src/VX_decode.sv:499:5
+															// Trace: src/VX_decode.sv:345:5
 															rs2_v[4-:5] = rs2;
-															// Trace: src/VX_decode.sv:500:5
+															// Trace: src/VX_decode.sv:346:5
 															rs2_v[5-:1] = 0;
-															// Trace: src/VX_decode.sv:501:5
+															// Trace: src/VX_decode.sv:347:5
 															use_rs2 = 1;
 														end
-														// Trace: src/VX_decode.sv:503:25
+														// Trace: src/VX_decode.sv:349:25
 														op_type = sv2v_cast_4(funct3);
 													end
 													default:
@@ -18790,11 +16176,11 @@ module Vortex (
 												;
 										endcase
 									end
-									// Trace: src/VX_decode.sv:511:5
+									// Trace: src/VX_decode.sv:357:5
 									wire wb = use_rd && (rd_v != 0);
-									// Trace: src/VX_decode.sv:512:5
+									// Trace: src/VX_decode.sv:358:5
 									wire [2:0] used_rs = {use_rs3, use_rs2, use_rs1};
-									// Trace: src/VX_decode.sv:513:5
+									// Trace: src/VX_decode.sv:359:5
 									VX_elastic_buffer #(
 										.DATAW(OUT_DATAW),
 										.SIZE(0)
@@ -18808,13 +16194,13 @@ module Vortex (
 										.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.decode_if.valid),
 										.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.decode_if.ready)
 									);
-									// Trace: src/VX_decode.sv:526:5
+									// Trace: src/VX_decode.sv:372:5
 									wire fetch_fire = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.fetch_if.valid && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.fetch_if.ready;
-									// Trace: src/VX_decode.sv:527:5
+									// Trace: src/VX_decode.sv:373:5
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.decode_sched_if.valid = fetch_fire;
-									// Trace: src/VX_decode.sv:528:5
+									// Trace: src/VX_decode.sv:374:5
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.decode_sched_if.wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.fetch_if.data[67-:2];
-									// Trace: src/VX_decode.sv:529:5
+									// Trace: src/VX_decode.sv:375:5
 									assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.decode_sched_if.unlock = ~is_wstall;
 								end
 								assign decode.clk = clk;
@@ -18839,9 +16225,9 @@ module Vortex (
 									localparam _mbase_writeback_if = 0;
 									// Trace: src/VX_issue.sv:8:5
 									localparam VX_gpu_pkg_EX_SFU = 2;
-									localparam VX_gpu_pkg_EX_FPU = 3;
-									localparam VX_gpu_pkg_EX_TCU = 3;
-									localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+									localparam VX_gpu_pkg_EX_FPU = 2;
+									localparam VX_gpu_pkg_EX_TCU = 2;
+									localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 									localparam _mbase_dispatch_if = 0;
 									// Trace: src/VX_issue.sv:9:5
 									localparam _mbase_issue_sched_if = 0;
@@ -18876,9 +16262,9 @@ module Vortex (
 											wire valid;
 											// Trace: src/VX_decode_if.sv:3:5
 											localparam VX_gpu_pkg_EX_SFU = 2;
-											localparam VX_gpu_pkg_EX_FPU = 3;
-											localparam VX_gpu_pkg_EX_TCU = 3;
-											localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+											localparam VX_gpu_pkg_EX_FPU = 2;
+											localparam VX_gpu_pkg_EX_TCU = 2;
+											localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 											localparam VX_gpu_pkg_EX_BITS = 2;
 											localparam VX_gpu_pkg_INST_OP_BITS = 4;
 											localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -18897,7 +16283,7 @@ module Vortex (
 											// removed localparam type VX_gpu_pkg_lsu_args_t
 											// removed localparam type VX_gpu_pkg_wctl_args_t
 											// removed localparam type VX_gpu_pkg_op_args_t
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 											localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 											// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -18911,7 +16297,7 @@ module Vortex (
 										// Trace: src/VX_issue.sv:17:9
 										// expanded interface instance: per_issue_dispatch_if
 										genvar _arr_18544;
-										for (_arr_18544 = 0; _arr_18544 <= 3; _arr_18544 = _arr_18544 + 1) begin : per_issue_dispatch_if
+										for (_arr_18544 = 0; _arr_18544 <= 2; _arr_18544 = _arr_18544 + 1) begin : per_issue_dispatch_if
 											// removed import VX_gpu_pkg::*;
 											// Trace: src/VX_dispatch_if.sv:2:5
 											wire valid;
@@ -18920,10 +16306,10 @@ module Vortex (
 											localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 											localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 											localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_SIMD_COUNT = 1;
 											localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
@@ -18941,7 +16327,7 @@ module Vortex (
 											// removed localparam type VX_gpu_pkg_wctl_args_t
 											// removed localparam type VX_gpu_pkg_op_args_t
 											// removed localparam type VX_gpu_pkg_dispatch_t
-											wire [471:0] data;
+											wire [470:0] data;
 											// Trace: src/VX_dispatch_if.sv:4:5
 											wire ready;
 											// Trace: src/VX_dispatch_if.sv:5:5
@@ -18976,9 +16362,9 @@ module Vortex (
 											localparam _mbase_writeback_if = _bbase_A8822_writeback_if;
 											// Trace: src/VX_issue_slice.sv:9:5
 											localparam VX_gpu_pkg_EX_SFU = 2;
-											localparam VX_gpu_pkg_EX_FPU = 3;
-											localparam VX_gpu_pkg_EX_TCU = 3;
-											localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+											localparam VX_gpu_pkg_EX_FPU = 2;
+											localparam VX_gpu_pkg_EX_TCU = 2;
+											localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 											localparam _mbase_dispatch_if = 0;
 											// Trace: src/VX_issue_slice.sv:10:5
 											localparam _mbase_issue_sched_if = _bbase_A8822_issue_sched_if;
@@ -18992,9 +16378,9 @@ module Vortex (
 												wire valid;
 												// Trace: src/VX_ibuffer_if.sv:3:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam VX_gpu_pkg_EX_BITS = 2;
 												localparam VX_gpu_pkg_INST_OP_BITS = 4;
 												localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -19011,7 +16397,7 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_lsu_args_t
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 												localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 												// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19030,9 +16416,9 @@ module Vortex (
 												wire valid;
 												// Trace: src/VX_scoreboard_if.sv:3:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam VX_gpu_pkg_EX_BITS = 2;
 												localparam VX_gpu_pkg_INST_OP_BITS = 4;
 												localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
@@ -19052,7 +16438,7 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_lsu_args_t
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 												localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 												// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19071,18 +16457,18 @@ module Vortex (
 												wire valid;
 												// Trace: src/VX_operands_if.sv:3:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam VX_gpu_pkg_EX_BITS = 2;
 												localparam VX_gpu_pkg_INST_OP_BITS = 4;
 												localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 												localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 												localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_PC_BITS = 30;
 												localparam VX_gpu_pkg_SIMD_COUNT = 1;
 												localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
@@ -19100,7 +16486,7 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
 												// removed localparam type VX_gpu_pkg_operands_t
-												wire [473:0] data;
+												wire [472:0] data;
 												// Trace: src/VX_operands_if.sv:4:5
 												wire ready;
 												// Trace: src/VX_operands_if.sv:5:5
@@ -19128,9 +16514,9 @@ module Vortex (
 												localparam _mbase_ibuffer_if = 0;
 												// Trace: src/VX_ibuffer.sv:10:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam VX_gpu_pkg_EX_BITS = 2;
 												localparam VX_gpu_pkg_INST_OP_BITS = 4;
 												localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -19147,7 +16533,7 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_lsu_args_t
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 												localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 												// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19185,9 +16571,9 @@ module Vortex (
 														wire valid;
 														// Trace: src/VX_ibuffer_if.sv:3:5
 														localparam VX_gpu_pkg_EX_SFU = 2;
-														localparam VX_gpu_pkg_EX_FPU = 3;
-														localparam VX_gpu_pkg_EX_TCU = 3;
-														localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+														localparam VX_gpu_pkg_EX_FPU = 2;
+														localparam VX_gpu_pkg_EX_TCU = 2;
+														localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 														localparam VX_gpu_pkg_EX_BITS = 2;
 														localparam VX_gpu_pkg_INST_OP_BITS = 4;
 														localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -19204,7 +16590,7 @@ module Vortex (
 														// removed localparam type VX_gpu_pkg_lsu_args_t
 														// removed localparam type VX_gpu_pkg_wctl_args_t
 														// removed localparam type VX_gpu_pkg_op_args_t
-														localparam VX_gpu_pkg_REG_TYPES = 2;
+														localparam VX_gpu_pkg_REG_TYPES = 1;
 														localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 														localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 														// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19245,9 +16631,9 @@ module Vortex (
 														localparam _mbase_output_if = _bbase_70C82_output_if;
 														// Trace: src/VX_uop_sequencer.sv:8:5
 														localparam VX_gpu_pkg_EX_SFU = 2;
-														localparam VX_gpu_pkg_EX_FPU = 3;
-														localparam VX_gpu_pkg_EX_TCU = 3;
-														localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+														localparam VX_gpu_pkg_EX_FPU = 2;
+														localparam VX_gpu_pkg_EX_TCU = 2;
+														localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 														localparam VX_gpu_pkg_EX_BITS = 2;
 														localparam VX_gpu_pkg_INST_OP_BITS = 4;
 														localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -19264,7 +16650,7 @@ module Vortex (
 														// removed localparam type VX_gpu_pkg_lsu_args_t
 														// removed localparam type VX_gpu_pkg_wctl_args_t
 														// removed localparam type VX_gpu_pkg_op_args_t
-														localparam VX_gpu_pkg_REG_TYPES = 2;
+														localparam VX_gpu_pkg_REG_TYPES = 1;
 														localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 														localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 														// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19348,9 +16734,9 @@ module Vortex (
 												localparam NUM_OPDS = 4;
 												// Trace: src/VX_scoreboard.sv:12:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam VX_gpu_pkg_EX_BITS = 2;
 												localparam VX_gpu_pkg_INST_OP_BITS = 4;
 												localparam VX_gpu_pkg_PC_BITS = 30;
@@ -19366,7 +16752,7 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_lsu_args_t
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 												localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 												// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19381,9 +16767,9 @@ module Vortex (
 													wire valid;
 													// Trace: src/VX_ibuffer_if.sv:3:5
 													localparam VX_gpu_pkg_EX_SFU = 2;
-													localparam VX_gpu_pkg_EX_FPU = 3;
-													localparam VX_gpu_pkg_EX_TCU = 3;
-													localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+													localparam VX_gpu_pkg_EX_FPU = 2;
+													localparam VX_gpu_pkg_EX_TCU = 2;
+													localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 													localparam VX_gpu_pkg_EX_BITS = 2;
 													localparam VX_gpu_pkg_INST_OP_BITS = 4;
 													localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
@@ -19400,7 +16786,7 @@ module Vortex (
 													// removed localparam type VX_gpu_pkg_lsu_args_t
 													// removed localparam type VX_gpu_pkg_wctl_args_t
 													// removed localparam type VX_gpu_pkg_op_args_t
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 													localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 													// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19434,18 +16820,18 @@ module Vortex (
 												localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 												localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
 												function automatic [31:0] VX_gpu_pkg_to_reg_mask;
-													// Trace: src/VX_gpu_pkg.sv:599:56
+													// Trace: src/VX_gpu_pkg.sv:595:56
 													input reg [5:0] reg_idx;
-													// Trace: src/VX_gpu_pkg.sv:600:9
+													// Trace: src/VX_gpu_pkg.sv:596:9
 													VX_gpu_pkg_to_reg_mask = 1 << reg_idx[4-:5];
 												endfunction
 												for (_gv_w_3 = 0; _gv_w_3 < VX_gpu_pkg_PER_ISSUE_WARPS; _gv_w_3 = _gv_w_3 + 1) begin : g_scoreboard
 													localparam w = _gv_w_3;
 													// Trace: src/VX_scoreboard.sv:30:9
-													reg [63:0] inuse_regs;
-													reg [63:0] inuse_regs_n;
+													reg [31:0] inuse_regs;
+													reg [31:0] inuse_regs_n;
 													// Trace: src/VX_scoreboard.sv:31:9
 													wire [3:0] operands_busy;
 													// Trace: src/VX_scoreboard.sv:32:9
@@ -19453,7 +16839,7 @@ module Vortex (
 													// Trace: src/VX_scoreboard.sv:33:9
 													wire staging_fire = staging_if[w].valid && staging_if[w].ready;
 													// Trace: src/VX_scoreboard.sv:34:9
-													wire writeback_fire = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].valid && (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].data[172-:2] == sv2v_cast_2_signed(w))) && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].data[0];
+													wire writeback_fire = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].valid && (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].data[171-:2] == sv2v_cast_2_signed(w))) && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].data[0];
 													// Trace: src/VX_scoreboard.sv:37:9
 													wire [23:0] ibf_opds;
 													wire [23:0] stg_opds;
@@ -19466,8 +16852,8 @@ module Vortex (
 													// Trace: src/VX_scoreboard.sv:41:9
 													wire [3:0] stg_used_rs = {staging_if[w].data[26-:3], staging_if[w].data[27]};
 													// Trace: src/VX_scoreboard.sv:42:9
-													wire [255:0] ibf_opd_mask;
-													wire [255:0] stg_opd_mask;
+													wire [127:0] ibf_opd_mask;
+													wire [127:0] stg_opd_mask;
 													genvar _gv_i_134;
 													for (_gv_i_134 = 0; _gv_i_134 < NUM_OPDS; _gv_i_134 = _gv_i_134 + 1) begin : g_opd_masks
 														localparam i = _gv_i_134;
@@ -19475,9 +16861,9 @@ module Vortex (
 														for (_gv_j_16 = 0; _gv_j_16 < VX_gpu_pkg_REG_TYPES; _gv_j_16 = _gv_j_16 + 1) begin : g_j
 															localparam j = _gv_j_16;
 															// Trace: src/VX_scoreboard.sv:45:17
-															assign ibf_opd_mask[((i * 2) + j) * 32+:32] = VX_gpu_pkg_to_reg_mask(ibf_opds[i * 6+:6]) & {VX_gpu_pkg_RV_REGS {ibf_used_rs[i] && (ibf_opds[(i * 6) + 5-:1] == j)}};
+															assign ibf_opd_mask[(i + j) * 32+:32] = VX_gpu_pkg_to_reg_mask(ibf_opds[i * 6+:6]) & {VX_gpu_pkg_RV_REGS {ibf_used_rs[i] && (ibf_opds[(i * 6) + 5-:1] == j)}};
 															// Trace: src/VX_scoreboard.sv:46:17
-															assign stg_opd_mask[((i * 2) + j) * 32+:32] = VX_gpu_pkg_to_reg_mask(stg_opds[i * 6+:6]) & {VX_gpu_pkg_RV_REGS {stg_used_rs[i] && (stg_opds[(i * 6) + 5-:1] == j)}};
+															assign stg_opd_mask[(i + j) * 32+:32] = VX_gpu_pkg_to_reg_mask(stg_opds[i * 6+:6]) & {VX_gpu_pkg_RV_REGS {stg_used_rs[i] && (stg_opds[(i * 6) + 5-:1] == j)}};
 														end
 													end
 													// Trace: src/VX_scoreboard.sv:49:9
@@ -19487,27 +16873,27 @@ module Vortex (
 														// Trace: src/VX_scoreboard.sv:51:13
 														if (writeback_fire)
 															// Trace: src/VX_scoreboard.sv:52:17
-															inuse_regs_n[Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].data[135-:6]] = 0;
+															inuse_regs_n[Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[_mbase_writeback_if].data[134-:5]] = 0;
 														if (staging_fire && staging_if[w].data[27])
 															// Trace: src/VX_scoreboard.sv:55:17
-															inuse_regs_n = inuse_regs_n | stg_opd_mask[0+:64];
+															inuse_regs_n = inuse_regs_n | stg_opd_mask[0+:32];
 													end
 													// Trace: src/VX_scoreboard.sv:58:9
-													wire [63:0] in_use_mask;
+													wire [31:0] in_use_mask;
 													genvar _gv_i_135;
 													for (_gv_i_135 = 0; _gv_i_135 < VX_gpu_pkg_REG_TYPES; _gv_i_135 = _gv_i_135 + 1) begin : g_in_use_mask
 														localparam i = _gv_i_135;
 														// Trace: src/VX_scoreboard.sv:60:13
-														wire [31:0] ibf_reg_mask = ((ibf_opd_mask[(0 + i) * 32+:32] | ibf_opd_mask[(2 + i) * 32+:32]) | ibf_opd_mask[(4 + i) * 32+:32]) | ibf_opd_mask[(6 + i) * 32+:32];
+														wire [31:0] ibf_reg_mask = ((ibf_opd_mask[i * 32+:32] | ibf_opd_mask[(1 + i) * 32+:32]) | ibf_opd_mask[(2 + i) * 32+:32]) | ibf_opd_mask[(3 + i) * 32+:32];
 														// Trace: src/VX_scoreboard.sv:61:13
-														wire [31:0] stg_reg_mask = ((stg_opd_mask[(0 + i) * 32+:32] | stg_opd_mask[(2 + i) * 32+:32]) | stg_opd_mask[(4 + i) * 32+:32]) | stg_opd_mask[(6 + i) * 32+:32];
+														wire [31:0] stg_reg_mask = ((stg_opd_mask[i * 32+:32] | stg_opd_mask[(1 + i) * 32+:32]) | stg_opd_mask[(2 + i) * 32+:32]) | stg_opd_mask[(3 + i) * 32+:32];
 														// Trace: src/VX_scoreboard.sv:62:13
 														wire [31:0] regs_mask = (ibuffer_fire ? ibf_reg_mask : stg_reg_mask);
 														// Trace: src/VX_scoreboard.sv:63:13
 														assign in_use_mask[i * 32+:32] = inuse_regs_n[i * VX_gpu_pkg_RV_REGS+:VX_gpu_pkg_RV_REGS] & regs_mask;
 													end
 													// Trace: src/VX_scoreboard.sv:65:9
-													wire [1:0] regs_busy;
+													wire [0:0] regs_busy;
 													genvar _gv_i_136;
 													for (_gv_i_136 = 0; _gv_i_136 < VX_gpu_pkg_REG_TYPES; _gv_i_136 = _gv_i_136 + 1) begin : g_regs_busy
 														localparam i = _gv_i_136;
@@ -19520,7 +16906,7 @@ module Vortex (
 														// Trace: src/VX_scoreboard.sv:70:13
 														wire [0:0] rtype = stg_opds[(i * 6) + 5-:1];
 														// Trace: src/VX_scoreboard.sv:71:13
-														assign operands_busy[i] = (in_use_mask[rtype * 32+:32] & stg_opd_mask[((i * 2) + rtype) * 32+:32]) != 0;
+														assign operands_busy[i] = (in_use_mask[rtype * 32+:32] & stg_opd_mask[(i + rtype) * 32+:32]) != 0;
 													end
 													// Trace: src/VX_scoreboard.sv:73:9
 													reg operands_ready_r;
@@ -19599,18 +16985,18 @@ module Vortex (
 												// removed modport instance operands_if
 												// Trace: src/VX_operands.sv:11:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam VX_gpu_pkg_EX_BITS = 2;
 												localparam VX_gpu_pkg_INST_OP_BITS = 4;
 												localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 												localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 												localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_PC_BITS = 30;
 												localparam VX_gpu_pkg_SIMD_COUNT = 1;
 												localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
@@ -19628,7 +17014,7 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
 												// removed localparam type VX_gpu_pkg_operands_t
-												localparam OUT_DATAW = 474;
+												localparam OUT_DATAW = 473;
 												// Trace: src/VX_operands.sv:12:5
 												localparam OUT_ARB_STICKY = 1'd0;
 												// Trace: src/VX_operands.sv:13:5
@@ -19640,18 +17026,18 @@ module Vortex (
 													wire valid;
 													// Trace: src/VX_operands_if.sv:3:5
 													localparam VX_gpu_pkg_EX_SFU = 2;
-													localparam VX_gpu_pkg_EX_FPU = 3;
-													localparam VX_gpu_pkg_EX_TCU = 3;
-													localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+													localparam VX_gpu_pkg_EX_FPU = 2;
+													localparam VX_gpu_pkg_EX_TCU = 2;
+													localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 													localparam VX_gpu_pkg_EX_BITS = 2;
 													localparam VX_gpu_pkg_INST_OP_BITS = 4;
 													localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 													localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 													localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+													localparam VX_gpu_pkg_NUM_REGS = 32;
+													localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 													localparam VX_gpu_pkg_PC_BITS = 30;
 													localparam VX_gpu_pkg_SIMD_COUNT = 1;
 													localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
@@ -19669,7 +17055,7 @@ module Vortex (
 													// removed localparam type VX_gpu_pkg_wctl_args_t
 													// removed localparam type VX_gpu_pkg_op_args_t
 													// removed localparam type VX_gpu_pkg_operands_t
-													wire [473:0] data;
+													wire [472:0] data;
 													// Trace: src/VX_operands_if.sv:4:5
 													wire ready;
 													// Trace: src/VX_operands_if.sv:5:5
@@ -19703,9 +17089,9 @@ module Vortex (
 														wire valid;
 														// Trace: src/VX_scoreboard_if.sv:3:5
 														localparam VX_gpu_pkg_EX_SFU = 2;
-														localparam VX_gpu_pkg_EX_FPU = 3;
-														localparam VX_gpu_pkg_EX_TCU = 3;
-														localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+														localparam VX_gpu_pkg_EX_FPU = 2;
+														localparam VX_gpu_pkg_EX_TCU = 2;
+														localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 														localparam VX_gpu_pkg_EX_BITS = 2;
 														localparam VX_gpu_pkg_INST_OP_BITS = 4;
 														localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
@@ -19725,7 +17111,7 @@ module Vortex (
 														// removed localparam type VX_gpu_pkg_lsu_args_t
 														// removed localparam type VX_gpu_pkg_wctl_args_t
 														// removed localparam type VX_gpu_pkg_op_args_t
-														localparam VX_gpu_pkg_REG_TYPES = 2;
+														localparam VX_gpu_pkg_REG_TYPES = 1;
 														localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 														localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 														// removed localparam type VX_gpu_pkg_reg_idx_t
@@ -19752,17 +17138,17 @@ module Vortex (
 														localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 														localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 														localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-														localparam VX_gpu_pkg_REG_TYPES = 2;
+														localparam VX_gpu_pkg_REG_TYPES = 1;
 														localparam VX_gpu_pkg_RV_REGS = 32;
-														localparam VX_gpu_pkg_NUM_REGS = 64;
-														localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+														localparam VX_gpu_pkg_NUM_REGS = 32;
+														localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 														localparam VX_gpu_pkg_PC_BITS = 30;
 														localparam VX_gpu_pkg_SIMD_COUNT = 1;
 														localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
 														localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 														localparam VX_gpu_pkg_UUID_WIDTH = 1;
 														// removed localparam type VX_gpu_pkg_writeback_t
-														wire [173:0] data;
+														wire [172:0] data;
 														// Trace: src/VX_writeback_if.sv:4:5
 														// Trace: src/VX_writeback_if.sv:8:5
 													end
@@ -19813,21 +17199,21 @@ module Vortex (
 														// Trace: src/VX_opc_unit.sv:18:5
 														localparam PER_OPC_NW_BITS = 2;
 														// Trace: src/VX_opc_unit.sv:19:5
-														localparam VX_gpu_pkg_REG_TYPES = 2;
+														localparam VX_gpu_pkg_REG_TYPES = 1;
 														localparam VX_gpu_pkg_RV_REGS = 32;
-														localparam VX_gpu_pkg_NUM_REGS = 64;
+														localparam VX_gpu_pkg_NUM_REGS = 32;
 														localparam VX_gpu_pkg_SIMD_COUNT = 1;
-														localparam BANK_SIZE = 64;
+														localparam BANK_SIZE = 32;
 														// Trace: src/VX_opc_unit.sv:20:5
-														localparam BANK_ADDR_WIDTH = 6;
+														localparam BANK_ADDR_WIDTH = 5;
 														// Trace: src/VX_opc_unit.sv:21:5
-														localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-														localparam REG_REM_BITS = 4;
+														localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
+														localparam REG_REM_BITS = 3;
 														// Trace: src/VX_opc_unit.sv:22:5
 														localparam VX_gpu_pkg_EX_SFU = 2;
-														localparam VX_gpu_pkg_EX_FPU = 3;
-														localparam VX_gpu_pkg_EX_TCU = 3;
-														localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+														localparam VX_gpu_pkg_EX_FPU = 2;
+														localparam VX_gpu_pkg_EX_TCU = 2;
+														localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 														localparam VX_gpu_pkg_EX_BITS = 2;
 														localparam VX_gpu_pkg_ALU_TYPE_BITS = 2;
 														localparam VX_gpu_pkg_INST_ARGS_BITS = 37;
@@ -19838,7 +17224,7 @@ module Vortex (
 														localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
 														localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 														localparam VX_gpu_pkg_UUID_WIDTH = 1;
-														localparam META_DATAW = 90;
+														localparam META_DATAW = 89;
 														// Trace: src/VX_opc_unit.sv:23:5
 														// removed localparam type VX_gpu_pkg_alu_args_t
 														// removed localparam type VX_gpu_pkg_csr_args_t
@@ -19850,14 +17236,14 @@ module Vortex (
 														// removed localparam type VX_gpu_pkg_wctl_args_t
 														// removed localparam type VX_gpu_pkg_op_args_t
 														// removed localparam type VX_gpu_pkg_operands_t
-														localparam OUT_DATAW = 474;
+														localparam OUT_DATAW = 473;
 														// Trace: src/VX_opc_unit.sv:24:5
 														wire [2:0] src_valid;
 														// Trace: src/VX_opc_unit.sv:25:5
 														wire [2:0] req_valid_in;
 														wire [2:0] req_ready_in;
 														// Trace: src/VX_opc_unit.sv:26:5
-														wire [11:0] req_addr_in;
+														wire [8:0] req_addr_in;
 														// Trace: src/VX_opc_unit.sv:27:5
 														wire [5:0] req_bank_idx;
 														// Trace: src/VX_opc_unit.sv:28:5
@@ -19867,8 +17253,8 @@ module Vortex (
 														wire [3:0] gpr_rd_valid_st1;
 														wire [3:0] gpr_rd_valid_st2;
 														// Trace: src/VX_opc_unit.sv:30:5
-														wire [15:0] gpr_rd_reg;
-														wire [15:0] gpr_rd_reg_st1;
+														wire [11:0] gpr_rd_reg;
+														wire [11:0] gpr_rd_reg_st1;
 														// Trace: src/VX_opc_unit.sv:31:5
 														wire [511:0] gpr_rd_data_st2;
 														// Trace: src/VX_opc_unit.sv:32:5
@@ -19891,9 +17277,9 @@ module Vortex (
 														wire pipe_valid_st2;
 														wire pipe_ready_st2;
 														// Trace: src/VX_opc_unit.sv:39:5
-														wire [89:0] pipe_mdata;
-														wire [89:0] pipe_mdata_st1;
-														wire [89:0] pipe_mdata_st2;
+														wire [88:0] pipe_mdata;
+														wire [88:0] pipe_mdata_st1;
+														wire [88:0] pipe_mdata_st2;
 														// Trace: src/VX_opc_unit.sv:40:5
 														reg [383:0] opd_buffer_st2;
 														reg [383:0] opd_buffer_n_st2;
@@ -19904,16 +17290,16 @@ module Vortex (
 														// Trace: src/VX_opc_unit.sv:43:5
 														wire has_collision_st1;
 														// Trace: src/VX_opc_unit.sv:44:5
-														wire [17:0] src_regs;
+														wire [14:0] src_regs;
 														// Trace: src/VX_opc_unit.sv:45:5
 														localparam VX_gpu_pkg_REG_TYPE_BITS = 1;
 														localparam VX_gpu_pkg_RV_REGS_BITS = 5;
 														// removed localparam type VX_gpu_pkg_reg_idx_t
-														function automatic [5:0] VX_gpu_pkg_to_reg_number;
-															// Trace: src/VX_gpu_pkg.sv:596:64
+														function automatic [4:0] VX_gpu_pkg_to_reg_number;
+															// Trace: src/VX_gpu_pkg.sv:592:64
 															input reg [5:0] reg_idx;
-															// Trace: src/VX_gpu_pkg.sv:597:9
-															VX_gpu_pkg_to_reg_number = {reg_idx[5-:1], reg_idx[4-:5]};
+															// Trace: src/VX_gpu_pkg.sv:593:9
+															VX_gpu_pkg_to_reg_number = reg_idx[4-:5];
 														endfunction
 														assign src_regs = {VX_gpu_pkg_to_reg_number(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_scoreboard_if.data[5-:6]), VX_gpu_pkg_to_reg_number(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_scoreboard_if.data[11-:6]), VX_gpu_pkg_to_reg_number(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_scoreboard_if.data[17-:6])};
 														// Trace: src/VX_opc_unit.sv:48:5
@@ -19921,7 +17307,7 @@ module Vortex (
 														for (_gv_i_1 = 0; _gv_i_1 < VX_gpu_pkg_NUM_SRC_OPDS; _gv_i_1 = _gv_i_1 + 1) begin : g_gpr_rd_reg
 															localparam i = _gv_i_1;
 															// Trace: src/VX_opc_unit.sv:49:9
-															assign req_addr_in[i * 4+:4] = src_regs[(i * 6) + 5-:REG_REM_BITS];
+															assign req_addr_in[i * 3+:3] = src_regs[(i * 5) + 4-:REG_REM_BITS];
 														end
 														// Trace: src/VX_opc_unit.sv:51:5
 														genvar _gv_i_2;
@@ -19929,7 +17315,7 @@ module Vortex (
 															localparam i = _gv_i_2;
 															if (1) begin : g_bn
 																// Trace: src/VX_opc_unit.sv:53:13
-																assign req_bank_idx[i * 2+:2] = src_regs[(i * 6) + 1-:2];
+																assign req_bank_idx[i * 2+:2] = src_regs[(i * 5) + 1-:2];
 															end
 														end
 														// Trace: src/VX_opc_unit.sv:58:5
@@ -19937,7 +17323,7 @@ module Vortex (
 														for (_gv_i_3 = 0; _gv_i_3 < VX_gpu_pkg_NUM_SRC_OPDS; _gv_i_3 = _gv_i_3 + 1) begin : g_src_valid
 															localparam i = _gv_i_3;
 															// Trace: src/VX_opc_unit.sv:59:9
-															assign src_valid[i] = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_scoreboard_if.data[24 + i] && (src_regs[i * 6+:6] != 0)) && ~opd_fetched_st1[i];
+															assign src_valid[i] = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_scoreboard_if.data[24 + i] && (src_regs[i * 5+:5] != 0)) && ~opd_fetched_st1[i];
 														end
 														// Trace: src/VX_opc_unit.sv:61:5
 														assign req_valid_in = {VX_gpu_pkg_NUM_SRC_OPDS {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_scoreboard_if.valid}} & src_valid;
@@ -19968,14 +17354,14 @@ module Vortex (
 															// Trace: src/VX_opc_unit.sv:83:9
 															has_collision = 0;
 															// Trace: src/VX_opc_unit.sv:84:9
-															begin : sv2v_autoblock_6
+															begin : sv2v_autoblock_5
 																// Trace: src/VX_opc_unit.sv:84:14
 																integer i;
 																// Trace: src/VX_opc_unit.sv:84:14
 																for (i = 0; i < VX_gpu_pkg_NUM_SRC_OPDS; i = i + 1)
 																	begin
 																		// Trace: src/VX_opc_unit.sv:85:13
-																		begin : sv2v_autoblock_7
+																		begin : sv2v_autoblock_6
 																			// Trace: src/VX_opc_unit.sv:85:18
 																			integer j;
 																			// Trace: src/VX_opc_unit.sv:85:18
@@ -20016,7 +17402,7 @@ module Vortex (
 														wire pipe_fire_st2 = pipe_valid_st2 && pipe_ready_st2;
 														// Trace: src/VX_opc_unit.sv:125:5
 														VX_pipe_buffer #(
-															.DATAW(119),
+															.DATAW(114),
 															.RESETW(1)
 														) pipe_reg1(
 															.clk(clk),
@@ -20043,7 +17429,7 @@ module Vortex (
 														wire pipe_valid2_st1 = pipe_valid_st1 && ~has_collision_st1;
 														// Trace: src/VX_opc_unit.sv:147:5
 														VX_pipe_buffer #(
-															.DATAW(102),
+															.DATAW(101),
 															.RESETW(1)
 														) pipe_reg2(
 															.clk(clk),
@@ -20060,7 +17446,7 @@ module Vortex (
 															// Trace: src/VX_opc_unit.sv:161:9
 															opd_buffer_n_st2 = opd_buffer_st2;
 															// Trace: src/VX_opc_unit.sv:162:9
-															begin : sv2v_autoblock_8
+															begin : sv2v_autoblock_7
 																// Trace: src/VX_opc_unit.sv:162:14
 																integer b;
 																// Trace: src/VX_opc_unit.sv:162:14
@@ -20083,12 +17469,12 @@ module Vortex (
 																// Trace: src/VX_opc_unit.sv:172:13
 																opd_buffer_st2 <= opd_buffer_n_st2;
 														// Trace: src/VX_opc_unit.sv:175:5
-														wire [5:0] gpr_wr_addr;
+														wire [4:0] gpr_wr_addr;
 														// Trace: src/VX_opc_unit.sv:176:5
 														if (1) begin : g_gpr_wr_addr
 															if (1) begin : genblk1
 																// Trace: src/VX_opc_unit.sv:195:9
-																assign gpr_wr_addr = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.data[172-:PER_OPC_NW_BITS], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.data[135-:REG_REM_BITS]};
+																assign gpr_wr_addr = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.data[171-:PER_OPC_NW_BITS], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.data[134-:REG_REM_BITS]};
 															end
 														end
 														// Trace: src/VX_opc_unit.sv:199:5
@@ -20106,7 +17492,7 @@ module Vortex (
 														for (_gv_i_4 = 0; _gv_i_4 < 4; _gv_i_4 = _gv_i_4 + 1) begin : g_gpr_wr_byteen
 															localparam i = _gv_i_4;
 															// Trace: src/VX_opc_unit.sv:207:9
-															assign gpr_wr_byteen[i * VX_gpu_pkg_XLENB+:VX_gpu_pkg_XLENB] = {VX_gpu_pkg_XLENB {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.data[166 + i]}};
+															assign gpr_wr_byteen[i * VX_gpu_pkg_XLENB+:VX_gpu_pkg_XLENB] = {VX_gpu_pkg_XLENB {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.data[165 + i]}};
 														end
 														// Trace: src/VX_opc_unit.sv:209:5
 														genvar _gv_b_1;
@@ -20119,11 +17505,11 @@ module Vortex (
 																assign gpr_wr_enabled = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.g_collectors[_gv_i_206].opc_writeback_if.valid && (gpr_wr_bank_idx == sv2v_cast_2_signed(b));
 															end
 															// Trace: src/VX_opc_unit.sv:216:9
-															wire [5:0] gpr_rd_addr;
+															wire [4:0] gpr_rd_addr;
 															if (1) begin : g_gpr_rd_addr
 																if (1) begin : genblk1
 																	// Trace: src/VX_opc_unit.sv:236:9
-																	assign gpr_rd_addr = {pipe_mdata_st1[88-:PER_OPC_NW_BITS], gpr_rd_reg_st1[b * 4+:4]};
+																	assign gpr_rd_addr = {pipe_mdata_st1[87-:PER_OPC_NW_BITS], gpr_rd_reg_st1[b * 3+:3]};
 																end
 															end
 															// Trace: src/VX_opc_unit.sv:240:9
@@ -20155,8 +17541,8 @@ module Vortex (
 															.reset(reset),
 															.valid_in(pipe_valid_st2),
 															.ready_in(pipe_ready_st2),
-															.data_in({pipe_mdata_st2[89:2], opd_buffer_n_st2, pipe_mdata_st2[1:0]}),
-															.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[473], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[472-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[469-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[465-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[392], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[435-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[433-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[429-:37], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[391-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[129-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[257-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[385-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[0]}),
+															.data_in({pipe_mdata_st2[88:2], opd_buffer_n_st2, pipe_mdata_st2[1:0]}),
+															.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[472], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[471-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[469], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[391], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[434-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[432-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[428-:37], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[390-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[129-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[257-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[385-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].data[0]}),
 															.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].valid),
 															.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands.per_opc_operands_if[_mbase_operands_if].ready)
 														);
@@ -20167,7 +17553,7 @@ module Vortex (
 												// Trace: src/VX_operands.sv:44:5
 												wire [0:0] per_opc_operands_valid;
 												// Trace: src/VX_operands.sv:45:5
-												wire [473:0] per_opc_operands_data;
+												wire [472:0] per_opc_operands_data;
 												// Trace: src/VX_operands.sv:46:5
 												wire [0:0] per_opc_operands_ready;
 												// Trace: src/VX_operands.sv:48:5
@@ -20177,7 +17563,7 @@ module Vortex (
 													// Trace: src/VX_operands.sv:49:9
 													assign per_opc_operands_valid[i] = per_opc_operands_if[i].valid;
 													// Trace: src/VX_operands.sv:50:9
-													assign per_opc_operands_data[i * 474+:474] = per_opc_operands_if[i].data;
+													assign per_opc_operands_data[i * 473+:473] = per_opc_operands_if[i].data;
 													// Trace: src/VX_operands.sv:51:9
 													assign per_opc_operands_if[i].ready = per_opc_operands_ready[i];
 												end
@@ -20222,19 +17608,19 @@ module Vortex (
 												// removed modport instance operands_if
 												// Trace: src/VX_dispatch.sv:8:5
 												localparam VX_gpu_pkg_EX_SFU = 2;
-												localparam VX_gpu_pkg_EX_FPU = 3;
-												localparam VX_gpu_pkg_EX_TCU = 3;
-												localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+												localparam VX_gpu_pkg_EX_FPU = 2;
+												localparam VX_gpu_pkg_EX_TCU = 2;
+												localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 												localparam _mbase_dispatch_if = 0;
 												// Trace: src/VX_dispatch.sv:10:5
 												localparam VX_gpu_pkg_INST_ALU_BITS = 4;
 												localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 												localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 												localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_PC_BITS = 30;
 												localparam VX_gpu_pkg_SIMD_COUNT = 1;
 												localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
@@ -20252,11 +17638,11 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
 												// removed localparam type VX_gpu_pkg_dispatch_t
-												localparam OUT_DATAW = 472;
+												localparam OUT_DATAW = 471;
 												// Trace: src/VX_dispatch.sv:11:5
-												wire [3:0] operands_ready_in;
+												wire [2:0] operands_ready_in;
 												// Trace: src/VX_dispatch.sv:12:5
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.ready = operands_ready_in[Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[435-:2]];
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.ready = operands_ready_in[Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[434-:2]];
 												// Trace: src/VX_dispatch.sv:13:5
 												genvar _gv_i_91;
 												localparam VX_gpu_pkg_EX_BITS = 2;
@@ -20270,9 +17656,9 @@ module Vortex (
 													) buffer(
 														.clk(clk),
 														.reset(reset),
-														.valid_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.valid && (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[435-:2] == sv2v_cast_2_signed(i))),
+														.valid_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.valid && (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[434-:2] == sv2v_cast_2_signed(i))),
 														.ready_in(operands_ready_in[i]),
-														.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[473], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[472-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[469-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[465-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[433-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[429-:37], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[392], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[391-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[385-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[257-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[129-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[0]}),
+														.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[472], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[471-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[469], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[432-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[428-:37], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[391], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[390-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[385-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[257-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[129-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].issue_slice.operands_if.data[0]}),
 														.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].per_issue_dispatch_if[i + _mbase_dispatch_if].data),
 														.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].per_issue_dispatch_if[i + _mbase_dispatch_if].valid),
 														.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue.g_slices[_gv_issue_id_1].per_issue_dispatch_if[i + _mbase_dispatch_if].ready)
@@ -20284,7 +17670,7 @@ module Vortex (
 											// Trace: src/VX_issue_slice.sv:53:5
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue_sched_if[_mbase_issue_sched_if].valid = (operands_if.valid && operands_if.ready) && operands_if.data[1];
 											// Trace: src/VX_issue_slice.sv:54:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue_sched_if[_mbase_issue_sched_if].wis = operands_if.data[472-:2];
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.issue_sched_if[_mbase_issue_sched_if].wis = operands_if.data[471-:2];
 										end
 										assign issue_slice.clk = clk;
 										assign issue_slice.reset = reset;
@@ -20327,9 +17713,9 @@ module Vortex (
 									localparam _mbase_lsu_mem_if = 0;
 									// Trace: src/VX_execute.sv:9:5
 									localparam VX_gpu_pkg_EX_SFU = 2;
-									localparam VX_gpu_pkg_EX_FPU = 3;
-									localparam VX_gpu_pkg_EX_TCU = 3;
-									localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+									localparam VX_gpu_pkg_EX_FPU = 2;
+									localparam VX_gpu_pkg_EX_TCU = 2;
+									localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 									localparam _mbase_dispatch_if = 0;
 									// Trace: src/VX_execute.sv:10:5
 									localparam _mbase_commit_if = 0;
@@ -20342,29 +17728,6 @@ module Vortex (
 									// Trace: src/VX_execute.sv:14:5
 									// removed modport instance commit_csr_if
 									// Trace: src/VX_execute.sv:16:5
-									// expanded interface instance: fpu_csr_if
-									genvar _arr_82930;
-									for (_arr_82930 = 0; _arr_82930 <= 0; _arr_82930 = _arr_82930 + 1) begin : fpu_csr_if
-										// removed import VX_gpu_pkg::*;
-										// removed import VX_fpu_pkg::*;
-										// Trace: src/VX_fpu_csr_if.sv:2:5
-										wire write_enable;
-										// Trace: src/VX_fpu_csr_if.sv:3:5
-										localparam VX_gpu_pkg_NW_BITS = 2;
-										localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-										wire [1:0] write_wid;
-										// Trace: src/VX_fpu_csr_if.sv:4:5
-										// removed localparam type VX_fpu_pkg_fflags_t
-										wire [4:0] write_fflags;
-										// Trace: src/VX_fpu_csr_if.sv:5:5
-										wire [1:0] read_wid;
-										// Trace: src/VX_fpu_csr_if.sv:6:5
-										localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-										wire [2:0] read_frm;
-										// Trace: src/VX_fpu_csr_if.sv:7:5
-										// Trace: src/VX_fpu_csr_if.sv:14:5
-									end
-									// Trace: src/VX_execute.sv:17:5
 									localparam VX_gpu_pkg_EX_ALU = 0;
 									// expanded module instance: alu_unit
 									localparam _bbase_4B10A_dispatch_if = 0;
@@ -20411,10 +17774,10 @@ module Vortex (
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_execute_if.sv:5:5
 											localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -20434,7 +17797,7 @@ module Vortex (
 											// Trace: src/VX_execute_if.sv:21:5
 											wire valid;
 											// Trace: src/VX_execute_if.sv:22:5
-											wire [471:0] data;
+											wire [470:0] data;
 											// Trace: src/VX_execute_if.sv:23:5
 											wire ready;
 											// Trace: src/VX_execute_if.sv:24:5
@@ -20451,10 +17814,10 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:3:15
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_result_if.sv:5:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -20463,7 +17826,7 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:17:5
 											wire valid;
 											// Trace: src/VX_result_if.sv:18:5
-											wire [174:0] data;
+											wire [173:0] data;
 											// Trace: src/VX_result_if.sv:19:5
 											wire ready;
 											// Trace: src/VX_result_if.sv:20:5
@@ -20519,25 +17882,25 @@ module Vortex (
 											localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 											localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 											localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_SIMD_COUNT = 1;
 											localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
 											localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam IN_DATAW = 472;
+											localparam IN_DATAW = 471;
 											// Trace: src/VX_dispatch_unit.sv:22:5
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam OUT_DATAW = 472;
+											localparam OUT_DATAW = 471;
 											// Trace: src/VX_dispatch_unit.sv:23:5
 											localparam FANOUT_ENABLE = 1'd0;
 											// Trace: src/VX_dispatch_unit.sv:24:5
-											localparam DATA_TMASK_OFF = 464;
+											localparam DATA_TMASK_OFF = 463;
 											// Trace: src/VX_dispatch_unit.sv:25:5
 											localparam DATA_REGS_OFF = 2;
 											// Trace: src/VX_dispatch_unit.sv:26:5
@@ -20545,7 +17908,7 @@ module Vortex (
 											// Trace: src/VX_dispatch_unit.sv:30:5
 											wire [0:0] dispatch_valid;
 											// Trace: src/VX_dispatch_unit.sv:31:5
-											wire [471:0] dispatch_data;
+											wire [470:0] dispatch_data;
 											// Trace: src/VX_dispatch_unit.sv:32:5
 											wire [0:0] dispatch_ready;
 											// Trace: src/VX_dispatch_unit.sv:33:5
@@ -20555,7 +17918,7 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:34:9
 												assign dispatch_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].valid;
 												// Trace: src/VX_dispatch_unit.sv:35:9
-												assign dispatch_data[i * 472+:472] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
+												assign dispatch_data[i * 471+:471] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
 												// Trace: src/VX_dispatch_unit.sv:36:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].ready = dispatch_ready[i];
 											end
@@ -20611,25 +17974,25 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:80:9
 												wire [0:0] issue_idx = issue_indices[block_idx+:1];
 												// Trace: src/VX_dispatch_unit.sv:81:9
-												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 472) + 469+:VX_gpu_pkg_ISSUE_WIS_W];
+												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 471) + 468+:VX_gpu_pkg_ISSUE_WIS_W];
 												// Trace: src/VX_dispatch_unit.sv:82:9
-												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 472) + 468+:VX_gpu_pkg_SIMD_IDX_W];
+												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 471) + 467+:VX_gpu_pkg_SIMD_IDX_W];
 												// Trace: src/VX_dispatch_unit.sv:83:9
-												wire dispatch_sop = dispatch_data[(issue_idx * 472) + 1];
+												wire dispatch_sop = dispatch_data[(issue_idx * 471) + 1];
 												// Trace: src/VX_dispatch_unit.sv:84:9
-												wire dispatch_eop = dispatch_data[issue_idx * 472];
+												wire dispatch_eop = dispatch_data[issue_idx * 471];
 												// Trace: src/VX_dispatch_unit.sv:85:9
 												wire [3:0] dispatch_tmask;
 												// Trace: src/VX_dispatch_unit.sv:86:9
 												wire [383:0] dispatch_rsdata;
 												// Trace: src/VX_dispatch_unit.sv:87:9
-												assign dispatch_tmask = dispatch_data[(issue_idx * 472) + DATA_TMASK_OFF+:4];
+												assign dispatch_tmask = dispatch_data[(issue_idx * 471) + DATA_TMASK_OFF+:4];
 												// Trace: src/VX_dispatch_unit.sv:88:9
-												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 472) + 258+:128];
+												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 471) + 258+:128];
 												// Trace: src/VX_dispatch_unit.sv:89:9
-												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 472) + 130+:128];
+												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 471) + 130+:128];
 												// Trace: src/VX_dispatch_unit.sv:90:9
-												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 472) + 2+:128];
+												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 471) + 2+:128];
 												// Trace: src/VX_dispatch_unit.sv:91:9
 												wire valid_p;
 												wire ready_p;
@@ -20675,7 +18038,7 @@ module Vortex (
 													.reset(reset),
 													.valid_in(valid_p),
 													.ready_in(ready_p),
-													.data_in({dispatch_data[(issue_idx * 472) + 471-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 472) + 463-:78], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
+													.data_in({dispatch_data[(issue_idx * 471) + 470-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 471) + 462-:77], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
 													.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_execute_if[block_idx + _mbase_execute_if].data),
 													.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_execute_if[block_idx + _mbase_execute_if].valid),
 													.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_execute_if[block_idx + _mbase_execute_if].ready)
@@ -20688,7 +18051,7 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:182:9
 												ready_in = 0;
 												// Trace: src/VX_dispatch_unit.sv:183:9
-												begin : sv2v_autoblock_9
+												begin : sv2v_autoblock_8
 													// Trace: src/VX_dispatch_unit.sv:183:14
 													integer block_idx;
 													// Trace: src/VX_dispatch_unit.sv:183:14
@@ -20721,10 +18084,10 @@ module Vortex (
 												localparam PID_WIDTH = 1;
 												// Trace: src/VX_execute_if.sv:5:5
 												localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												localparam VX_gpu_pkg_PC_BITS = 30;
@@ -20744,7 +18107,7 @@ module Vortex (
 												// Trace: src/VX_execute_if.sv:21:5
 												wire valid;
 												// Trace: src/VX_execute_if.sv:22:5
-												wire [471:0] data;
+												wire [470:0] data;
 												// Trace: src/VX_execute_if.sv:23:5
 												wire ready;
 												// Trace: src/VX_execute_if.sv:24:5
@@ -20761,10 +18124,10 @@ module Vortex (
 												// Trace: src/VX_result_if.sv:3:15
 												localparam PID_WIDTH = 1;
 												// Trace: src/VX_result_if.sv:5:5
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												localparam VX_gpu_pkg_PC_BITS = 30;
@@ -20773,7 +18136,7 @@ module Vortex (
 												// Trace: src/VX_result_if.sv:17:5
 												wire valid;
 												// Trace: src/VX_result_if.sv:18:5
-												wire [174:0] data;
+												wire [173:0] data;
 												// Trace: src/VX_result_if.sv:19:5
 												wire ready;
 												// Trace: src/VX_result_if.sv:20:5
@@ -20786,7 +18149,7 @@ module Vortex (
 												// Trace: src/VX_alu_unit.sv:42:13
 												pe_select = PE_IDX_INT;
 												// Trace: src/VX_alu_unit.sv:43:13
-												if (per_block_execute_if[block_idx].data[427-:2] == VX_gpu_pkg_ALU_TYPE_MULDIV)
+												if (per_block_execute_if[block_idx].data[426-:2] == VX_gpu_pkg_ALU_TYPE_MULDIV)
 													// Trace: src/VX_alu_unit.sv:44:17
 													pe_select = PE_IDX_MDV;
 											end
@@ -20835,10 +18198,10 @@ module Vortex (
 												localparam PID_WIDTH = 1;
 												// Trace: src/VX_pe_switch.sv:19:5
 												localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												localparam VX_gpu_pkg_PC_BITS = 30;
@@ -20854,13 +18217,13 @@ module Vortex (
 												// removed localparam type VX_gpu_pkg_lsu_args_t
 												// removed localparam type VX_gpu_pkg_wctl_args_t
 												// removed localparam type VX_gpu_pkg_op_args_t
-												localparam REQ_DATAW = 472;
+												localparam REQ_DATAW = 471;
 												// Trace: src/VX_pe_switch.sv:20:5
-												localparam RSP_DATAW = 175;
+												localparam RSP_DATAW = 174;
 												// Trace: src/VX_pe_switch.sv:21:5
 												wire [1:0] pe_req_valid;
 												// Trace: src/VX_pe_switch.sv:22:5
-												wire [943:0] pe_req_data;
+												wire [941:0] pe_req_data;
 												// Trace: src/VX_pe_switch.sv:23:5
 												wire [1:0] pe_req_ready;
 												// Trace: src/VX_pe_switch.sv:24:5
@@ -20887,14 +18250,14 @@ module Vortex (
 													// Trace: src/VX_pe_switch.sv:41:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[i + _mbase_execute_out_if].valid = pe_req_valid[i];
 													// Trace: src/VX_pe_switch.sv:42:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[i + _mbase_execute_out_if].data = pe_req_data[i * 472+:472];
+													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[i + _mbase_execute_out_if].data = pe_req_data[i * 471+:471];
 													// Trace: src/VX_pe_switch.sv:43:9
 													assign pe_req_ready[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[i + _mbase_execute_out_if].ready;
 												end
 												// Trace: src/VX_pe_switch.sv:45:5
 												wire [1:0] pe_rsp_valid;
 												// Trace: src/VX_pe_switch.sv:46:5
-												wire [349:0] pe_rsp_data;
+												wire [347:0] pe_rsp_data;
 												// Trace: src/VX_pe_switch.sv:47:5
 												wire [1:0] pe_rsp_ready;
 												// Trace: src/VX_pe_switch.sv:48:5
@@ -20904,7 +18267,7 @@ module Vortex (
 													// Trace: src/VX_pe_switch.sv:49:9
 													assign pe_rsp_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[i + _mbase_result_in_if].valid;
 													// Trace: src/VX_pe_switch.sv:50:9
-													assign pe_rsp_data[i * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[i + _mbase_result_in_if].data;
+													assign pe_rsp_data[i * 174+:174] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[i + _mbase_result_in_if].data;
 													// Trace: src/VX_pe_switch.sv:51:9
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[i + _mbase_result_in_if].ready = pe_rsp_ready[i];
 												end
@@ -20993,13 +18356,13 @@ module Vortex (
 												wire is_alu_w = 0;
 												// Trace: src/VX_alu_int.sv:30:5
 												localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-												wire [3:0] alu_op = sv2v_cast_4(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[434-:4]);
+												wire [3:0] alu_op = sv2v_cast_4(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[433-:4]);
 												// Trace: src/VX_alu_int.sv:31:5
 												localparam VX_gpu_pkg_INST_BR_BITS = 4;
-												wire [3:0] br_op = sv2v_cast_4(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[434-:4]);
+												wire [3:0] br_op = sv2v_cast_4(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[433-:4]);
 												// Trace: src/VX_alu_int.sv:32:5
 												localparam VX_gpu_pkg_ALU_TYPE_BRANCH = 1;
-												wire is_br_op = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[427-:2] == VX_gpu_pkg_ALU_TYPE_BRANCH;
+												wire is_br_op = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[426-:2] == VX_gpu_pkg_ALU_TYPE_BRANCH;
 												// Trace: src/VX_alu_int.sv:33:5
 												function automatic VX_gpu_pkg_inst_alu_is_sub;
 													// Trace: src/VX_gpu_pkg.sv:120:46
@@ -21042,11 +18405,11 @@ module Vortex (
 													// Trace: src/VX_gpu_pkg.sv:28:9
 													VX_gpu_pkg_to_fullPC = {pc, 2'b00};
 												endfunction
-												wire [127:0] alu_in1_PC = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[430] ? {NUM_LANES {VX_gpu_pkg_to_fullPC(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[464-:30])}} : alu_in1);
+												wire [127:0] alu_in1_PC = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[429] ? {NUM_LANES {VX_gpu_pkg_to_fullPC(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[463-:30])}} : alu_in1);
 												// Trace: src/VX_alu_int.sv:39:5
-												wire [127:0] alu_in2_imm = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[429] ? {NUM_LANES {{Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[425], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[424:394]}}} : alu_in2);
+												wire [127:0] alu_in2_imm = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[428] ? {NUM_LANES {{Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[424], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[423:393]}}} : alu_in2);
 												// Trace: src/VX_alu_int.sv:40:5
-												wire [127:0] alu_in2_br = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[429] && ~is_br_op ? {NUM_LANES {{Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[425], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[424:394]}}} : alu_in2);
+												wire [127:0] alu_in2_br = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[428] && ~is_br_op ? {NUM_LANES {{Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[424], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[423:393]}}} : alu_in2);
 												// Trace: src/VX_alu_int.sv:41:5
 												genvar _gv_i_141;
 												for (_gv_i_141 = 0; _gv_i_141 < NUM_LANES; _gv_i_141 = _gv_i_141 + 1) begin : g_add_result
@@ -21129,9 +18492,9 @@ module Vortex (
 													// Trace: src/VX_alu_int.sv:80:9
 													wire pred = alu_in1[i * 32];
 													// Trace: src/VX_alu_int.sv:81:9
-													assign vote_true[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[465 + i] && pred;
+													assign vote_true[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[464 + i] && pred;
 													// Trace: src/VX_alu_int.sv:82:9
-													assign vote_false[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[465 + i] && ~pred;
+													assign vote_false[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[464 + i] && ~pred;
 												end
 												// Trace: src/VX_alu_int.sv:84:5
 												wire has_vote_true = |vote_true;
@@ -21229,7 +18592,7 @@ module Vortex (
 															endcase
 														end
 														// Trace: src/VX_alu_int.sv:137:13
-														assign shfl_result[i * 32+:32] = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[0].data[465 + lane] ? alu_in1[lane * 32+:32] : alu_in1[i * 32+:32]);
+														assign shfl_result[i * 32+:32] = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[0].data[464 + lane] ? alu_in1[lane * 32+:32] : alu_in1[i * 32+:32]);
 													end
 												end
 												// Trace: src/VX_alu_int.sv:142:5
@@ -21244,7 +18607,7 @@ module Vortex (
 													// Trace: src/VX_alu_int.sv:145:9
 													always @(*)
 														// Trace: src/VX_alu_int.sv:146:13
-														if (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[427-:2] == VX_gpu_pkg_ALU_TYPE_OTHER)
+														if (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[426-:2] == VX_gpu_pkg_ALU_TYPE_OTHER)
 															// Trace: src/VX_alu_int.sv:147:17
 															case (alu_op[2])
 																1'b0:
@@ -21312,27 +18675,27 @@ module Vortex (
 														.N(NUM_LANES),
 														.REVERSE(1)
 													) last_tid_sel(
-														.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[468-:4]),
+														.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[467-:4]),
 														.index_out(last_tid),
 														.onehot_out(),
 														.valid_out()
 													);
 												end
 												// Trace: src/VX_alu_int.sv:185:5
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												localparam VX_gpu_pkg_UUID_WIDTH = 1;
-												VX_elastic_buffer #(.DATAW(212)) rsp_buf(
+												VX_elastic_buffer #(.DATAW(211)) rsp_buf(
 													.clk(clk),
 													.reset(reset),
 													.valid_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].valid),
 													.ready_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].ready),
-													.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[392-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[393], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[0], alu_result, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[464-:30], cbr_dest, is_br_op, br_op, last_tid}),
-													.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[174], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[173-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[171-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[136-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[137], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[0], alu_result_r, PC_r, cbr_dest_r, is_br_op_r, br_op_r, last_tid_r}),
+													.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[467-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[391-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[392], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[0], alu_result, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[463-:30], cbr_dest, is_br_op, br_op, last_tid}),
+													.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[173], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[172-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[170-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[135-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[136], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[0], alu_result_r, PC_r, cbr_dest_r, is_br_op_r, br_op_r, last_tid_r}),
 													.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].valid),
 													.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].ready)
 												);
@@ -21379,7 +18742,7 @@ module Vortex (
 												// Trace: src/VX_alu_int.sv:209:5
 												if (1) begin : genblk10
 													// Trace: src/VX_alu_int.sv:216:9
-													assign br_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[173-:2];
+													assign br_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[172-:2];
 												end
 												// Trace: src/VX_alu_int.sv:219:5
 												VX_pipe_register #(
@@ -21402,7 +18765,7 @@ module Vortex (
 													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[3 + (i * 32)+:32] = (is_br_op_r && is_br_static ? PC_next : alu_result_r[i * 32+:32]);
 												end
 												// Trace: src/VX_alu_int.sv:233:5
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[167-:30] = PC_r;
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[166-:30] = PC_r;
 											end
 											assign alu_int.clk = clk;
 											assign alu_int.reset = reset;
@@ -21431,18 +18794,18 @@ module Vortex (
 												// Trace: src/VX_alu_muldiv.sv:11:5
 												localparam PID_WIDTH = 1;
 												// Trace: src/VX_alu_muldiv.sv:12:5
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												localparam VX_gpu_pkg_PC_BITS = 30;
 												localparam VX_gpu_pkg_UUID_WIDTH = 1;
-												localparam TAG_WIDTH = 47;
+												localparam TAG_WIDTH = 46;
 												// Trace: src/VX_alu_muldiv.sv:13:5
 												localparam VX_gpu_pkg_INST_M_BITS = 3;
-												wire [2:0] muldiv_op = sv2v_cast_3(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[434-:4]);
+												wire [2:0] muldiv_op = sv2v_cast_3(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[433-:4]);
 												// Trace: src/VX_alu_muldiv.sv:14:5
 												function automatic VX_gpu_pkg_inst_m_is_mulx;
 													// Trace: src/VX_gpu_pkg.sv:175:45
@@ -21472,7 +18835,7 @@ module Vortex (
 												// Trace: src/VX_alu_muldiv.sv:21:5
 												wire [29:0] mul_PC_out;
 												// Trace: src/VX_alu_muldiv.sv:22:5
-												wire [5:0] mul_rd_out;
+												wire [4:0] mul_rd_out;
 												// Trace: src/VX_alu_muldiv.sv:23:5
 												wire mul_wb_out;
 												// Trace: src/VX_alu_muldiv.sv:24:5
@@ -21537,14 +18900,14 @@ module Vortex (
 												end
 												// Trace: src/VX_alu_muldiv.sv:53:5
 												VX_shift_register #(
-													.DATAW(50),
+													.DATAW(49),
 													.DEPTH(3),
 													.RESETW(1)
 												) mul_shift_reg(
 													.clk(clk),
 													.reset(reset),
 													.enable(mul_ready_in),
-													.data_in({mul_valid_in, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[392-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[393], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[0], is_mulh_in, is_alu_w}),
+													.data_in({mul_valid_in, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[467-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[463-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[391-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[392], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[0], is_mulh_in, is_alu_w}),
 													.data_out({mul_valid_out, mul_uuid_out, mul_wid_out, mul_tmask_out, mul_PC_out, mul_rd_out, mul_wb_out, mul_pid_out, mul_sop_out, mul_eop_out, is_mulh_out, is_mul_w_out})
 												);
 												// Trace: src/VX_alu_muldiv.sv:64:5
@@ -21567,7 +18930,7 @@ module Vortex (
 												// Trace: src/VX_alu_muldiv.sv:72:5
 												wire [29:0] div_PC_out;
 												// Trace: src/VX_alu_muldiv.sv:73:5
-												wire [5:0] div_rd_out;
+												wire [4:0] div_rd_out;
 												// Trace: src/VX_alu_muldiv.sv:74:5
 												wire div_wb_out;
 												// Trace: src/VX_alu_muldiv.sv:75:5
@@ -21645,13 +19008,13 @@ module Vortex (
 													.remainder(div_remainder)
 												);
 												// Trace: src/VX_alu_muldiv.sv:120:5
-												reg [48:0] div_tag_r;
+												reg [47:0] div_tag_r;
 												// Trace: src/VX_alu_muldiv.sv:121:5
 												always @(posedge clk)
 													// Trace: src/VX_alu_muldiv.sv:122:9
 													if (div_valid_in && div_ready_in)
 														// Trace: src/VX_alu_muldiv.sv:123:13
-														div_tag_r <= {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[392-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[393], is_rem_op, is_alu_w, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[0]};
+														div_tag_r <= {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[467-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[463-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[391-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[392], is_rem_op, is_alu_w, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_execute_if[_mbase_execute_if].data[0]};
 												// Trace: src/VX_alu_muldiv.sv:126:5
 												assign {div_uuid_out, div_wid_out, div_tmask_out, div_PC_out, div_rd_out, div_wb_out, is_rem_op_out, is_div_w_out, div_pid_out, div_sop_out, div_eop_out} = div_tag_r;
 												// Trace: src/VX_alu_muldiv.sv:127:5
@@ -21666,7 +19029,7 @@ module Vortex (
 												// Trace: src/VX_alu_muldiv.sv:131:5
 												VX_stream_arb #(
 													.NUM_INPUTS(2),
-													.DATAW(175),
+													.DATAW(174),
 													.ARBITER("P"),
 													.OUT_BUF(2)
 												) rsp_buf(
@@ -21675,7 +19038,7 @@ module Vortex (
 													.valid_in({div_valid_out, mul_valid_out}),
 													.ready_in({div_ready_out, mul_ready_out}),
 													.data_in({div_uuid_out, div_wid_out, div_tmask_out, div_PC_out, div_rd_out, div_wb_out, div_pid_out, div_sop_out, div_eop_out, div_result_out, mul_uuid_out, mul_wid_out, mul_tmask_out, mul_PC_out, mul_rd_out, mul_wb_out, mul_pid_out, mul_sop_out, mul_eop_out, mul_result_out}),
-													.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[174], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[173-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[171-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[167-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[136-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[137], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[0], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[130-:128]}),
+													.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[173], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[172-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[170-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[166-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[135-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[136], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[0], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].data[130-:128]}),
 													.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].valid),
 													.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.g_blocks[_gv_block_idx_1].pe_result_if[_mbase_result_if].ready),
 													.sel_out()
@@ -21720,21 +19083,21 @@ module Vortex (
 											// Trace: src/VX_gather_unit.sv:16:5
 											localparam GPID_WIDTH = 1;
 											// Trace: src/VX_gather_unit.sv:17:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam DATAW = 175;
+											localparam DATAW = 174;
 											// Trace: src/VX_gather_unit.sv:18:5
-											localparam DATA_WIS_OFF = 172;
+											localparam DATA_WIS_OFF = 171;
 											// Trace: src/VX_gather_unit.sv:19:5
 											wire [0:0] result_in_valid;
 											// Trace: src/VX_gather_unit.sv:20:5
-											wire [174:0] result_in_data;
+											wire [173:0] result_in_data;
 											// Trace: src/VX_gather_unit.sv:21:5
 											wire [0:0] result_in_ready;
 											// Trace: src/VX_gather_unit.sv:22:5
@@ -21748,7 +19111,7 @@ module Vortex (
 												// Trace: src/VX_gather_unit.sv:24:9
 												assign result_in_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_result_if[i + _mbase_result_if].valid;
 												// Trace: src/VX_gather_unit.sv:25:9
-												assign result_in_data[i * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_result_if[i + _mbase_result_if].data;
+												assign result_in_data[i * 174+:174] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_result_if[i + _mbase_result_if].data;
 												// Trace: src/VX_gather_unit.sv:26:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.alu_unit.per_block_result_if[i + _mbase_result_if].ready = result_in_ready[i];
 												if (1) begin : g_result_in_isw_full
@@ -21759,7 +19122,7 @@ module Vortex (
 											// Trace: src/VX_gather_unit.sv:37:5
 											reg [0:0] result_out_valid;
 											// Trace: src/VX_gather_unit.sv:38:5
-											reg [174:0] result_out_data;
+											reg [173:0] result_out_data;
 											// Trace: src/VX_gather_unit.sv:39:5
 											wire [0:0] result_out_ready;
 											// Trace: src/VX_gather_unit.sv:40:5
@@ -21767,17 +19130,17 @@ module Vortex (
 												// Trace: src/VX_gather_unit.sv:41:9
 												result_out_valid = 1'sb0;
 												// Trace: src/VX_gather_unit.sv:42:9
-												begin : sv2v_autoblock_10
+												begin : sv2v_autoblock_9
 													// Trace: src/VX_gather_unit.sv:42:14
 													integer i;
 													// Trace: src/VX_gather_unit.sv:42:14
 													for (i = 0; i < 1; i = i + 1)
 														begin
 															// Trace: src/VX_gather_unit.sv:43:13
-															result_out_data[i * 175+:175] = 1'sbx;
+															result_out_data[i * 174+:174] = 1'sbx;
 														end
 												end
-												begin : sv2v_autoblock_11
+												begin : sv2v_autoblock_10
 													// Trace: src/VX_gather_unit.sv:45:14
 													integer i;
 													// Trace: src/VX_gather_unit.sv:45:14
@@ -21786,7 +19149,7 @@ module Vortex (
 															// Trace: src/VX_gather_unit.sv:46:13
 															result_out_valid[result_in_isw[i+:1]] = result_in_valid[i];
 															// Trace: src/VX_gather_unit.sv:47:13
-															result_out_data[result_in_isw[i+:1] * 175+:175] = result_in_data[i * 175+:175];
+															result_out_data[result_in_isw[i+:1] * 174+:174] = result_in_data[i * 174+:174];
 														end
 												end
 											end
@@ -21814,10 +19177,10 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:3:15
 													localparam PID_WIDTH = 1;
 													// Trace: src/VX_result_if.sv:5:5
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+													localparam VX_gpu_pkg_NUM_REGS = 32;
+													localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 													localparam VX_gpu_pkg_NW_BITS = 2;
 													localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 													localparam VX_gpu_pkg_PC_BITS = 30;
@@ -21826,7 +19189,7 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:17:5
 													wire valid;
 													// Trace: src/VX_result_if.sv:18:5
-													wire [174:0] data;
+													wire [173:0] data;
 													// Trace: src/VX_result_if.sv:19:5
 													wire ready;
 													// Trace: src/VX_result_if.sv:20:5
@@ -21842,7 +19205,7 @@ module Vortex (
 													.reset(reset),
 													.valid_in(result_out_valid[i]),
 													.ready_in(result_out_ready[i]),
-													.data_in(result_out_data[i * 175+:175]),
+													.data_in(result_out_data[i * 174+:174]),
 													.data_out(result_tmp_if.data),
 													.valid_out(result_tmp_if.valid),
 													.ready_out(result_tmp_if.ready)
@@ -21857,14 +19220,14 @@ module Vortex (
 													// Trace: src/VX_gather_unit.sv:91:13
 													assign commit_sid_w = result_tmp_if.data[2];
 													// Trace: src/VX_gather_unit.sv:92:13
-													assign commit_tmask_w = result_tmp_if.data[171-:4];
+													assign commit_tmask_w = result_tmp_if.data[170-:4];
 													// Trace: src/VX_gather_unit.sv:93:13
 													assign commit_data_w = result_tmp_if.data[130-:128];
 												end
 												// Trace: src/VX_gather_unit.sv:95:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].valid = result_tmp_if.valid;
 												// Trace: src/VX_gather_unit.sv:96:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[174], result_tmp_if.data[173-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[167-:30], result_tmp_if.data[137], result_tmp_if.data[136-:6], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[173], result_tmp_if.data[172-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[166-:30], result_tmp_if.data[136], result_tmp_if.data[135-:5], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
 												// Trace: src/VX_gather_unit.sv:108:9
 												assign result_tmp_if.ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].ready;
 											end
@@ -21874,7 +19237,7 @@ module Vortex (
 									end
 									assign alu_unit.clk = clk;
 									assign alu_unit.reset = reset;
-									// Trace: src/VX_execute.sv:27:5
+									// Trace: src/VX_execute.sv:26:5
 									localparam VX_gpu_pkg_EX_LSU = 1;
 									// expanded module instance: lsu_unit
 									localparam _bbase_54826_dispatch_if = 1;
@@ -21911,10 +19274,10 @@ module Vortex (
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_execute_if.sv:5:5
 											localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -21934,7 +19297,7 @@ module Vortex (
 											// Trace: src/VX_execute_if.sv:21:5
 											wire valid;
 											// Trace: src/VX_execute_if.sv:22:5
-											wire [471:0] data;
+											wire [470:0] data;
 											// Trace: src/VX_execute_if.sv:23:5
 											wire ready;
 											// Trace: src/VX_execute_if.sv:24:5
@@ -21990,25 +19353,25 @@ module Vortex (
 											localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 											localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 											localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_SIMD_COUNT = 1;
 											localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
 											localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam IN_DATAW = 472;
+											localparam IN_DATAW = 471;
 											// Trace: src/VX_dispatch_unit.sv:22:5
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam OUT_DATAW = 472;
+											localparam OUT_DATAW = 471;
 											// Trace: src/VX_dispatch_unit.sv:23:5
 											localparam FANOUT_ENABLE = 1'd0;
 											// Trace: src/VX_dispatch_unit.sv:24:5
-											localparam DATA_TMASK_OFF = 464;
+											localparam DATA_TMASK_OFF = 463;
 											// Trace: src/VX_dispatch_unit.sv:25:5
 											localparam DATA_REGS_OFF = 2;
 											// Trace: src/VX_dispatch_unit.sv:26:5
@@ -22016,7 +19379,7 @@ module Vortex (
 											// Trace: src/VX_dispatch_unit.sv:30:5
 											wire [0:0] dispatch_valid;
 											// Trace: src/VX_dispatch_unit.sv:31:5
-											wire [471:0] dispatch_data;
+											wire [470:0] dispatch_data;
 											// Trace: src/VX_dispatch_unit.sv:32:5
 											wire [0:0] dispatch_ready;
 											// Trace: src/VX_dispatch_unit.sv:33:5
@@ -22026,7 +19389,7 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:34:9
 												assign dispatch_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].valid;
 												// Trace: src/VX_dispatch_unit.sv:35:9
-												assign dispatch_data[i * 472+:472] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
+												assign dispatch_data[i * 471+:471] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
 												// Trace: src/VX_dispatch_unit.sv:36:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].ready = dispatch_ready[i];
 											end
@@ -22082,25 +19445,25 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:80:9
 												wire [0:0] issue_idx = issue_indices[block_idx+:1];
 												// Trace: src/VX_dispatch_unit.sv:81:9
-												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 472) + 469+:VX_gpu_pkg_ISSUE_WIS_W];
+												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 471) + 468+:VX_gpu_pkg_ISSUE_WIS_W];
 												// Trace: src/VX_dispatch_unit.sv:82:9
-												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 472) + 468+:VX_gpu_pkg_SIMD_IDX_W];
+												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 471) + 467+:VX_gpu_pkg_SIMD_IDX_W];
 												// Trace: src/VX_dispatch_unit.sv:83:9
-												wire dispatch_sop = dispatch_data[(issue_idx * 472) + 1];
+												wire dispatch_sop = dispatch_data[(issue_idx * 471) + 1];
 												// Trace: src/VX_dispatch_unit.sv:84:9
-												wire dispatch_eop = dispatch_data[issue_idx * 472];
+												wire dispatch_eop = dispatch_data[issue_idx * 471];
 												// Trace: src/VX_dispatch_unit.sv:85:9
 												wire [3:0] dispatch_tmask;
 												// Trace: src/VX_dispatch_unit.sv:86:9
 												wire [383:0] dispatch_rsdata;
 												// Trace: src/VX_dispatch_unit.sv:87:9
-												assign dispatch_tmask = dispatch_data[(issue_idx * 472) + DATA_TMASK_OFF+:4];
+												assign dispatch_tmask = dispatch_data[(issue_idx * 471) + DATA_TMASK_OFF+:4];
 												// Trace: src/VX_dispatch_unit.sv:88:9
-												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 472) + 258+:128];
+												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 471) + 258+:128];
 												// Trace: src/VX_dispatch_unit.sv:89:9
-												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 472) + 130+:128];
+												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 471) + 130+:128];
 												// Trace: src/VX_dispatch_unit.sv:90:9
-												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 472) + 2+:128];
+												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 471) + 2+:128];
 												// Trace: src/VX_dispatch_unit.sv:91:9
 												wire valid_p;
 												wire ready_p;
@@ -22146,7 +19509,7 @@ module Vortex (
 													.reset(reset),
 													.valid_in(valid_p),
 													.ready_in(ready_p),
-													.data_in({dispatch_data[(issue_idx * 472) + 471-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 472) + 463-:78], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
+													.data_in({dispatch_data[(issue_idx * 471) + 470-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 471) + 462-:77], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
 													.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[block_idx + _mbase_execute_if].data),
 													.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[block_idx + _mbase_execute_if].valid),
 													.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[block_idx + _mbase_execute_if].ready)
@@ -22159,7 +19522,7 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:182:9
 												ready_in = 0;
 												// Trace: src/VX_dispatch_unit.sv:183:9
-												begin : sv2v_autoblock_12
+												begin : sv2v_autoblock_11
 													// Trace: src/VX_dispatch_unit.sv:183:14
 													integer block_idx;
 													// Trace: src/VX_dispatch_unit.sv:183:14
@@ -22186,10 +19549,10 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:3:15
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_result_if.sv:5:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -22198,7 +19561,7 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:17:5
 											wire valid;
 											// Trace: src/VX_result_if.sv:18:5
-											wire [174:0] data;
+											wire [173:0] data;
 											// Trace: src/VX_result_if.sv:19:5
 											wire ready;
 											// Trace: src/VX_result_if.sv:20:5
@@ -22235,15 +19598,15 @@ module Vortex (
 												// Trace: src/VX_lsu_slice.sv:12:5
 												localparam PID_WIDTH = 1;
 												// Trace: src/VX_lsu_slice.sv:13:5
-												localparam VX_gpu_pkg_REG_TYPES = 2;
+												localparam VX_gpu_pkg_REG_TYPES = 1;
 												localparam VX_gpu_pkg_RV_REGS = 32;
-												localparam VX_gpu_pkg_NUM_REGS = 64;
-												localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+												localparam VX_gpu_pkg_NUM_REGS = 32;
+												localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												localparam VX_gpu_pkg_PC_BITS = 30;
 												localparam VX_gpu_pkg_UUID_WIDTH = 1;
-												localparam RSP_ARB_DATAW = 175;
+												localparam RSP_ARB_DATAW = 174;
 												// Trace: src/VX_lsu_slice.sv:14:5
 												localparam LSUQ_SIZEW = 1;
 												// Trace: src/VX_lsu_slice.sv:15:5
@@ -22256,9 +19619,9 @@ module Vortex (
 												localparam MEM_ADDRW = 26;
 												// Trace: src/VX_lsu_slice.sv:18:5
 												localparam VX_gpu_pkg_INST_LSU_BITS = 4;
-												localparam TAG_ID_WIDTH = 54;
+												localparam TAG_ID_WIDTH = 53;
 												// Trace: src/VX_lsu_slice.sv:19:5
-												localparam TAG_WIDTH = 55;
+												localparam TAG_WIDTH = 54;
 												// Trace: src/VX_lsu_slice.sv:20:5
 												// expanded interface instance: result_rsp_if
 												localparam _param_3E3A8_NUM_LANES = NUM_LANES;
@@ -22269,10 +19632,10 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:3:15
 													localparam PID_WIDTH = 1;
 													// Trace: src/VX_result_if.sv:5:5
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+													localparam VX_gpu_pkg_NUM_REGS = 32;
+													localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 													localparam VX_gpu_pkg_NW_BITS = 2;
 													localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 													localparam VX_gpu_pkg_PC_BITS = 30;
@@ -22281,7 +19644,7 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:17:5
 													wire valid;
 													// Trace: src/VX_result_if.sv:18:5
-													wire [174:0] data;
+													wire [173:0] data;
 													// Trace: src/VX_result_if.sv:19:5
 													wire ready;
 													// Trace: src/VX_result_if.sv:20:5
@@ -22297,10 +19660,10 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:3:15
 													localparam PID_WIDTH = 1;
 													// Trace: src/VX_result_if.sv:5:5
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+													localparam VX_gpu_pkg_NUM_REGS = 32;
+													localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 													localparam VX_gpu_pkg_NW_BITS = 2;
 													localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 													localparam VX_gpu_pkg_PC_BITS = 30;
@@ -22309,7 +19672,7 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:17:5
 													wire valid;
 													// Trace: src/VX_result_if.sv:18:5
-													wire [174:0] data;
+													wire [173:0] data;
 													// Trace: src/VX_result_if.sv:19:5
 													wire ready;
 													// Trace: src/VX_result_if.sv:20:5
@@ -22325,7 +19688,7 @@ module Vortex (
 												for (_gv_i_113 = 0; _gv_i_113 < NUM_LANES; _gv_i_113 = _gv_i_113 + 1) begin : g_full_addr
 													localparam i = _gv_i_113;
 													// Trace: src/VX_lsu_slice.sv:29:9
-													assign full_addr[i * 32+:32] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[259 + (i * 32)+:32] + {{21 {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[405]}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[404:394]};
+													assign full_addr[i * 32+:32] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[259 + (i * 32)+:32] + {{21 {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[404]}}, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[403:393]};
 												end
 												// Trace: src/VX_lsu_slice.sv:31:5
 												localparam VX_gpu_pkg_MEM_REQ_FLAG_LOCAL = 2;
@@ -22368,7 +19731,7 @@ module Vortex (
 												// Trace: src/VX_lsu_slice.sv:47:5
 												reg [127:0] mem_req_data;
 												// Trace: src/VX_lsu_slice.sv:48:5
-												wire [54:0] mem_req_tag;
+												wire [53:0] mem_req_tag;
 												// Trace: src/VX_lsu_slice.sv:49:5
 												wire mem_req_ready;
 												// Trace: src/VX_lsu_slice.sv:50:5
@@ -22378,7 +19741,7 @@ module Vortex (
 												// Trace: src/VX_lsu_slice.sv:52:5
 												wire [127:0] mem_rsp_data;
 												// Trace: src/VX_lsu_slice.sv:53:5
-												wire [54:0] mem_rsp_tag;
+												wire [53:0] mem_rsp_tag;
 												// Trace: src/VX_lsu_slice.sv:54:5
 												wire mem_rsp_sop;
 												// Trace: src/VX_lsu_slice.sv:55:5
@@ -22407,7 +19770,7 @@ module Vortex (
 													// Trace: src/VX_gpu_pkg.sv:217:9
 													VX_gpu_pkg_inst_lsu_is_fence = op[3:2] == 3;
 												endfunction
-												assign req_is_fence = VX_gpu_pkg_inst_lsu_is_fence(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[434-:4]);
+												assign req_is_fence = VX_gpu_pkg_inst_lsu_is_fence(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[433-:4]);
 												// Trace: src/VX_lsu_slice.sv:64:5
 												always @(posedge clk)
 													// Trace: src/VX_lsu_slice.sv:65:9
@@ -22426,7 +19789,7 @@ module Vortex (
 												// Trace: src/VX_lsu_slice.sv:76:5
 												wire req_skip = req_is_fence && ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[0];
 												// Trace: src/VX_lsu_slice.sv:77:5
-												wire no_rsp_buf_enable = (mem_req_rw && ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[393]) || req_skip;
+												wire no_rsp_buf_enable = (mem_req_rw && ~Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[392]) || req_skip;
 												// Trace: src/VX_lsu_slice.sv:78:5
 												assign mem_req_valid = ((Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].valid && ~req_skip) && ~(no_rsp_buf_enable && ~no_rsp_buf_ready)) && ~fence_lock;
 												// Trace: src/VX_lsu_slice.sv:82:5
@@ -22434,9 +19797,9 @@ module Vortex (
 												// Trace: src/VX_lsu_slice.sv:86:5
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].ready = ((mem_req_ready || req_skip) && ~(no_rsp_buf_enable && ~no_rsp_buf_ready)) && ~fence_lock;
 												// Trace: src/VX_lsu_slice.sv:89:5
-												assign mem_req_mask = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[468-:4];
+												assign mem_req_mask = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[467-:4];
 												// Trace: src/VX_lsu_slice.sv:90:5
-												assign mem_req_rw = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[407];
+												assign mem_req_rw = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[406];
 												// Trace: src/VX_lsu_slice.sv:91:5
 												wire [7:0] req_align;
 												// Trace: src/VX_lsu_slice.sv:92:5
@@ -22465,7 +19828,7 @@ module Vortex (
 														// Trace: src/VX_lsu_slice.sv:99:13
 														mem_req_byteen_w = 1'sb0;
 														// Trace: src/VX_lsu_slice.sv:100:13
-														case (VX_gpu_pkg_inst_lsu_wsize(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[434-:4]))
+														case (VX_gpu_pkg_inst_lsu_wsize(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[433-:4]))
 															0:
 																// Trace: src/VX_lsu_slice.sv:102:21
 																mem_req_byteen_w[req_align[i * 2+:2]] = 1'b1;
@@ -22524,7 +19887,7 @@ module Vortex (
 													assign mem_rsp_eop_pkt = mem_rsp_eop;
 												end
 												// Trace: src/VX_lsu_slice.sv:184:5
-												assign mem_req_tag = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[393], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[392-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[434-:4], req_align, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[2], pkt_waddr, req_is_fence};
+												assign mem_req_tag = {Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[463-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[392], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[391-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[433-:4], req_align, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[2], pkt_waddr, req_is_fence};
 												// Trace: src/VX_lsu_slice.sv:196:5
 												wire lsu_mem_req_valid;
 												// Trace: src/VX_lsu_slice.sv:197:5
@@ -22645,7 +20008,7 @@ module Vortex (
 												// Trace: src/VX_lsu_slice.sv:278:5
 												wire rsp_wb;
 												// Trace: src/VX_lsu_slice.sv:279:5
-												wire [5:0] rsp_rd;
+												wire [4:0] rsp_rd;
 												// Trace: src/VX_lsu_slice.sv:280:5
 												wire [3:0] rsp_op_type;
 												// Trace: src/VX_lsu_slice.sv:281:5
@@ -22703,7 +20066,7 @@ module Vortex (
 												end
 												// Trace: src/VX_lsu_slice.sv:311:5
 												VX_elastic_buffer #(
-													.DATAW(175),
+													.DATAW(174),
 													.SIZE(2)
 												) rsp_buf(
 													.clk(clk),
@@ -22711,7 +20074,7 @@ module Vortex (
 													.valid_in(mem_rsp_valid),
 													.ready_in(mem_rsp_ready),
 													.data_in({rsp_uuid, rsp_wid, mem_rsp_mask, rsp_pc, rsp_wb, rsp_rd, rsp_data, rsp_pid, mem_rsp_sop_pkt, mem_rsp_eop_pkt}),
-													.data_out({result_rsp_if.data[174], result_rsp_if.data[173-:2], result_rsp_if.data[171-:4], result_rsp_if.data[167-:30], result_rsp_if.data[137], result_rsp_if.data[136-:6], result_rsp_if.data[130-:128], result_rsp_if.data[2], result_rsp_if.data[1], result_rsp_if.data[0]}),
+													.data_out({result_rsp_if.data[173], result_rsp_if.data[172-:2], result_rsp_if.data[170-:4], result_rsp_if.data[166-:30], result_rsp_if.data[136], result_rsp_if.data[135-:5], result_rsp_if.data[130-:128], result_rsp_if.data[2], result_rsp_if.data[1], result_rsp_if.data[0]}),
 													.valid_out(result_rsp_if.valid),
 													.ready_out(result_rsp_if.ready)
 												);
@@ -22724,15 +20087,15 @@ module Vortex (
 													.reset(reset),
 													.valid_in(no_rsp_buf_valid),
 													.ready_in(no_rsp_buf_ready),
-													.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[0]}),
-													.data_out({result_no_rsp_if.data[174], result_no_rsp_if.data[173-:2], result_no_rsp_if.data[171-:4], result_no_rsp_if.data[167-:30], result_no_rsp_if.data[2], result_no_rsp_if.data[1], result_no_rsp_if.data[0]}),
+													.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[467-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[463-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_execute_if[_mbase_execute_if].data[0]}),
+													.data_out({result_no_rsp_if.data[173], result_no_rsp_if.data[172-:2], result_no_rsp_if.data[170-:4], result_no_rsp_if.data[166-:30], result_no_rsp_if.data[2], result_no_rsp_if.data[1], result_no_rsp_if.data[0]}),
 													.valid_out(result_no_rsp_if.valid),
 													.ready_out(result_no_rsp_if.ready)
 												);
 												// Trace: src/VX_lsu_slice.sv:337:5
-												assign result_no_rsp_if.data[136-:6] = 1'sb0;
+												assign result_no_rsp_if.data[135-:5] = 1'sb0;
 												// Trace: src/VX_lsu_slice.sv:338:5
-												assign result_no_rsp_if.data[137] = 1'b0;
+												assign result_no_rsp_if.data[136] = 1'b0;
 												// Trace: src/VX_lsu_slice.sv:339:5
 												assign result_no_rsp_if.data[130-:128] = result_rsp_if.data[130-:128];
 												// Trace: src/VX_lsu_slice.sv:340:5
@@ -22792,21 +20155,21 @@ module Vortex (
 											// Trace: src/VX_gather_unit.sv:16:5
 											localparam GPID_WIDTH = 1;
 											// Trace: src/VX_gather_unit.sv:17:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam DATAW = 175;
+											localparam DATAW = 174;
 											// Trace: src/VX_gather_unit.sv:18:5
-											localparam DATA_WIS_OFF = 172;
+											localparam DATA_WIS_OFF = 171;
 											// Trace: src/VX_gather_unit.sv:19:5
 											wire [0:0] result_in_valid;
 											// Trace: src/VX_gather_unit.sv:20:5
-											wire [174:0] result_in_data;
+											wire [173:0] result_in_data;
 											// Trace: src/VX_gather_unit.sv:21:5
 											wire [0:0] result_in_ready;
 											// Trace: src/VX_gather_unit.sv:22:5
@@ -22820,7 +20183,7 @@ module Vortex (
 												// Trace: src/VX_gather_unit.sv:24:9
 												assign result_in_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_result_if[i + _mbase_result_if].valid;
 												// Trace: src/VX_gather_unit.sv:25:9
-												assign result_in_data[i * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_result_if[i + _mbase_result_if].data;
+												assign result_in_data[i * 174+:174] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_result_if[i + _mbase_result_if].data;
 												// Trace: src/VX_gather_unit.sv:26:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.lsu_unit.per_block_result_if[i + _mbase_result_if].ready = result_in_ready[i];
 												if (1) begin : g_result_in_isw_full
@@ -22831,7 +20194,7 @@ module Vortex (
 											// Trace: src/VX_gather_unit.sv:37:5
 											reg [0:0] result_out_valid;
 											// Trace: src/VX_gather_unit.sv:38:5
-											reg [174:0] result_out_data;
+											reg [173:0] result_out_data;
 											// Trace: src/VX_gather_unit.sv:39:5
 											wire [0:0] result_out_ready;
 											// Trace: src/VX_gather_unit.sv:40:5
@@ -22839,17 +20202,17 @@ module Vortex (
 												// Trace: src/VX_gather_unit.sv:41:9
 												result_out_valid = 1'sb0;
 												// Trace: src/VX_gather_unit.sv:42:9
-												begin : sv2v_autoblock_13
+												begin : sv2v_autoblock_12
 													// Trace: src/VX_gather_unit.sv:42:14
 													integer i;
 													// Trace: src/VX_gather_unit.sv:42:14
 													for (i = 0; i < 1; i = i + 1)
 														begin
 															// Trace: src/VX_gather_unit.sv:43:13
-															result_out_data[i * 175+:175] = 1'sbx;
+															result_out_data[i * 174+:174] = 1'sbx;
 														end
 												end
-												begin : sv2v_autoblock_14
+												begin : sv2v_autoblock_13
 													// Trace: src/VX_gather_unit.sv:45:14
 													integer i;
 													// Trace: src/VX_gather_unit.sv:45:14
@@ -22858,7 +20221,7 @@ module Vortex (
 															// Trace: src/VX_gather_unit.sv:46:13
 															result_out_valid[result_in_isw[i+:1]] = result_in_valid[i];
 															// Trace: src/VX_gather_unit.sv:47:13
-															result_out_data[result_in_isw[i+:1] * 175+:175] = result_in_data[i * 175+:175];
+															result_out_data[result_in_isw[i+:1] * 174+:174] = result_in_data[i * 174+:174];
 														end
 												end
 											end
@@ -22886,10 +20249,10 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:3:15
 													localparam PID_WIDTH = 1;
 													// Trace: src/VX_result_if.sv:5:5
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+													localparam VX_gpu_pkg_NUM_REGS = 32;
+													localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 													localparam VX_gpu_pkg_NW_BITS = 2;
 													localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 													localparam VX_gpu_pkg_PC_BITS = 30;
@@ -22898,7 +20261,7 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:17:5
 													wire valid;
 													// Trace: src/VX_result_if.sv:18:5
-													wire [174:0] data;
+													wire [173:0] data;
 													// Trace: src/VX_result_if.sv:19:5
 													wire ready;
 													// Trace: src/VX_result_if.sv:20:5
@@ -22914,7 +20277,7 @@ module Vortex (
 													.reset(reset),
 													.valid_in(result_out_valid[i]),
 													.ready_in(result_out_ready[i]),
-													.data_in(result_out_data[i * 175+:175]),
+													.data_in(result_out_data[i * 174+:174]),
 													.data_out(result_tmp_if.data),
 													.valid_out(result_tmp_if.valid),
 													.ready_out(result_tmp_if.ready)
@@ -22929,14 +20292,14 @@ module Vortex (
 													// Trace: src/VX_gather_unit.sv:91:13
 													assign commit_sid_w = result_tmp_if.data[2];
 													// Trace: src/VX_gather_unit.sv:92:13
-													assign commit_tmask_w = result_tmp_if.data[171-:4];
+													assign commit_tmask_w = result_tmp_if.data[170-:4];
 													// Trace: src/VX_gather_unit.sv:93:13
 													assign commit_data_w = result_tmp_if.data[130-:128];
 												end
 												// Trace: src/VX_gather_unit.sv:95:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].valid = result_tmp_if.valid;
 												// Trace: src/VX_gather_unit.sv:96:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[174], result_tmp_if.data[173-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[167-:30], result_tmp_if.data[137], result_tmp_if.data[136-:6], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[173], result_tmp_if.data[172-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[166-:30], result_tmp_if.data[136], result_tmp_if.data[135-:5], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
 												// Trace: src/VX_gather_unit.sv:108:9
 												assign result_tmp_if.ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].ready;
 											end
@@ -22946,727 +20309,10 @@ module Vortex (
 									end
 									assign lsu_unit.clk = clk;
 									assign lsu_unit.reset = reset;
-									// Trace: src/VX_execute.sv:36:5
-									// expanded module instance: fpu_unit
-									localparam _bbase_88E44_dispatch_if = 3;
-									localparam _bbase_88E44_commit_if = 3;
-									localparam _bbase_88E44_fpu_csr_if = 0;
-									localparam _param_88E44_INSTANCE_ID = "";
-									if (1) begin : fpu_unit
-										// removed import VX_gpu_pkg::*;
-										// removed import VX_fpu_pkg::*;
-										// Trace: src/VX_fpu_unit.sv:2:15
-										localparam INSTANCE_ID = _param_88E44_INSTANCE_ID;
-										// Trace: src/VX_fpu_unit.sv:4:5
-										wire clk;
-										// Trace: src/VX_fpu_unit.sv:5:5
-										wire reset;
-										// Trace: src/VX_fpu_unit.sv:6:5
-										localparam _mbase_dispatch_if = 3;
-										// Trace: src/VX_fpu_unit.sv:7:5
-										localparam _mbase_commit_if = 3;
-										// Trace: src/VX_fpu_unit.sv:8:5
-										localparam _mbase_fpu_csr_if = 0;
-										// Trace: src/VX_fpu_unit.sv:10:5
-										localparam BLOCK_SIZE = 1;
-										// Trace: src/VX_fpu_unit.sv:11:5
-										localparam NUM_LANES = 4;
-										// Trace: src/VX_fpu_unit.sv:12:5
-										localparam PID_BITS = 0;
-										// Trace: src/VX_fpu_unit.sv:13:5
-										localparam PID_WIDTH = 1;
-										// Trace: src/VX_fpu_unit.sv:14:5
-										localparam TAG_WIDTH = 1;
-										// Trace: src/VX_fpu_unit.sv:15:5
-										localparam VX_gpu_pkg_REG_TYPES = 2;
-										localparam VX_gpu_pkg_RV_REGS = 32;
-										localparam VX_gpu_pkg_NUM_REGS = 64;
-										localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-										localparam VX_gpu_pkg_NW_BITS = 2;
-										localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-										localparam VX_gpu_pkg_PC_BITS = 30;
-										localparam VX_gpu_pkg_UUID_WIDTH = 1;
-										localparam IBUF_DATAW = 46;
-										// Trace: src/VX_fpu_unit.sv:16:5
-										localparam PARTIAL_BW = 1'd0;
-										// Trace: src/VX_fpu_unit.sv:17:5
-										// expanded interface instance: per_block_execute_if
-										localparam _param_E2592_NUM_LANES = NUM_LANES;
-										genvar _arr_E2592;
-										for (_arr_E2592 = 0; _arr_E2592 <= 0; _arr_E2592 = _arr_E2592 + 1) begin : per_block_execute_if
-											// removed import VX_gpu_pkg::*;
-											// Trace: src/VX_execute_if.sv:2:15
-											localparam NUM_LANES = _param_E2592_NUM_LANES;
-											// Trace: src/VX_execute_if.sv:3:15
-											localparam PID_WIDTH = 1;
-											// Trace: src/VX_execute_if.sv:5:5
-											localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
-											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-											localparam VX_gpu_pkg_NW_BITS = 2;
-											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam VX_gpu_pkg_PC_BITS = 30;
-											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam VX_gpu_pkg_ALU_TYPE_BITS = 2;
-											// removed localparam type VX_gpu_pkg_alu_args_t
-											localparam VX_gpu_pkg_INST_ARGS_BITS = 37;
-											// removed localparam type VX_gpu_pkg_csr_args_t
-											localparam VX_gpu_pkg_INST_FMT_BITS = 2;
-											localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-											// removed localparam type VX_gpu_pkg_fpu_args_t
-											localparam VX_gpu_pkg_OFFSET_BITS = 12;
-											// removed localparam type VX_gpu_pkg_lsu_args_t
-											// removed localparam type VX_gpu_pkg_wctl_args_t
-											// removed localparam type VX_gpu_pkg_op_args_t
-											// removed localparam type data_t
-											// Trace: src/VX_execute_if.sv:21:5
-											wire valid;
-											// Trace: src/VX_execute_if.sv:22:5
-											wire [471:0] data;
-											// Trace: src/VX_execute_if.sv:23:5
-											wire ready;
-											// Trace: src/VX_execute_if.sv:24:5
-											// Trace: src/VX_execute_if.sv:29:5
-										end
-										// Trace: src/VX_fpu_unit.sv:20:5
-										// expanded module instance: dispatch_unit
-										localparam _bbase_2E16E_dispatch_if = 3;
-										localparam _bbase_2E16E_execute_if = 0;
-										localparam _param_2E16E_BLOCK_SIZE = BLOCK_SIZE;
-										localparam _param_2E16E_NUM_LANES = NUM_LANES;
-										localparam _param_2E16E_OUT_BUF = (PARTIAL_BW ? 3 : 0);
-										if (1) begin : dispatch_unit
-											// removed import VX_gpu_pkg::*;
-											// Trace: src/VX_dispatch_unit.sv:2:15
-											localparam BLOCK_SIZE = _param_2E16E_BLOCK_SIZE;
-											// Trace: src/VX_dispatch_unit.sv:3:15
-											localparam NUM_LANES = _param_2E16E_NUM_LANES;
-											// Trace: src/VX_dispatch_unit.sv:4:15
-											localparam OUT_BUF = _param_2E16E_OUT_BUF;
-											// Trace: src/VX_dispatch_unit.sv:5:15
-											localparam MAX_FANOUT = 8;
-											// Trace: src/VX_dispatch_unit.sv:7:5
-											wire clk;
-											// Trace: src/VX_dispatch_unit.sv:8:5
-											wire reset;
-											// Trace: src/VX_dispatch_unit.sv:9:5
-											localparam _mbase_dispatch_if = 3;
-											// Trace: src/VX_dispatch_unit.sv:10:5
-											localparam _mbase_execute_if = 0;
-											// Trace: src/VX_dispatch_unit.sv:12:5
-											localparam BLOCK_SIZE_W = 1;
-											// Trace: src/VX_dispatch_unit.sv:13:5
-											localparam NUM_PACKETS = 1;
-											// Trace: src/VX_dispatch_unit.sv:14:5
-											localparam LPID_BITS = 0;
-											// Trace: src/VX_dispatch_unit.sv:15:5
-											localparam LPID_WIDTH = 1;
-											// Trace: src/VX_dispatch_unit.sv:16:5
-											localparam GPID_BITS = 0;
-											// Trace: src/VX_dispatch_unit.sv:17:5
-											localparam GPID_WIDTH = 1;
-											// Trace: src/VX_dispatch_unit.sv:18:5
-											localparam BATCH_COUNT = 1;
-											// Trace: src/VX_dispatch_unit.sv:19:5
-											localparam BATCH_COUNT_W = 1;
-											// Trace: src/VX_dispatch_unit.sv:20:5
-											localparam ISSUE_W = 1;
-											// Trace: src/VX_dispatch_unit.sv:21:5
-											localparam VX_gpu_pkg_ALU_TYPE_BITS = 2;
-											localparam VX_gpu_pkg_INST_ARGS_BITS = 37;
-											localparam VX_gpu_pkg_INST_OP_BITS = 4;
-											localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
-											localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
-											localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
-											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-											localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
-											localparam VX_gpu_pkg_PC_BITS = 30;
-											localparam VX_gpu_pkg_SIMD_COUNT = 1;
-											localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
-											localparam VX_gpu_pkg_SIMD_IDX_W = 1;
-											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam IN_DATAW = 472;
-											// Trace: src/VX_dispatch_unit.sv:22:5
-											localparam VX_gpu_pkg_NW_BITS = 2;
-											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam OUT_DATAW = 472;
-											// Trace: src/VX_dispatch_unit.sv:23:5
-											localparam FANOUT_ENABLE = 1'd0;
-											// Trace: src/VX_dispatch_unit.sv:24:5
-											localparam DATA_TMASK_OFF = 464;
-											// Trace: src/VX_dispatch_unit.sv:25:5
-											localparam DATA_REGS_OFF = 2;
-											// Trace: src/VX_dispatch_unit.sv:26:5
-											// removed localparam type packet_t
-											// Trace: src/VX_dispatch_unit.sv:30:5
-											wire [0:0] dispatch_valid;
-											// Trace: src/VX_dispatch_unit.sv:31:5
-											wire [471:0] dispatch_data;
-											// Trace: src/VX_dispatch_unit.sv:32:5
-											wire [0:0] dispatch_ready;
-											// Trace: src/VX_dispatch_unit.sv:33:5
-											genvar _gv_i_35;
-											for (_gv_i_35 = 0; _gv_i_35 < 1; _gv_i_35 = _gv_i_35 + 1) begin : g_dispatch_data
-												localparam i = _gv_i_35;
-												// Trace: src/VX_dispatch_unit.sv:34:9
-												assign dispatch_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].valid;
-												// Trace: src/VX_dispatch_unit.sv:35:9
-												assign dispatch_data[i * 472+:472] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
-												// Trace: src/VX_dispatch_unit.sv:36:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].ready = dispatch_ready[i];
-											end
-											// Trace: src/VX_dispatch_unit.sv:38:5
-											wire [0:0] block_ready;
-											// Trace: src/VX_dispatch_unit.sv:39:5
-											wire [3:0] block_tmask;
-											// Trace: src/VX_dispatch_unit.sv:40:5
-											wire [383:0] block_rsdata;
-											// Trace: src/VX_dispatch_unit.sv:41:5
-											wire [0:0] block_pid;
-											// Trace: src/VX_dispatch_unit.sv:42:5
-											wire [0:0] block_sop;
-											// Trace: src/VX_dispatch_unit.sv:43:5
-											wire [0:0] block_eop;
-											// Trace: src/VX_dispatch_unit.sv:44:5
-											wire [0:0] block_done;
-											// Trace: src/VX_dispatch_unit.sv:45:5
-											wire batch_done = &block_done;
-											// Trace: src/VX_dispatch_unit.sv:46:5
-											wire [0:0] batch_idx;
-											// Trace: src/VX_dispatch_unit.sv:47:5
-											if (1) begin : g_batch_idx_0
-												// Trace: src/VX_dispatch_unit.sv:73:9
-												assign batch_idx = 0;
-											end
-											// Trace: src/VX_dispatch_unit.sv:75:5
-											wire [0:0] issue_indices;
-											// Trace: src/VX_dispatch_unit.sv:76:5
-											genvar _gv_block_idx_2;
-											for (_gv_block_idx_2 = 0; _gv_block_idx_2 < BLOCK_SIZE; _gv_block_idx_2 = _gv_block_idx_2 + 1) begin : g_issue_indices
-												localparam block_idx = _gv_block_idx_2;
-												// Trace: src/VX_dispatch_unit.sv:77:9
-												assign issue_indices[block_idx+:1] = sv2v_cast_1(batch_idx * BLOCK_SIZE) + sv2v_cast_1_signed(block_idx);
-											end
-											// Trace: src/VX_dispatch_unit.sv:79:5
-											genvar _gv_block_idx_3;
-											localparam VX_gpu_pkg_ISSUE_ISW_BITS = 0;
-											localparam VX_gpu_pkg_ISSUE_ISW_W = 1;
-											function automatic [1:0] VX_gpu_pkg_wis_to_wid;
-												// Trace: src/VX_gpu_pkg.sv:264:9
-												input reg [1:0] wis;
-												// Trace: src/VX_gpu_pkg.sv:265:9
-												input reg [0:0] isw;
-												// Trace: src/VX_gpu_pkg.sv:267:9
-												begin
-													// Trace: src/VX_gpu_pkg.sv:270:13
-													VX_gpu_pkg_wis_to_wid = wis;
-												end
-											endfunction
-											for (_gv_block_idx_3 = 0; _gv_block_idx_3 < BLOCK_SIZE; _gv_block_idx_3 = _gv_block_idx_3 + 1) begin : g_blocks
-												localparam block_idx = _gv_block_idx_3;
-												// Trace: src/VX_dispatch_unit.sv:80:9
-												wire [0:0] issue_idx = issue_indices[block_idx+:1];
-												// Trace: src/VX_dispatch_unit.sv:81:9
-												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 472) + 469+:VX_gpu_pkg_ISSUE_WIS_W];
-												// Trace: src/VX_dispatch_unit.sv:82:9
-												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 472) + 468+:VX_gpu_pkg_SIMD_IDX_W];
-												// Trace: src/VX_dispatch_unit.sv:83:9
-												wire dispatch_sop = dispatch_data[(issue_idx * 472) + 1];
-												// Trace: src/VX_dispatch_unit.sv:84:9
-												wire dispatch_eop = dispatch_data[issue_idx * 472];
-												// Trace: src/VX_dispatch_unit.sv:85:9
-												wire [3:0] dispatch_tmask;
-												// Trace: src/VX_dispatch_unit.sv:86:9
-												wire [383:0] dispatch_rsdata;
-												// Trace: src/VX_dispatch_unit.sv:87:9
-												assign dispatch_tmask = dispatch_data[(issue_idx * 472) + DATA_TMASK_OFF+:4];
-												// Trace: src/VX_dispatch_unit.sv:88:9
-												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 472) + 258+:128];
-												// Trace: src/VX_dispatch_unit.sv:89:9
-												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 472) + 130+:128];
-												// Trace: src/VX_dispatch_unit.sv:90:9
-												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 472) + 2+:128];
-												// Trace: src/VX_dispatch_unit.sv:91:9
-												wire valid_p;
-												wire ready_p;
-												if (1) begin : g_full_simd
-													// Trace: src/VX_dispatch_unit.sv:132:13
-													assign valid_p = dispatch_valid[issue_idx];
-													// Trace: src/VX_dispatch_unit.sv:133:13
-													assign block_tmask[block_idx * 4+:4] = dispatch_tmask;
-													// Trace: src/VX_dispatch_unit.sv:134:13
-													assign block_rsdata[32 * (4 * (block_idx * 3))+:384] = dispatch_rsdata;
-													// Trace: src/VX_dispatch_unit.sv:135:13
-													assign block_pid[block_idx+:1] = 0;
-													// Trace: src/VX_dispatch_unit.sv:136:13
-													assign block_sop[block_idx] = 1;
-													// Trace: src/VX_dispatch_unit.sv:137:13
-													assign block_eop[block_idx] = 1;
-													// Trace: src/VX_dispatch_unit.sv:138:13
-													assign block_ready[block_idx] = ready_p;
-													// Trace: src/VX_dispatch_unit.sv:139:13
-													assign block_done[block_idx] = ready_p || ~valid_p;
-												end
-												// Trace: src/VX_dispatch_unit.sv:141:9
-												wire [0:0] isw;
-												if (1) begin : g_isw
-													// Trace: src/VX_dispatch_unit.sv:149:13
-													assign isw = block_idx;
-												end
-												// Trace: src/VX_dispatch_unit.sv:151:9
-												wire [1:0] block_wid = VX_gpu_pkg_wis_to_wid(dispatch_wis, isw);
-												// Trace: src/VX_dispatch_unit.sv:152:9
-												wire [0:0] warp_pid = block_pid[block_idx+:1] + sv2v_cast_1(dispatch_sid * NUM_PACKETS);
-												// Trace: src/VX_dispatch_unit.sv:153:9
-												wire warp_sop = block_sop[block_idx] && dispatch_sop;
-												// Trace: src/VX_dispatch_unit.sv:154:9
-												wire warp_eop = block_eop[block_idx] && dispatch_eop;
-												// Trace: src/VX_dispatch_unit.sv:155:9
-												VX_elastic_buffer #(
-													.DATAW(OUT_DATAW),
-													.SIZE(((OUT_BUF & 7) < 2 ? OUT_BUF & 7 : 2)),
-													.OUT_REG(((OUT_BUF & 7) < 2 ? OUT_BUF & 7 : (OUT_BUF & 7) - 2))
-												) buf_out(
-													.clk(clk),
-													.reset(reset),
-													.valid_in(valid_p),
-													.ready_in(ready_p),
-													.data_in({dispatch_data[(issue_idx * 472) + 471-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 472) + 463-:78], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
-													.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_unit.per_block_execute_if[block_idx + _mbase_execute_if].data),
-													.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_unit.per_block_execute_if[block_idx + _mbase_execute_if].valid),
-													.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_unit.per_block_execute_if[block_idx + _mbase_execute_if].ready)
-												);
-											end
-											// Trace: src/VX_dispatch_unit.sv:180:5
-											reg [0:0] ready_in;
-											// Trace: src/VX_dispatch_unit.sv:181:5
-											always @(*) begin
-												// Trace: src/VX_dispatch_unit.sv:182:9
-												ready_in = 0;
-												// Trace: src/VX_dispatch_unit.sv:183:9
-												begin : sv2v_autoblock_15
-													// Trace: src/VX_dispatch_unit.sv:183:14
-													integer block_idx;
-													// Trace: src/VX_dispatch_unit.sv:183:14
-													for (block_idx = 0; block_idx < BLOCK_SIZE; block_idx = block_idx + 1)
-														begin
-															// Trace: src/VX_dispatch_unit.sv:184:13
-															ready_in[issue_indices[block_idx+:1]] = block_ready[block_idx] && block_eop[block_idx];
-														end
-												end
-											end
-											// Trace: src/VX_dispatch_unit.sv:187:5
-											assign dispatch_ready = ready_in;
-										end
-										assign dispatch_unit.clk = clk;
-										assign dispatch_unit.reset = reset;
-										// Trace: src/VX_fpu_unit.sv:30:5
-										// expanded interface instance: per_block_result_if
-										localparam _param_911F6_NUM_LANES = NUM_LANES;
-										genvar _arr_911F6;
-										for (_arr_911F6 = 0; _arr_911F6 <= 0; _arr_911F6 = _arr_911F6 + 1) begin : per_block_result_if
-											// removed import VX_gpu_pkg::*;
-											// Trace: src/VX_result_if.sv:2:15
-											localparam NUM_LANES = _param_911F6_NUM_LANES;
-											// Trace: src/VX_result_if.sv:3:15
-											localparam PID_WIDTH = 1;
-											// Trace: src/VX_result_if.sv:5:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
-											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-											localparam VX_gpu_pkg_NW_BITS = 2;
-											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam VX_gpu_pkg_PC_BITS = 30;
-											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											// removed localparam type data_t
-											// Trace: src/VX_result_if.sv:17:5
-											wire valid;
-											// Trace: src/VX_result_if.sv:18:5
-											wire [174:0] data;
-											// Trace: src/VX_result_if.sv:19:5
-											wire ready;
-											// Trace: src/VX_result_if.sv:20:5
-											// Trace: src/VX_result_if.sv:25:5
-										end
-										// Trace: src/VX_fpu_unit.sv:33:5
-										genvar _gv_block_idx_4;
-										// removed localparam type VX_fpu_pkg_fflags_t
-										localparam VX_gpu_pkg_INST_FMT_BITS = 2;
-										localparam VX_gpu_pkg_INST_FPU_MISC = 4'b1110;
-										localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-										localparam VX_gpu_pkg_INST_FRM_DYN = 3'b111;
-										for (_gv_block_idx_4 = 0; _gv_block_idx_4 < BLOCK_SIZE; _gv_block_idx_4 = _gv_block_idx_4 + 1) begin : g_blocks
-											localparam block_idx = _gv_block_idx_4;
-											// Trace: src/VX_fpu_unit.sv:34:9
-											wire fpu_req_valid;
-											wire fpu_req_ready;
-											// Trace: src/VX_fpu_unit.sv:35:9
-											wire fpu_rsp_valid;
-											wire fpu_rsp_ready;
-											// Trace: src/VX_fpu_unit.sv:36:9
-											wire [127:0] fpu_rsp_result;
-											// Trace: src/VX_fpu_unit.sv:37:9
-											wire [4:0] fpu_rsp_fflags;
-											// Trace: src/VX_fpu_unit.sv:38:9
-											wire fpu_rsp_has_fflags;
-											// Trace: src/VX_fpu_unit.sv:39:9
-											wire [0:0] fpu_rsp_uuid;
-											// Trace: src/VX_fpu_unit.sv:40:9
-											wire [1:0] fpu_rsp_wid;
-											// Trace: src/VX_fpu_unit.sv:41:9
-											wire [3:0] fpu_rsp_tmask;
-											// Trace: src/VX_fpu_unit.sv:42:9
-											wire [29:0] fpu_rsp_PC;
-											// Trace: src/VX_fpu_unit.sv:43:9
-											wire [5:0] fpu_rsp_rd;
-											// Trace: src/VX_fpu_unit.sv:44:9
-											wire [0:0] fpu_rsp_pid;
-											wire [0:0] fpu_rsp_pid_u;
-											// Trace: src/VX_fpu_unit.sv:45:9
-											wire fpu_rsp_sop;
-											wire fpu_rsp_sop_u;
-											// Trace: src/VX_fpu_unit.sv:46:9
-											wire fpu_rsp_eop;
-											wire fpu_rsp_eop_u;
-											// Trace: src/VX_fpu_unit.sv:47:9
-											wire [0:0] fpu_req_tag;
-											wire [0:0] fpu_rsp_tag;
-											// Trace: src/VX_fpu_unit.sv:48:9
-											wire mdata_full;
-											// Trace: src/VX_fpu_unit.sv:49:9
-											wire [1:0] fpu_fmt = per_block_execute_if[block_idx].data[395-:2];
-											// Trace: src/VX_fpu_unit.sv:50:9
-											wire [2:0] fpu_frm = per_block_execute_if[block_idx].data[398-:3];
-											// Trace: src/VX_fpu_unit.sv:51:9
-											wire execute_fire = per_block_execute_if[block_idx].valid && per_block_execute_if[block_idx].ready;
-											// Trace: src/VX_fpu_unit.sv:52:9
-											wire fpu_rsp_fire = fpu_rsp_valid && fpu_rsp_ready;
-											// Trace: src/VX_fpu_unit.sv:53:9
-											VX_index_buffer #(
-												.DATAW(IBUF_DATAW),
-												.SIZE(2)
-											) tag_store(
-												.clk(clk),
-												.reset(reset),
-												.acquire_en(execute_fire),
-												.write_addr(fpu_req_tag),
-												.write_data({per_block_execute_if[block_idx].data[471], per_block_execute_if[block_idx].data[470-:2], per_block_execute_if[block_idx].data[468-:4], per_block_execute_if[block_idx].data[464-:30], per_block_execute_if[block_idx].data[392-:6], per_block_execute_if[block_idx].data[2], per_block_execute_if[block_idx].data[1], per_block_execute_if[block_idx].data[0]}),
-												.read_data({fpu_rsp_uuid, fpu_rsp_wid, fpu_rsp_tmask, fpu_rsp_PC, fpu_rsp_rd, fpu_rsp_pid_u, fpu_rsp_sop_u, fpu_rsp_eop_u}),
-												.read_addr(fpu_rsp_tag),
-												.release_en(fpu_rsp_fire),
-												.full(mdata_full),
-												.empty()
-											);
-											if (1) begin : g_fpu_rsp_no_pid
-												// Trace: src/VX_fpu_unit.sv:73:13
-												assign fpu_rsp_pid = 0;
-												// Trace: src/VX_fpu_unit.sv:74:13
-												assign fpu_rsp_sop = 1;
-												// Trace: src/VX_fpu_unit.sv:75:13
-												assign fpu_rsp_eop = 1;
-											end
-											// Trace: src/VX_fpu_unit.sv:77:9
-											wire [2:0] fpu_req_frm;
-											if (1) begin : genblk2
-												// Trace: src/VX_fpu_unit.sv:86:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[block_idx + _mbase_fpu_csr_if].read_wid = per_block_execute_if[block_idx].data[470-:2];
-											end
-											// Trace: src/VX_fpu_unit.sv:89:9
-											assign fpu_req_frm = ((per_block_execute_if[block_idx].data[434-:4] != VX_gpu_pkg_INST_FPU_MISC) && (fpu_frm == VX_gpu_pkg_INST_FRM_DYN) ? Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[block_idx + _mbase_fpu_csr_if].read_frm : fpu_frm);
-											// Trace: src/VX_fpu_unit.sv:91:9
-											assign fpu_req_valid = per_block_execute_if[block_idx].valid && ~mdata_full;
-											// Trace: src/VX_fpu_unit.sv:92:9
-											assign per_block_execute_if[block_idx].ready = fpu_req_ready && ~mdata_full;
-											// Trace: src/VX_fpu_unit.sv:93:9
-											VX_fpu_dsp #(
-												.NUM_LANES(NUM_LANES),
-												.TAG_WIDTH(TAG_WIDTH),
-												.OUT_BUF((PARTIAL_BW ? 1 : 3))
-											) fpu_dsp(
-												.clk(clk),
-												.reset(reset),
-												.valid_in(fpu_req_valid),
-												.mask_in(per_block_execute_if[block_idx].data[468-:4]),
-												.op_type(per_block_execute_if[block_idx].data[434-:4]),
-												.fmt(fpu_fmt),
-												.frm(fpu_req_frm),
-												.dataa(per_block_execute_if[block_idx].data[386-:128]),
-												.datab(per_block_execute_if[block_idx].data[258-:128]),
-												.datac(per_block_execute_if[block_idx].data[130-:128]),
-												.tag_in(fpu_req_tag),
-												.ready_in(fpu_req_ready),
-												.valid_out(fpu_rsp_valid),
-												.result(fpu_rsp_result),
-												.has_fflags(fpu_rsp_has_fflags),
-												.fflags(fpu_rsp_fflags),
-												.tag_out(fpu_rsp_tag),
-												.ready_out(fpu_rsp_ready)
-											);
-											// Trace: src/VX_fpu_unit.sv:117:9
-											wire [4:0] fpu_rsp_fflags_q;
-											if (1) begin : g_fflags_no_pid
-												// Trace: src/VX_fpu_unit.sv:129:13
-												assign fpu_rsp_fflags_q = fpu_rsp_fflags;
-											end
-											// Trace: src/VX_fpu_unit.sv:131:9
-											// expanded interface instance: fpu_csr_tmp_if
-											if (1) begin : fpu_csr_tmp_if
-												// removed import VX_gpu_pkg::*;
-												// removed import VX_fpu_pkg::*;
-												// Trace: src/VX_fpu_csr_if.sv:2:5
-												wire write_enable;
-												// Trace: src/VX_fpu_csr_if.sv:3:5
-												localparam VX_gpu_pkg_NW_BITS = 2;
-												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-												wire [1:0] write_wid;
-												// Trace: src/VX_fpu_csr_if.sv:4:5
-												// removed localparam type VX_fpu_pkg_fflags_t
-												wire [4:0] write_fflags;
-												// Trace: src/VX_fpu_csr_if.sv:5:5
-												wire [1:0] read_wid;
-												// Trace: src/VX_fpu_csr_if.sv:6:5
-												localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-												wire [2:0] read_frm;
-												// Trace: src/VX_fpu_csr_if.sv:7:5
-												// Trace: src/VX_fpu_csr_if.sv:14:5
-											end
-											// Trace: src/VX_fpu_unit.sv:132:9
-											assign fpu_csr_tmp_if.write_enable = (fpu_rsp_fire && fpu_rsp_eop) && fpu_rsp_has_fflags;
-											if (1) begin : genblk4
-												// Trace: src/VX_fpu_unit.sv:141:9
-												assign fpu_csr_tmp_if.write_wid = fpu_rsp_wid;
-											end
-											// Trace: src/VX_fpu_unit.sv:144:9
-											assign fpu_csr_tmp_if.write_fflags = fpu_rsp_fflags_q;
-											// Trace: src/VX_fpu_unit.sv:145:10
-											VX_pipe_register #(
-												.DATAW(8),
-												.RESETW(1)
-											) fpu_csr_reg(
-												.clk(clk),
-												.reset(reset),
-												.enable(1'b1),
-												.data_in({fpu_csr_tmp_if.write_enable, fpu_csr_tmp_if.write_wid, fpu_csr_tmp_if.write_fflags}),
-												.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[block_idx + _mbase_fpu_csr_if].write_enable, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[block_idx + _mbase_fpu_csr_if].write_wid, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[block_idx + _mbase_fpu_csr_if].write_fflags})
-											);
-											// Trace: src/VX_fpu_unit.sv:155:9
-											VX_elastic_buffer #(
-												.DATAW(174),
-												.SIZE(0)
-											) rsp_buf(
-												.clk(clk),
-												.reset(reset),
-												.valid_in(fpu_rsp_valid),
-												.ready_in(fpu_rsp_ready),
-												.data_in({fpu_rsp_uuid, fpu_rsp_wid, fpu_rsp_tmask, fpu_rsp_PC, fpu_rsp_rd, fpu_rsp_pid, fpu_rsp_sop, fpu_rsp_eop, fpu_rsp_result}),
-												.data_out({per_block_result_if[block_idx].data[174], per_block_result_if[block_idx].data[173-:2], per_block_result_if[block_idx].data[171-:4], per_block_result_if[block_idx].data[167-:30], per_block_result_if[block_idx].data[136-:6], per_block_result_if[block_idx].data[2], per_block_result_if[block_idx].data[1], per_block_result_if[block_idx].data[0], per_block_result_if[block_idx].data[130-:128]}),
-												.valid_out(per_block_result_if[block_idx].valid),
-												.ready_out(per_block_result_if[block_idx].ready)
-											);
-											// Trace: src/VX_fpu_unit.sv:168:9
-											assign per_block_result_if[block_idx].data[137] = 1'b1;
-										end
-										// Trace: src/VX_fpu_unit.sv:170:5
-										// expanded module instance: gather_unit
-										localparam _bbase_8E516_result_if = 0;
-										localparam _bbase_8E516_commit_if = 3;
-										localparam _param_8E516_BLOCK_SIZE = BLOCK_SIZE;
-										localparam _param_8E516_NUM_LANES = NUM_LANES;
-										localparam _param_8E516_OUT_BUF = (PARTIAL_BW ? 3 : 0);
-										if (1) begin : gather_unit
-											// removed import VX_gpu_pkg::*;
-											// Trace: src/VX_gather_unit.sv:2:15
-											localparam BLOCK_SIZE = _param_8E516_BLOCK_SIZE;
-											// Trace: src/VX_gather_unit.sv:3:15
-											localparam NUM_LANES = _param_8E516_NUM_LANES;
-											// Trace: src/VX_gather_unit.sv:4:15
-											localparam OUT_BUF = _param_8E516_OUT_BUF;
-											// Trace: src/VX_gather_unit.sv:6:5
-											wire clk;
-											// Trace: src/VX_gather_unit.sv:7:5
-											wire reset;
-											// Trace: src/VX_gather_unit.sv:8:5
-											localparam _mbase_result_if = 0;
-											// Trace: src/VX_gather_unit.sv:9:5
-											localparam _mbase_commit_if = 3;
-											// Trace: src/VX_gather_unit.sv:11:5
-											localparam BLOCK_SIZE_W = 1;
-											// Trace: src/VX_gather_unit.sv:12:5
-											localparam NUM_PACKETS = 1;
-											// Trace: src/VX_gather_unit.sv:13:5
-											localparam LPID_BITS = 0;
-											// Trace: src/VX_gather_unit.sv:14:5
-											localparam LPID_WIDTH = 1;
-											// Trace: src/VX_gather_unit.sv:15:5
-											localparam GPID_BITS = 0;
-											// Trace: src/VX_gather_unit.sv:16:5
-											localparam GPID_WIDTH = 1;
-											// Trace: src/VX_gather_unit.sv:17:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
-											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-											localparam VX_gpu_pkg_NW_BITS = 2;
-											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam VX_gpu_pkg_PC_BITS = 30;
-											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam DATAW = 175;
-											// Trace: src/VX_gather_unit.sv:18:5
-											localparam DATA_WIS_OFF = 172;
-											// Trace: src/VX_gather_unit.sv:19:5
-											wire [0:0] result_in_valid;
-											// Trace: src/VX_gather_unit.sv:20:5
-											wire [174:0] result_in_data;
-											// Trace: src/VX_gather_unit.sv:21:5
-											wire [0:0] result_in_ready;
-											// Trace: src/VX_gather_unit.sv:22:5
-											localparam VX_gpu_pkg_ISSUE_ISW_BITS = 0;
-											localparam VX_gpu_pkg_ISSUE_ISW_W = 1;
-											wire [0:0] result_in_isw;
-											// Trace: src/VX_gather_unit.sv:23:5
-											genvar _gv_i_60;
-											for (_gv_i_60 = 0; _gv_i_60 < BLOCK_SIZE; _gv_i_60 = _gv_i_60 + 1) begin : g_commit_in
-												localparam i = _gv_i_60;
-												// Trace: src/VX_gather_unit.sv:24:9
-												assign result_in_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_unit.per_block_result_if[i + _mbase_result_if].valid;
-												// Trace: src/VX_gather_unit.sv:25:9
-												assign result_in_data[i * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_unit.per_block_result_if[i + _mbase_result_if].data;
-												// Trace: src/VX_gather_unit.sv:26:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_unit.per_block_result_if[i + _mbase_result_if].ready = result_in_ready[i];
-												if (1) begin : g_result_in_isw_full
-													// Trace: src/VX_gather_unit.sv:34:13
-													assign result_in_isw[i+:1] = sv2v_cast_1_signed(i);
-												end
-											end
-											// Trace: src/VX_gather_unit.sv:37:5
-											reg [0:0] result_out_valid;
-											// Trace: src/VX_gather_unit.sv:38:5
-											reg [174:0] result_out_data;
-											// Trace: src/VX_gather_unit.sv:39:5
-											wire [0:0] result_out_ready;
-											// Trace: src/VX_gather_unit.sv:40:5
-											always @(*) begin
-												// Trace: src/VX_gather_unit.sv:41:9
-												result_out_valid = 1'sb0;
-												// Trace: src/VX_gather_unit.sv:42:9
-												begin : sv2v_autoblock_16
-													// Trace: src/VX_gather_unit.sv:42:14
-													integer i;
-													// Trace: src/VX_gather_unit.sv:42:14
-													for (i = 0; i < 1; i = i + 1)
-														begin
-															// Trace: src/VX_gather_unit.sv:43:13
-															result_out_data[i * 175+:175] = 1'sbx;
-														end
-												end
-												begin : sv2v_autoblock_17
-													// Trace: src/VX_gather_unit.sv:45:14
-													integer i;
-													// Trace: src/VX_gather_unit.sv:45:14
-													for (i = 0; i < BLOCK_SIZE; i = i + 1)
-														begin
-															// Trace: src/VX_gather_unit.sv:46:13
-															result_out_valid[result_in_isw[i+:1]] = result_in_valid[i];
-															// Trace: src/VX_gather_unit.sv:47:13
-															result_out_data[result_in_isw[i+:1] * 175+:175] = result_in_data[i * 175+:175];
-														end
-												end
-											end
-											// Trace: src/VX_gather_unit.sv:50:5
-											genvar _gv_i_61;
-											for (_gv_i_61 = 0; _gv_i_61 < BLOCK_SIZE; _gv_i_61 = _gv_i_61 + 1) begin : g_result_in_ready
-												localparam i = _gv_i_61;
-												// Trace: src/VX_gather_unit.sv:51:9
-												assign result_in_ready[i] = result_out_ready[result_in_isw[i+:1]];
-											end
-											// Trace: src/VX_gather_unit.sv:53:5
-											genvar _gv_i_62;
-											localparam VX_gpu_pkg_SIMD_COUNT = 1;
-											localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
-											localparam VX_gpu_pkg_SIMD_IDX_W = 1;
-											for (_gv_i_62 = 0; _gv_i_62 < 1; _gv_i_62 = _gv_i_62 + 1) begin : g_out_bufs
-												localparam i = _gv_i_62;
-												// Trace: src/VX_gather_unit.sv:54:9
-												// expanded interface instance: result_tmp_if
-												localparam _param_D4A7C_NUM_LANES = NUM_LANES;
-												if (1) begin : result_tmp_if
-													// removed import VX_gpu_pkg::*;
-													// Trace: src/VX_result_if.sv:2:15
-													localparam NUM_LANES = _param_D4A7C_NUM_LANES;
-													// Trace: src/VX_result_if.sv:3:15
-													localparam PID_WIDTH = 1;
-													// Trace: src/VX_result_if.sv:5:5
-													localparam VX_gpu_pkg_REG_TYPES = 2;
-													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
-													localparam VX_gpu_pkg_NW_BITS = 2;
-													localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-													localparam VX_gpu_pkg_PC_BITS = 30;
-													localparam VX_gpu_pkg_UUID_WIDTH = 1;
-													// removed localparam type data_t
-													// Trace: src/VX_result_if.sv:17:5
-													wire valid;
-													// Trace: src/VX_result_if.sv:18:5
-													wire [174:0] data;
-													// Trace: src/VX_result_if.sv:19:5
-													wire ready;
-													// Trace: src/VX_result_if.sv:20:5
-													// Trace: src/VX_result_if.sv:25:5
-												end
-												// Trace: src/VX_gather_unit.sv:57:9
-												VX_elastic_buffer #(
-													.DATAW(DATAW),
-													.SIZE(((OUT_BUF & 7) < 2 ? OUT_BUF & 7 : 2)),
-													.OUT_REG(((OUT_BUF & 7) < 2 ? OUT_BUF & 7 : (OUT_BUF & 7) - 2))
-												) out_buf(
-													.clk(clk),
-													.reset(reset),
-													.valid_in(result_out_valid[i]),
-													.ready_in(result_out_ready[i]),
-													.data_in(result_out_data[i * 175+:175]),
-													.data_out(result_tmp_if.data),
-													.valid_out(result_tmp_if.valid),
-													.ready_out(result_tmp_if.ready)
-												);
-												// Trace: src/VX_gather_unit.sv:71:9
-												wire [0:0] commit_sid_w;
-												// Trace: src/VX_gather_unit.sv:72:9
-												wire [3:0] commit_tmask_w;
-												// Trace: src/VX_gather_unit.sv:73:9
-												wire [127:0] commit_data_w;
-												if (1) begin : g_no_lpid
-													// Trace: src/VX_gather_unit.sv:91:13
-													assign commit_sid_w = result_tmp_if.data[2];
-													// Trace: src/VX_gather_unit.sv:92:13
-													assign commit_tmask_w = result_tmp_if.data[171-:4];
-													// Trace: src/VX_gather_unit.sv:93:13
-													assign commit_data_w = result_tmp_if.data[130-:128];
-												end
-												// Trace: src/VX_gather_unit.sv:95:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].valid = result_tmp_if.valid;
-												// Trace: src/VX_gather_unit.sv:96:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[174], result_tmp_if.data[173-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[167-:30], result_tmp_if.data[137], result_tmp_if.data[136-:6], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
-												// Trace: src/VX_gather_unit.sv:108:9
-												assign result_tmp_if.ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].ready;
-											end
-										end
-										assign gather_unit.clk = clk;
-										assign gather_unit.reset = reset;
-									end
-									assign fpu_unit.clk = clk;
-									assign fpu_unit.reset = reset;
-									// Trace: src/VX_execute.sv:45:5
+									// Trace: src/VX_execute.sv:35:5
 									// expanded module instance: sfu_unit
 									localparam _bbase_6660E_dispatch_if = 2;
 									localparam _bbase_6660E_commit_if = 2;
-									localparam _bbase_6660E_fpu_csr_if = 0;
 									localparam _param_6660E_INSTANCE_ID = "";
 									localparam _param_6660E_CORE_ID = CORE_ID;
 									if (1) begin : sfu_unit
@@ -23685,28 +20331,26 @@ module Vortex (
 										// Trace: src/VX_sfu_unit.sv:8:5
 										localparam _mbase_dispatch_if = 2;
 										// Trace: src/VX_sfu_unit.sv:9:5
-										localparam _mbase_fpu_csr_if = 0;
-										// Trace: src/VX_sfu_unit.sv:10:5
 										// removed modport instance commit_csr_if
-										// Trace: src/VX_sfu_unit.sv:11:5
+										// Trace: src/VX_sfu_unit.sv:10:5
 										// removed modport instance sched_csr_if
-										// Trace: src/VX_sfu_unit.sv:12:5
+										// Trace: src/VX_sfu_unit.sv:11:5
 										localparam _mbase_commit_if = 2;
-										// Trace: src/VX_sfu_unit.sv:13:5
+										// Trace: src/VX_sfu_unit.sv:12:5
 										// removed modport instance warp_ctl_if
-										// Trace: src/VX_sfu_unit.sv:15:5
+										// Trace: src/VX_sfu_unit.sv:14:5
 										localparam BLOCK_SIZE = 1;
-										// Trace: src/VX_sfu_unit.sv:16:5
+										// Trace: src/VX_sfu_unit.sv:15:5
 										localparam NUM_LANES = 4;
-										// Trace: src/VX_sfu_unit.sv:17:5
+										// Trace: src/VX_sfu_unit.sv:16:5
 										localparam PE_COUNT = 2;
-										// Trace: src/VX_sfu_unit.sv:18:5
+										// Trace: src/VX_sfu_unit.sv:17:5
 										localparam PE_SEL_BITS = 1;
-										// Trace: src/VX_sfu_unit.sv:19:5
+										// Trace: src/VX_sfu_unit.sv:18:5
 										localparam PE_IDX_WCTL = 0;
-										// Trace: src/VX_sfu_unit.sv:20:5
+										// Trace: src/VX_sfu_unit.sv:19:5
 										localparam PE_IDX_CSRS = 1;
-										// Trace: src/VX_sfu_unit.sv:21:5
+										// Trace: src/VX_sfu_unit.sv:20:5
 										// expanded interface instance: per_block_execute_if
 										localparam _param_E2592_NUM_LANES = NUM_LANES;
 										genvar _arr_E2592;
@@ -23718,10 +20362,10 @@ module Vortex (
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_execute_if.sv:5:5
 											localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -23741,13 +20385,13 @@ module Vortex (
 											// Trace: src/VX_execute_if.sv:21:5
 											wire valid;
 											// Trace: src/VX_execute_if.sv:22:5
-											wire [471:0] data;
+											wire [470:0] data;
 											// Trace: src/VX_execute_if.sv:23:5
 											wire ready;
 											// Trace: src/VX_execute_if.sv:24:5
 											// Trace: src/VX_execute_if.sv:29:5
 										end
-										// Trace: src/VX_sfu_unit.sv:24:5
+										// Trace: src/VX_sfu_unit.sv:23:5
 										// expanded interface instance: per_block_result_if
 										localparam _param_911F6_NUM_LANES = NUM_LANES;
 										genvar _arr_911F6;
@@ -23758,10 +20402,10 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:3:15
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_result_if.sv:5:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -23770,13 +20414,13 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:17:5
 											wire valid;
 											// Trace: src/VX_result_if.sv:18:5
-											wire [174:0] data;
+											wire [173:0] data;
 											// Trace: src/VX_result_if.sv:19:5
 											wire ready;
 											// Trace: src/VX_result_if.sv:20:5
 											// Trace: src/VX_result_if.sv:25:5
 										end
-										// Trace: src/VX_sfu_unit.sv:27:5
+										// Trace: src/VX_sfu_unit.sv:26:5
 										// expanded module instance: dispatch_unit
 										localparam _bbase_2E16E_dispatch_if = 2;
 										localparam _bbase_2E16E_execute_if = 0;
@@ -23826,25 +20470,25 @@ module Vortex (
 											localparam VX_gpu_pkg_PER_ISSUE_WARPS = 4;
 											localparam VX_gpu_pkg_ISSUE_WIS_BITS = 2;
 											localparam VX_gpu_pkg_ISSUE_WIS_W = VX_gpu_pkg_ISSUE_WIS_BITS;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NUM_SRC_OPDS = 3;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_SIMD_COUNT = 1;
 											localparam VX_gpu_pkg_SIMD_IDX_BITS = 0;
 											localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam IN_DATAW = 472;
+											localparam IN_DATAW = 471;
 											// Trace: src/VX_dispatch_unit.sv:22:5
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
-											localparam OUT_DATAW = 472;
+											localparam OUT_DATAW = 471;
 											// Trace: src/VX_dispatch_unit.sv:23:5
 											localparam FANOUT_ENABLE = 1'd0;
 											// Trace: src/VX_dispatch_unit.sv:24:5
-											localparam DATA_TMASK_OFF = 464;
+											localparam DATA_TMASK_OFF = 463;
 											// Trace: src/VX_dispatch_unit.sv:25:5
 											localparam DATA_REGS_OFF = 2;
 											// Trace: src/VX_dispatch_unit.sv:26:5
@@ -23852,7 +20496,7 @@ module Vortex (
 											// Trace: src/VX_dispatch_unit.sv:30:5
 											wire [0:0] dispatch_valid;
 											// Trace: src/VX_dispatch_unit.sv:31:5
-											wire [471:0] dispatch_data;
+											wire [470:0] dispatch_data;
 											// Trace: src/VX_dispatch_unit.sv:32:5
 											wire [0:0] dispatch_ready;
 											// Trace: src/VX_dispatch_unit.sv:33:5
@@ -23862,7 +20506,7 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:34:9
 												assign dispatch_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].valid;
 												// Trace: src/VX_dispatch_unit.sv:35:9
-												assign dispatch_data[i * 472+:472] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
+												assign dispatch_data[i * 471+:471] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].data;
 												// Trace: src/VX_dispatch_unit.sv:36:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.dispatch_if[i + _mbase_dispatch_if].ready = dispatch_ready[i];
 											end
@@ -23918,25 +20562,25 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:80:9
 												wire [0:0] issue_idx = issue_indices[block_idx+:1];
 												// Trace: src/VX_dispatch_unit.sv:81:9
-												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 472) + 469+:VX_gpu_pkg_ISSUE_WIS_W];
+												wire [1:0] dispatch_wis = dispatch_data[(issue_idx * 471) + 468+:VX_gpu_pkg_ISSUE_WIS_W];
 												// Trace: src/VX_dispatch_unit.sv:82:9
-												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 472) + 468+:VX_gpu_pkg_SIMD_IDX_W];
+												wire [0:0] dispatch_sid = dispatch_data[(issue_idx * 471) + 467+:VX_gpu_pkg_SIMD_IDX_W];
 												// Trace: src/VX_dispatch_unit.sv:83:9
-												wire dispatch_sop = dispatch_data[(issue_idx * 472) + 1];
+												wire dispatch_sop = dispatch_data[(issue_idx * 471) + 1];
 												// Trace: src/VX_dispatch_unit.sv:84:9
-												wire dispatch_eop = dispatch_data[issue_idx * 472];
+												wire dispatch_eop = dispatch_data[issue_idx * 471];
 												// Trace: src/VX_dispatch_unit.sv:85:9
 												wire [3:0] dispatch_tmask;
 												// Trace: src/VX_dispatch_unit.sv:86:9
 												wire [383:0] dispatch_rsdata;
 												// Trace: src/VX_dispatch_unit.sv:87:9
-												assign dispatch_tmask = dispatch_data[(issue_idx * 472) + DATA_TMASK_OFF+:4];
+												assign dispatch_tmask = dispatch_data[(issue_idx * 471) + DATA_TMASK_OFF+:4];
 												// Trace: src/VX_dispatch_unit.sv:88:9
-												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 472) + 258+:128];
+												assign dispatch_rsdata[0+:128] = dispatch_data[(issue_idx * 471) + 258+:128];
 												// Trace: src/VX_dispatch_unit.sv:89:9
-												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 472) + 130+:128];
+												assign dispatch_rsdata[128+:128] = dispatch_data[(issue_idx * 471) + 130+:128];
 												// Trace: src/VX_dispatch_unit.sv:90:9
-												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 472) + 2+:128];
+												assign dispatch_rsdata[256+:128] = dispatch_data[(issue_idx * 471) + 2+:128];
 												// Trace: src/VX_dispatch_unit.sv:91:9
 												wire valid_p;
 												wire ready_p;
@@ -23982,7 +20626,7 @@ module Vortex (
 													.reset(reset),
 													.valid_in(valid_p),
 													.ready_in(ready_p),
-													.data_in({dispatch_data[(issue_idx * 472) + 471-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 472) + 463-:78], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
+													.data_in({dispatch_data[(issue_idx * 471) + 470-:VX_gpu_pkg_UUID_WIDTH], block_wid, block_tmask[block_idx * 4+:4], dispatch_data[(issue_idx * 471) + 462-:77], block_rsdata[32 * ((block_idx * 3) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 1) * 4)+:128], block_rsdata[32 * (((block_idx * 3) + 2) * 4)+:128], warp_pid, warp_sop, warp_eop}),
 													.data_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_execute_if[block_idx + _mbase_execute_if].data),
 													.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_execute_if[block_idx + _mbase_execute_if].valid),
 													.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_execute_if[block_idx + _mbase_execute_if].ready)
@@ -23995,7 +20639,7 @@ module Vortex (
 												// Trace: src/VX_dispatch_unit.sv:182:9
 												ready_in = 0;
 												// Trace: src/VX_dispatch_unit.sv:183:9
-												begin : sv2v_autoblock_18
+												begin : sv2v_autoblock_14
 													// Trace: src/VX_dispatch_unit.sv:183:14
 													integer block_idx;
 													// Trace: src/VX_dispatch_unit.sv:183:14
@@ -24011,7 +20655,7 @@ module Vortex (
 										end
 										assign dispatch_unit.clk = clk;
 										assign dispatch_unit.reset = reset;
-										// Trace: src/VX_sfu_unit.sv:37:5
+										// Trace: src/VX_sfu_unit.sv:36:5
 										// expanded interface instance: pe_execute_if
 										localparam _param_C9035_NUM_LANES = NUM_LANES;
 										genvar _arr_C9035;
@@ -24023,10 +20667,10 @@ module Vortex (
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_execute_if.sv:5:5
 											localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -24046,13 +20690,13 @@ module Vortex (
 											// Trace: src/VX_execute_if.sv:21:5
 											wire valid;
 											// Trace: src/VX_execute_if.sv:22:5
-											wire [471:0] data;
+											wire [470:0] data;
 											// Trace: src/VX_execute_if.sv:23:5
 											wire ready;
 											// Trace: src/VX_execute_if.sv:24:5
 											// Trace: src/VX_execute_if.sv:29:5
 										end
-										// Trace: src/VX_sfu_unit.sv:40:5
+										// Trace: src/VX_sfu_unit.sv:39:5
 										// expanded interface instance: pe_result_if
 										localparam _param_FE18D_NUM_LANES = NUM_LANES;
 										genvar _arr_FE18D;
@@ -24063,10 +20707,10 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:3:15
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_result_if.sv:5:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -24075,15 +20719,15 @@ module Vortex (
 											// Trace: src/VX_result_if.sv:17:5
 											wire valid;
 											// Trace: src/VX_result_if.sv:18:5
-											wire [174:0] data;
+											wire [173:0] data;
 											// Trace: src/VX_result_if.sv:19:5
 											wire ready;
 											// Trace: src/VX_result_if.sv:20:5
 											// Trace: src/VX_result_if.sv:25:5
 										end
-										// Trace: src/VX_sfu_unit.sv:43:5
+										// Trace: src/VX_sfu_unit.sv:42:5
 										reg [0:0] pe_select;
-										// Trace: src/VX_sfu_unit.sv:44:5
+										// Trace: src/VX_sfu_unit.sv:43:5
 										localparam VX_gpu_pkg_INST_SFU_BITS = 4;
 										function automatic VX_gpu_pkg_inst_sfu_is_csr;
 											// Trace: src/VX_gpu_pkg.sv:255:46
@@ -24092,14 +20736,14 @@ module Vortex (
 											VX_gpu_pkg_inst_sfu_is_csr = (op >= 6) && (op <= 8);
 										endfunction
 										always @(*) begin
-											// Trace: src/VX_sfu_unit.sv:45:9
+											// Trace: src/VX_sfu_unit.sv:44:9
 											pe_select = PE_IDX_WCTL;
-											// Trace: src/VX_sfu_unit.sv:46:9
-											if (VX_gpu_pkg_inst_sfu_is_csr(per_block_execute_if[0].data[434-:4]))
-												// Trace: src/VX_sfu_unit.sv:47:13
+											// Trace: src/VX_sfu_unit.sv:45:9
+											if (VX_gpu_pkg_inst_sfu_is_csr(per_block_execute_if[0].data[433-:4]))
+												// Trace: src/VX_sfu_unit.sv:46:13
 												pe_select = PE_IDX_CSRS;
 										end
-										// Trace: src/VX_sfu_unit.sv:50:5
+										// Trace: src/VX_sfu_unit.sv:49:5
 										// expanded module instance: pe_switch
 										localparam _bbase_3D12E_execute_in_if = 0;
 										localparam _bbase_3D12E_result_out_if = 0;
@@ -24144,10 +20788,10 @@ module Vortex (
 											localparam PID_WIDTH = 1;
 											// Trace: src/VX_pe_switch.sv:19:5
 											localparam VX_gpu_pkg_INST_ALU_BITS = 4;
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
@@ -24163,13 +20807,13 @@ module Vortex (
 											// removed localparam type VX_gpu_pkg_lsu_args_t
 											// removed localparam type VX_gpu_pkg_wctl_args_t
 											// removed localparam type VX_gpu_pkg_op_args_t
-											localparam REQ_DATAW = 472;
+											localparam REQ_DATAW = 471;
 											// Trace: src/VX_pe_switch.sv:20:5
-											localparam RSP_DATAW = 175;
+											localparam RSP_DATAW = 174;
 											// Trace: src/VX_pe_switch.sv:21:5
 											wire [1:0] pe_req_valid;
 											// Trace: src/VX_pe_switch.sv:22:5
-											wire [943:0] pe_req_data;
+											wire [941:0] pe_req_data;
 											// Trace: src/VX_pe_switch.sv:23:5
 											wire [1:0] pe_req_ready;
 											// Trace: src/VX_pe_switch.sv:24:5
@@ -24196,14 +20840,14 @@ module Vortex (
 												// Trace: src/VX_pe_switch.sv:41:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[i + _mbase_execute_out_if].valid = pe_req_valid[i];
 												// Trace: src/VX_pe_switch.sv:42:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[i + _mbase_execute_out_if].data = pe_req_data[i * 472+:472];
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[i + _mbase_execute_out_if].data = pe_req_data[i * 471+:471];
 												// Trace: src/VX_pe_switch.sv:43:9
 												assign pe_req_ready[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[i + _mbase_execute_out_if].ready;
 											end
 											// Trace: src/VX_pe_switch.sv:45:5
 											wire [1:0] pe_rsp_valid;
 											// Trace: src/VX_pe_switch.sv:46:5
-											wire [349:0] pe_rsp_data;
+											wire [347:0] pe_rsp_data;
 											// Trace: src/VX_pe_switch.sv:47:5
 											wire [1:0] pe_rsp_ready;
 											// Trace: src/VX_pe_switch.sv:48:5
@@ -24213,7 +20857,7 @@ module Vortex (
 												// Trace: src/VX_pe_switch.sv:49:9
 												assign pe_rsp_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[i + _mbase_result_in_if].valid;
 												// Trace: src/VX_pe_switch.sv:50:9
-												assign pe_rsp_data[i * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[i + _mbase_result_in_if].data;
+												assign pe_rsp_data[i * 174+:174] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[i + _mbase_result_in_if].data;
 												// Trace: src/VX_pe_switch.sv:51:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[i + _mbase_result_in_if].ready = pe_rsp_ready[i];
 											end
@@ -24238,7 +20882,7 @@ module Vortex (
 										assign pe_switch.clk = clk;
 										assign pe_switch.reset = reset;
 										assign pe_switch.pe_sel = pe_select;
-										// Trace: src/VX_sfu_unit.sv:65:5
+										// Trace: src/VX_sfu_unit.sv:64:5
 										// expanded module instance: wctl_unit
 										localparam _bbase_F22EA_execute_if = PE_IDX_WCTL;
 										localparam _bbase_F22EA_result_if = PE_IDX_WCTL;
@@ -24281,12 +20925,12 @@ module Vortex (
 											// removed localparam type VX_gpu_pkg_wspawn_t
 											localparam WCTL_WIDTH = 89;
 											// Trace: src/VX_wctl_unit.sv:15:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam DATAW = 49;
+											localparam DATAW = 48;
 											// Trace: src/VX_wctl_unit.sv:16:5
 											wire [4:0] tmc;
 											// Trace: src/VX_wctl_unit.sv:17:5
@@ -24299,22 +20943,22 @@ module Vortex (
 											wire [5:0] barrier;
 											// Trace: src/VX_wctl_unit.sv:21:5
 											localparam VX_gpu_pkg_INST_SFU_WSPAWN = 4'h1;
-											wire is_wspawn = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_WSPAWN;
+											wire is_wspawn = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_WSPAWN;
 											// Trace: src/VX_wctl_unit.sv:22:5
 											localparam VX_gpu_pkg_INST_SFU_TMC = 4'h0;
-											wire is_tmc = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_TMC;
+											wire is_tmc = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_TMC;
 											// Trace: src/VX_wctl_unit.sv:23:5
 											localparam VX_gpu_pkg_INST_SFU_PRED = 4'h5;
-											wire is_pred = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_PRED;
+											wire is_pred = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_PRED;
 											// Trace: src/VX_wctl_unit.sv:24:5
 											localparam VX_gpu_pkg_INST_SFU_SPLIT = 4'h2;
-											wire is_split = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_SPLIT;
+											wire is_split = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_SPLIT;
 											// Trace: src/VX_wctl_unit.sv:25:5
 											localparam VX_gpu_pkg_INST_SFU_JOIN = 4'h3;
-											wire is_join = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_JOIN;
+											wire is_join = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_JOIN;
 											// Trace: src/VX_wctl_unit.sv:26:5
 											localparam VX_gpu_pkg_INST_SFU_BAR = 4'h4;
-											wire is_bar = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_BAR;
+											wire is_bar = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_BAR;
 											// Trace: src/VX_wctl_unit.sv:27:5
 											wire [1:0] last_tid;
 											// Trace: src/VX_wctl_unit.sv:28:5
@@ -24324,7 +20968,7 @@ module Vortex (
 													.N(NUM_LANES),
 													.REVERSE(1)
 												) last_tid_select(
-													.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[468-:4]),
+													.data_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[467-:4]),
 													.index_out(last_tid),
 													.onehot_out(),
 													.valid_out()
@@ -24335,7 +20979,7 @@ module Vortex (
 											// Trace: src/VX_wctl_unit.sv:42:5
 											wire [31:0] rs2_data = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[131 + (last_tid * 32)+:32];
 											// Trace: src/VX_wctl_unit.sv:43:5
-											wire not_pred = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[394];
+											wire not_pred = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[393];
 											// Trace: src/VX_wctl_unit.sv:44:5
 											wire [3:0] taken;
 											// Trace: src/VX_wctl_unit.sv:45:5
@@ -24352,9 +20996,9 @@ module Vortex (
 											// Trace: src/VX_wctl_unit.sv:50:5
 											if (1) begin : g_no_pid
 												// Trace: src/VX_wctl_unit.sv:64:9
-												assign then_tmask = taken & Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[468-:4];
+												assign then_tmask = taken & Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[467-:4];
 												// Trace: src/VX_wctl_unit.sv:65:9
-												assign else_tmask = ~taken & Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[468-:4];
+												assign else_tmask = ~taken & Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[467-:4];
 											end
 											// Trace: src/VX_wctl_unit.sv:67:5
 											wire has_then = then_tmask != 0;
@@ -24406,7 +21050,7 @@ module Vortex (
 												// Trace: src/VX_gpu_pkg.sv:31:9
 												VX_gpu_pkg_from_fullPC = sv2v_cast_30(pc >> 2);
 											endfunction
-											assign split[29-:30] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[464-:30] + VX_gpu_pkg_from_fullPC(32'sd4);
+											assign split[29-:30] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[463-:30] + VX_gpu_pkg_from_fullPC(32'sd4);
 											// Trace: src/VX_wctl_unit.sv:95:5
 											assign sjoin[2] = is_join;
 											// Trace: src/VX_wctl_unit.sv:96:5
@@ -24432,7 +21076,7 @@ module Vortex (
 											for (_gv_i_139 = 0; _gv_i_139 < 4; _gv_i_139 = _gv_i_139 + 1) begin : g_wspawn_wmask
 												localparam i = _gv_i_139;
 												// Trace: src/VX_wctl_unit.sv:104:9
-												assign wspawn_wmask[i] = (i < rs1_data[VX_gpu_pkg_NW_BITS:0]) && (i != Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2]);
+												assign wspawn_wmask[i] = (i < rs1_data[VX_gpu_pkg_NW_BITS:0]) && (i != Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2]);
 											end
 											// Trace: src/VX_wctl_unit.sv:106:5
 											assign wspawn[34] = is_wspawn;
@@ -24441,7 +21085,7 @@ module Vortex (
 											// Trace: src/VX_wctl_unit.sv:108:5
 											assign wspawn[29-:30] = VX_gpu_pkg_from_fullPC(rs2_data);
 											// Trace: src/VX_wctl_unit.sv:109:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.dvstack_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2];
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.dvstack_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2];
 											// Trace: src/VX_wctl_unit.sv:110:5
 											wire [1:0] dvstack_ptr;
 											// Trace: src/VX_wctl_unit.sv:111:5
@@ -24453,8 +21097,8 @@ module Vortex (
 												.reset(reset),
 												.valid_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].valid),
 												.ready_in(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].ready),
-												.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[392-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[393], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[0], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.dvstack_ptr}),
-												.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[174], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[173-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[171-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[167-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[136-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[137], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[0], dvstack_ptr}),
+												.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[467-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[463-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[391-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[392], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[0], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.dvstack_ptr}),
+												.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[173], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[172-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[170-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[166-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[135-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[136], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[0], dvstack_ptr}),
 												.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].valid),
 												.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].ready)
 											);
@@ -24470,7 +21114,7 @@ module Vortex (
 												.clk(clk),
 												.reset(reset),
 												.enable(1'b1),
-												.data_in({wctl_valid, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2], tmc, wspawn, split, sjoin, barrier}),
+												.data_in({wctl_valid, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2], tmc, wspawn, split, sjoin, barrier}),
 												.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.valid, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.wid, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.tmc, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.wspawn, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.split, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.sjoin, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.warp_ctl_if.barrier})
 											);
 											// Trace: src/VX_wctl_unit.sv:136:5
@@ -24483,10 +21127,9 @@ module Vortex (
 										end
 										assign wctl_unit.clk = clk;
 										assign wctl_unit.reset = reset;
-										// Trace: src/VX_sfu_unit.sv:75:5
+										// Trace: src/VX_sfu_unit.sv:74:5
 										// expanded module instance: csr_unit
 										localparam _bbase_BED2E_execute_if = PE_IDX_CSRS;
-										localparam _bbase_BED2E_fpu_csr_if = 0;
 										localparam _bbase_BED2E_result_if = PE_IDX_CSRS;
 										localparam _param_BED2E_INSTANCE_ID = "";
 										localparam _param_BED2E_CORE_ID = CORE_ID;
@@ -24507,315 +21150,229 @@ module Vortex (
 											// removed localparam type VX_gpu_pkg_base_dcrs_t
 											wire [71:0] base_dcrs;
 											// Trace: src/VX_csr_unit.sv:9:5
-											localparam _mbase_fpu_csr_if = 0;
-											// Trace: src/VX_csr_unit.sv:10:5
 											// removed modport instance commit_csr_if
-											// Trace: src/VX_csr_unit.sv:11:5
+											// Trace: src/VX_csr_unit.sv:10:5
 											// removed modport instance sched_csr_if
-											// Trace: src/VX_csr_unit.sv:12:5
+											// Trace: src/VX_csr_unit.sv:11:5
 											localparam _mbase_execute_if = _bbase_BED2E_execute_if;
-											// Trace: src/VX_csr_unit.sv:13:5
+											// Trace: src/VX_csr_unit.sv:12:5
 											localparam _mbase_result_if = _bbase_BED2E_result_if;
-											// Trace: src/VX_csr_unit.sv:15:5
+											// Trace: src/VX_csr_unit.sv:14:5
 											localparam PID_BITS = 0;
-											// Trace: src/VX_csr_unit.sv:16:5
+											// Trace: src/VX_csr_unit.sv:15:5
 											localparam PID_WIDTH = 1;
-											// Trace: src/VX_csr_unit.sv:17:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											// Trace: src/VX_csr_unit.sv:16:5
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam DATAW = 175;
-											// Trace: src/VX_csr_unit.sv:18:5
+											localparam DATAW = 174;
+											// Trace: src/VX_csr_unit.sv:17:5
 											reg [127:0] csr_read_data;
-											// Trace: src/VX_csr_unit.sv:19:5
+											// Trace: src/VX_csr_unit.sv:18:5
 											reg [31:0] csr_write_data;
-											// Trace: src/VX_csr_unit.sv:20:5
+											// Trace: src/VX_csr_unit.sv:19:5
 											wire [31:0] csr_read_data_ro;
 											wire [31:0] csr_read_data_rw;
-											// Trace: src/VX_csr_unit.sv:21:5
+											// Trace: src/VX_csr_unit.sv:20:5
 											wire [31:0] csr_req_data;
-											// Trace: src/VX_csr_unit.sv:22:5
+											// Trace: src/VX_csr_unit.sv:21:5
 											reg csr_rd_enable;
-											// Trace: src/VX_csr_unit.sv:23:5
+											// Trace: src/VX_csr_unit.sv:22:5
 											wire csr_wr_enable;
-											// Trace: src/VX_csr_unit.sv:24:5
+											// Trace: src/VX_csr_unit.sv:23:5
 											wire csr_req_ready;
+											// Trace: src/VX_csr_unit.sv:24:5
+											wire [11:0] csr_addr = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[409-:12];
 											// Trace: src/VX_csr_unit.sv:25:5
-											wire [11:0] csr_addr = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[410-:12];
-											// Trace: src/VX_csr_unit.sv:26:5
 											localparam VX_gpu_pkg_RV_REGS_BITS = 5;
-											wire [4:0] csr_imm = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[398-:5];
-											// Trace: src/VX_csr_unit.sv:27:5
+											wire [4:0] csr_imm = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[397-:5];
+											// Trace: src/VX_csr_unit.sv:26:5
 											wire is_fpu_csr = csr_addr <= 12'h003;
+											// Trace: src/VX_csr_unit.sv:27:5
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.alm_empty_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2];
 											// Trace: src/VX_csr_unit.sv:28:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.alm_empty_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2];
-											// Trace: src/VX_csr_unit.sv:29:5
 											wire no_pending_instr = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.alm_empty || ~is_fpu_csr;
-											// Trace: src/VX_csr_unit.sv:30:5
+											// Trace: src/VX_csr_unit.sv:29:5
 											wire csr_req_valid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].valid && no_pending_instr;
-											// Trace: src/VX_csr_unit.sv:31:5
+											// Trace: src/VX_csr_unit.sv:30:5
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].ready = csr_req_ready && no_pending_instr;
-											// Trace: src/VX_csr_unit.sv:32:5
+											// Trace: src/VX_csr_unit.sv:31:5
 											wire [127:0] rs1_data;
-											// Trace: src/VX_csr_unit.sv:33:5
+											// Trace: src/VX_csr_unit.sv:32:5
 											genvar _gv_i_154;
 											for (_gv_i_154 = 0; _gv_i_154 < NUM_LANES; _gv_i_154 = _gv_i_154 + 1) begin : g_rs1_data
 												localparam i = _gv_i_154;
-												// Trace: src/VX_csr_unit.sv:34:9
+												// Trace: src/VX_csr_unit.sv:33:9
 												assign rs1_data[i * 32+:32] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[259 + (i * 32)+:32];
 											end
-											// Trace: src/VX_csr_unit.sv:36:5
+											// Trace: src/VX_csr_unit.sv:35:5
 											localparam VX_gpu_pkg_INST_SFU_CSRRW = 4'h6;
-											wire csr_write_enable = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4] == VX_gpu_pkg_INST_SFU_CSRRW;
-											// Trace: src/VX_csr_unit.sv:37:5
+											wire csr_write_enable = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4] == VX_gpu_pkg_INST_SFU_CSRRW;
+											// Trace: src/VX_csr_unit.sv:36:5
 											// expanded module instance: csr_data
-											localparam _bbase_9D0B6_fpu_csr_if = 0;
 											localparam _param_9D0B6_INSTANCE_ID = INSTANCE_ID;
 											localparam _param_9D0B6_CORE_ID = CORE_ID;
 											if (1) begin : csr_data
 												// removed import VX_gpu_pkg::*;
-												// removed import VX_fpu_pkg::*;
-												// Trace: src/VX_csr_data.sv:5:15
+												// Trace: src/VX_csr_data.sv:4:15
 												localparam INSTANCE_ID = _param_9D0B6_INSTANCE_ID;
-												// Trace: src/VX_csr_data.sv:6:15
+												// Trace: src/VX_csr_data.sv:5:15
 												localparam CORE_ID = _param_9D0B6_CORE_ID;
-												// Trace: src/VX_csr_data.sv:8:5
+												// Trace: src/VX_csr_data.sv:7:5
 												wire clk;
-												// Trace: src/VX_csr_data.sv:9:5
+												// Trace: src/VX_csr_data.sv:8:5
 												wire reset;
-												// Trace: src/VX_csr_data.sv:10:5
+												// Trace: src/VX_csr_data.sv:9:5
 												// removed localparam type VX_gpu_pkg_base_dcrs_t
 												wire [71:0] base_dcrs;
-												// Trace: src/VX_csr_data.sv:11:5
+												// Trace: src/VX_csr_data.sv:10:5
 												// removed modport instance commit_csr_if
-												// Trace: src/VX_csr_data.sv:12:5
-												localparam _mbase_fpu_csr_if = 0;
-												// Trace: src/VX_csr_data.sv:13:5
+												// Trace: src/VX_csr_data.sv:11:5
 												localparam VX_gpu_pkg_PERF_CTR_BITS = 44;
 												wire [43:0] cycles;
-												// Trace: src/VX_csr_data.sv:14:5
+												// Trace: src/VX_csr_data.sv:12:5
 												wire [3:0] active_warps;
-												// Trace: src/VX_csr_data.sv:15:5
+												// Trace: src/VX_csr_data.sv:13:5
 												wire [15:0] thread_masks;
-												// Trace: src/VX_csr_data.sv:16:5
+												// Trace: src/VX_csr_data.sv:14:5
 												wire read_enable;
-												// Trace: src/VX_csr_data.sv:17:5
+												// Trace: src/VX_csr_data.sv:15:5
 												localparam VX_gpu_pkg_UUID_WIDTH = 1;
 												wire [0:0] read_uuid;
-												// Trace: src/VX_csr_data.sv:18:5
+												// Trace: src/VX_csr_data.sv:16:5
 												localparam VX_gpu_pkg_NW_BITS = 2;
 												localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 												wire [1:0] read_wid;
-												// Trace: src/VX_csr_data.sv:19:5
+												// Trace: src/VX_csr_data.sv:17:5
 												wire [11:0] read_addr;
-												// Trace: src/VX_csr_data.sv:20:5
+												// Trace: src/VX_csr_data.sv:18:5
 												wire [31:0] read_data_ro;
-												// Trace: src/VX_csr_data.sv:21:5
+												// Trace: src/VX_csr_data.sv:19:5
 												wire [31:0] read_data_rw;
-												// Trace: src/VX_csr_data.sv:22:5
+												// Trace: src/VX_csr_data.sv:20:5
 												wire write_enable;
-												// Trace: src/VX_csr_data.sv:23:5
+												// Trace: src/VX_csr_data.sv:21:5
 												wire [0:0] write_uuid;
-												// Trace: src/VX_csr_data.sv:24:5
+												// Trace: src/VX_csr_data.sv:22:5
 												wire [1:0] write_wid;
-												// Trace: src/VX_csr_data.sv:25:5
+												// Trace: src/VX_csr_data.sv:23:5
 												wire [11:0] write_addr;
-												// Trace: src/VX_csr_data.sv:26:5
+												// Trace: src/VX_csr_data.sv:24:5
 												wire [31:0] write_data;
-												// Trace: src/VX_csr_data.sv:28:5
+												// Trace: src/VX_csr_data.sv:26:5
 												reg [31:0] mscratch;
-												// Trace: src/VX_csr_data.sv:29:5
-												// removed localparam type VX_fpu_pkg_fflags_t
-												localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-												reg [31:0] fcsr;
-												reg [31:0] fcsr_n;
-												// Trace: src/VX_csr_data.sv:30:5
-												wire [0:0] fpu_write_enable;
-												// Trace: src/VX_csr_data.sv:31:5
-												wire [1:0] fpu_write_wid;
-												// Trace: src/VX_csr_data.sv:32:5
-												wire [4:0] fpu_write_fflags;
-												// Trace: src/VX_csr_data.sv:33:5
-												genvar _gv_i_228;
-												for (_gv_i_228 = 0; _gv_i_228 < 1; _gv_i_228 = _gv_i_228 + 1) begin : g_fpu_write
-													localparam i = _gv_i_228;
-													// Trace: src/VX_csr_data.sv:34:9
-													assign fpu_write_enable[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[i + _mbase_fpu_csr_if].write_enable;
-													// Trace: src/VX_csr_data.sv:35:9
-													assign fpu_write_wid[i * 2+:2] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[i + _mbase_fpu_csr_if].write_wid;
-													// Trace: src/VX_csr_data.sv:36:9
-													assign fpu_write_fflags[i * 5+:5] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[i + _mbase_fpu_csr_if].write_fflags;
-												end
-												// Trace: src/VX_csr_data.sv:38:5
-												always @(*) begin
-													// Trace: src/VX_csr_data.sv:39:9
-													fcsr_n = fcsr;
-													// Trace: src/VX_csr_data.sv:40:9
-													begin : sv2v_autoblock_19
-														// Trace: src/VX_csr_data.sv:40:14
-														integer i;
-														// Trace: src/VX_csr_data.sv:40:14
-														for (i = 0; i < 1; i = i + 1)
-															begin
-																// Trace: src/VX_csr_data.sv:41:13
-																if (fpu_write_enable[i])
-																	// Trace: src/VX_csr_data.sv:42:17
-																	fcsr_n[(fpu_write_wid[i * 2+:2] * 8) + 4-:5] = fcsr[(fpu_write_wid[i * 2+:2] * 8) + 4-:5] | fpu_write_fflags[i * 5+:5];
-															end
-													end
-													if (write_enable)
-														// Trace: src/VX_csr_data.sv:47:13
-														case (write_addr)
-															12'h001:
-																// Trace: src/VX_csr_data.sv:48:26
-																fcsr_n[(write_wid * 8) + 4-:5] = write_data[4:0];
-															12'h002:
-																// Trace: src/VX_csr_data.sv:49:29
-																fcsr_n[(write_wid * 8) + 7-:3] = write_data[2:0];
-															12'h003:
-																// Trace: src/VX_csr_data.sv:50:28
-																fcsr_n[write_wid * 8+:8] = write_data[7:0];
-															default:
-																;
-														endcase
-												end
-												// Trace: src/VX_csr_data.sv:55:5
-												genvar _gv_i_229;
-												for (_gv_i_229 = 0; _gv_i_229 < 1; _gv_i_229 = _gv_i_229 + 1) begin : g_fpu_csr_read_frm
-													localparam i = _gv_i_229;
-													// Trace: src/VX_csr_data.sv:56:9
-													assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[i + _mbase_fpu_csr_if].read_frm = fcsr[(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.fpu_csr_if[i + _mbase_fpu_csr_if].read_wid * 8) + 7-:3];
-												end
-												// Trace: src/VX_csr_data.sv:58:5
-												always @(posedge clk)
-													// Trace: src/VX_csr_data.sv:59:9
-													if (reset)
-														// Trace: src/VX_csr_data.sv:60:13
-														fcsr <= 1'sb0;
-													else
-														// Trace: src/VX_csr_data.sv:62:13
-														fcsr <= fcsr_n;
-												// Trace: src/VX_csr_data.sv:65:5
+												// Trace: src/VX_csr_data.sv:27:5
 												always @(posedge clk) begin
-													// Trace: src/VX_csr_data.sv:66:9
+													// Trace: src/VX_csr_data.sv:28:9
 													if (reset)
-														// Trace: src/VX_csr_data.sv:67:13
+														// Trace: src/VX_csr_data.sv:29:13
 														mscratch <= base_dcrs[39-:32];
 													if (write_enable)
-														// Trace: src/VX_csr_data.sv:70:13
+														// Trace: src/VX_csr_data.sv:32:13
 														case (write_addr)
-															12'h001, 12'h002, 12'h003, 12'h180, 12'h300, 12'h744, 12'h302, 12'h303, 12'h304, 12'h305, 12'h341, 12'h3a0, 12'h3b0:
+															12'h180, 12'h300, 12'h744, 12'h302, 12'h303, 12'h304, 12'h305, 12'h341, 12'h3a0, 12'h3b0:
 																;
 															12'h340:
-																// Trace: src/VX_csr_data.sv:86:21
+																// Trace: src/VX_csr_data.sv:45:21
 																mscratch <= write_data;
 															default:
 																;
 														endcase
 												end
-												// Trace: src/VX_csr_data.sv:94:5
+												// Trace: src/VX_csr_data.sv:53:5
 												reg [31:0] read_data_ro_w;
-												// Trace: src/VX_csr_data.sv:95:5
+												// Trace: src/VX_csr_data.sv:54:5
 												reg [31:0] read_data_rw_w;
-												// Trace: src/VX_csr_data.sv:96:5
+												// Trace: src/VX_csr_data.sv:55:5
 												reg read_addr_valid_w;
-												// Trace: src/VX_csr_data.sv:97:5
+												// Trace: src/VX_csr_data.sv:56:5
 												always @(*) begin
-													// Trace: src/VX_csr_data.sv:98:9
+													// Trace: src/VX_csr_data.sv:57:9
 													read_data_ro_w = 1'sb0;
-													// Trace: src/VX_csr_data.sv:99:9
+													// Trace: src/VX_csr_data.sv:58:9
 													read_data_rw_w = 1'sb0;
-													// Trace: src/VX_csr_data.sv:100:9
+													// Trace: src/VX_csr_data.sv:59:9
 													read_addr_valid_w = 1;
-													// Trace: src/VX_csr_data.sv:101:9
+													// Trace: src/VX_csr_data.sv:60:9
 													case (read_addr)
 														12'hf11:
-															// Trace: src/VX_csr_data.sv:102:24
+															// Trace: src/VX_csr_data.sv:61:24
 															read_data_ro_w = 32'sd0;
 														12'hf12:
-															// Trace: src/VX_csr_data.sv:103:26
+															// Trace: src/VX_csr_data.sv:62:26
 															read_data_ro_w = 32'sd0;
 														12'hf13:
-															// Trace: src/VX_csr_data.sv:104:27
+															// Trace: src/VX_csr_data.sv:63:27
 															read_data_ro_w = 32'sd0;
 														12'h301:
-															// Trace: src/VX_csr_data.sv:105:29
-															read_data_ro_w = 32'h40901120;
-														12'h001:
-															// Trace: src/VX_csr_data.sv:131:27
-															read_data_rw_w = sv2v_cast_32(fcsr[(read_wid * 8) + 4-:5]);
-														12'h002:
-															// Trace: src/VX_csr_data.sv:132:30
-															read_data_rw_w = sv2v_cast_32(fcsr[(read_wid * 8) + 7-:3]);
-														12'h003:
-															// Trace: src/VX_csr_data.sv:133:29
-															read_data_rw_w = sv2v_cast_32(fcsr[read_wid * 8+:8]);
+															// Trace: src/VX_csr_data.sv:64:29
+															read_data_ro_w = 32'h40901100;
 														12'h340:
-															// Trace: src/VX_csr_data.sv:134:25
+															// Trace: src/VX_csr_data.sv:90:25
 															read_data_rw_w = mscratch;
 														12'hcc1:
-															// Trace: src/VX_csr_data.sv:135:26
+															// Trace: src/VX_csr_data.sv:91:26
 															read_data_ro_w = sv2v_cast_32(read_wid);
 														12'hcc2:
-															// Trace: src/VX_csr_data.sv:136:26
+															// Trace: src/VX_csr_data.sv:92:26
 															read_data_ro_w = sv2v_cast_32_signed(CORE_ID);
 														12'hcc4:
-															// Trace: src/VX_csr_data.sv:137:22
+															// Trace: src/VX_csr_data.sv:93:22
 															read_data_ro_w = sv2v_cast_32(thread_masks[read_wid * 4+:4]);
 														12'hcc3:
-															// Trace: src/VX_csr_data.sv:138:22
+															// Trace: src/VX_csr_data.sv:94:22
 															read_data_ro_w = sv2v_cast_32(active_warps);
 														12'hfc0:
-															// Trace: src/VX_csr_data.sv:139:22
+															// Trace: src/VX_csr_data.sv:95:22
 															read_data_ro_w = 32'sd4;
 														12'hfc1:
-															// Trace: src/VX_csr_data.sv:140:24
+															// Trace: src/VX_csr_data.sv:96:24
 															read_data_ro_w = 32'sd4;
 														12'hfc2:
-															// Trace: src/VX_csr_data.sv:141:24
-															read_data_ro_w = 32'sd64;
+															// Trace: src/VX_csr_data.sv:97:24
+															read_data_ro_w = 32'sd1;
 														12'hfc3:
-															// Trace: src/VX_csr_data.sv:142:22
+															// Trace: src/VX_csr_data.sv:98:22
 															read_data_ro_w = 32'hffff0000;
 														12'hb00:
-															// Trace: src/VX_csr_data.sv:143:19
+															// Trace: src/VX_csr_data.sv:99:19
 															read_data_ro_w = cycles[31:0];
 														12'hb00 + 12'h080:
-															// Trace: src/VX_csr_data.sv:144:26
+															// Trace: src/VX_csr_data.sv:100:26
 															read_data_ro_w = sv2v_cast_32(cycles[43:32]);
 														12'hb01:
-															// Trace: src/VX_csr_data.sv:145:23
+															// Trace: src/VX_csr_data.sv:101:23
 															read_data_ro_w = 1'sbx;
 														12'hb81:
-															// Trace: src/VX_csr_data.sv:146:23
+															// Trace: src/VX_csr_data.sv:102:23
 															read_data_ro_w = 1'sbx;
 														12'hb02:
-															// Trace: src/VX_csr_data.sv:147:19
+															// Trace: src/VX_csr_data.sv:103:19
 															read_data_ro_w = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_csr_if.instret[31:0];
 														12'hb02 + 12'h080:
-															// Trace: src/VX_csr_data.sv:148:26
+															// Trace: src/VX_csr_data.sv:104:26
 															read_data_ro_w = sv2v_cast_32(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_csr_if.instret[43:32]);
 														12'h180, 12'h300, 12'h744, 12'h302, 12'h303, 12'h304, 12'h305, 12'h341, 12'h3a0, 12'h3b0:
-															// Trace: src/VX_csr_data.sv:158:23
+															// Trace: src/VX_csr_data.sv:114:23
 															read_data_ro_w = 32'sd0;
 														default: begin
-															// Trace: src/VX_csr_data.sv:160:17
+															// Trace: src/VX_csr_data.sv:116:17
 															read_addr_valid_w = 0;
-															// Trace: src/VX_csr_data.sv:161:17
+															// Trace: src/VX_csr_data.sv:117:17
 															if (((read_addr >= 12'hb03) && (read_addr < 2851)) || ((read_addr >= 12'hb83) && (read_addr < 2979)))
-																// Trace: src/VX_csr_data.sv:163:21
+																// Trace: src/VX_csr_data.sv:119:21
 																read_addr_valid_w = 1;
 														end
 													endcase
 												end
-												// Trace: src/VX_csr_data.sv:168:5
+												// Trace: src/VX_csr_data.sv:124:5
 												assign read_data_ro = read_data_ro_w;
-												// Trace: src/VX_csr_data.sv:169:5
+												// Trace: src/VX_csr_data.sv:125:5
 												assign read_data_rw = read_data_rw_w;
 											end
 											assign csr_data.clk = clk;
@@ -24825,80 +21382,80 @@ module Vortex (
 											assign csr_data.active_warps = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.active_warps;
 											assign csr_data.thread_masks = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.thread_masks;
 											assign csr_data.read_enable = csr_req_valid && csr_rd_enable;
-											assign csr_data.read_uuid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[471];
-											assign csr_data.read_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2];
+											assign csr_data.read_uuid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470];
+											assign csr_data.read_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2];
 											assign csr_data.read_addr = csr_addr;
 											assign csr_read_data_ro = csr_data.read_data_ro;
 											assign csr_read_data_rw = csr_data.read_data_rw;
 											assign csr_data.write_enable = csr_req_valid && csr_wr_enable;
-											assign csr_data.write_uuid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[471];
-											assign csr_data.write_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2];
+											assign csr_data.write_uuid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470];
+											assign csr_data.write_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2];
 											assign csr_data.write_addr = csr_addr;
 											assign csr_data.write_data = csr_write_data;
-											// Trace: src/VX_csr_unit.sv:61:5
+											// Trace: src/VX_csr_unit.sv:59:5
 											wire [127:0] wtid;
 											wire [127:0] gtid;
-											// Trace: src/VX_csr_unit.sv:62:5
+											// Trace: src/VX_csr_unit.sv:60:5
 											genvar _gv_i_155;
 											for (_gv_i_155 = 0; _gv_i_155 < NUM_LANES; _gv_i_155 = _gv_i_155 + 1) begin : g_wtid
 												localparam i = _gv_i_155;
 												if (1) begin : g_no_pid
-													// Trace: src/VX_csr_unit.sv:66:13
+													// Trace: src/VX_csr_unit.sv:64:13
 													assign wtid[i * 32+:32] = i;
 												end
 											end
-											// Trace: src/VX_csr_unit.sv:69:5
+											// Trace: src/VX_csr_unit.sv:67:5
 											genvar _gv_i_156;
 											localparam VX_gpu_pkg_NT_BITS = 2;
 											for (_gv_i_156 = 0; _gv_i_156 < NUM_LANES; _gv_i_156 = _gv_i_156 + 1) begin : g_gtid
 												localparam i = _gv_i_156;
-												// Trace: src/VX_csr_unit.sv:70:9
-												assign gtid[i * 32+:32] = ((sv2v_cast_32_signed(CORE_ID) << 4) + (sv2v_cast_32(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2]) << VX_gpu_pkg_NT_BITS)) + wtid[i * 32+:32];
+												// Trace: src/VX_csr_unit.sv:68:9
+												assign gtid[i * 32+:32] = ((sv2v_cast_32_signed(CORE_ID) << 4) + (sv2v_cast_32(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2]) << VX_gpu_pkg_NT_BITS)) + wtid[i * 32+:32];
 											end
-											// Trace: src/VX_csr_unit.sv:72:5
+											// Trace: src/VX_csr_unit.sv:70:5
 											always @(*) begin
-												// Trace: src/VX_csr_unit.sv:73:9
+												// Trace: src/VX_csr_unit.sv:71:9
 												csr_rd_enable = 0;
-												// Trace: src/VX_csr_unit.sv:74:9
+												// Trace: src/VX_csr_unit.sv:72:9
 												case (csr_addr)
 													12'hcc0:
-														// Trace: src/VX_csr_unit.sv:75:19
+														// Trace: src/VX_csr_unit.sv:73:19
 														csr_read_data = wtid;
 													12'hf14:
-														// Trace: src/VX_csr_unit.sv:76:21
+														// Trace: src/VX_csr_unit.sv:74:21
 														csr_read_data = gtid;
 													default: begin
-														// Trace: src/VX_csr_unit.sv:78:13
+														// Trace: src/VX_csr_unit.sv:76:13
 														csr_read_data = {NUM_LANES {csr_read_data_ro | csr_read_data_rw}};
-														// Trace: src/VX_csr_unit.sv:79:13
+														// Trace: src/VX_csr_unit.sv:77:13
 														csr_rd_enable = 1;
 													end
 												endcase
 											end
-											// Trace: src/VX_csr_unit.sv:83:5
-											assign csr_req_data = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[411] ? sv2v_cast_32(csr_imm) : rs1_data[0+:32]);
-											// Trace: src/VX_csr_unit.sv:84:5
+											// Trace: src/VX_csr_unit.sv:81:5
+											assign csr_req_data = (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[410] ? sv2v_cast_32(csr_imm) : rs1_data[0+:32]);
+											// Trace: src/VX_csr_unit.sv:82:5
 											assign csr_wr_enable = csr_write_enable || |csr_req_data;
-											// Trace: src/VX_csr_unit.sv:85:5
+											// Trace: src/VX_csr_unit.sv:83:5
 											localparam VX_gpu_pkg_INST_SFU_CSRRS = 4'h7;
 											always @(*)
-												// Trace: src/VX_csr_unit.sv:86:9
-												case (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[434-:4])
+												// Trace: src/VX_csr_unit.sv:84:9
+												case (Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[433-:4])
 													VX_gpu_pkg_INST_SFU_CSRRW:
-														// Trace: src/VX_csr_unit.sv:88:17
+														// Trace: src/VX_csr_unit.sv:86:17
 														csr_write_data = csr_req_data;
 													VX_gpu_pkg_INST_SFU_CSRRS:
-														// Trace: src/VX_csr_unit.sv:91:17
+														// Trace: src/VX_csr_unit.sv:89:17
 														csr_write_data = csr_read_data_rw | csr_req_data;
 													default:
-														// Trace: src/VX_csr_unit.sv:94:17
+														// Trace: src/VX_csr_unit.sv:92:17
 														csr_write_data = csr_read_data_rw & ~csr_req_data;
 												endcase
-											// Trace: src/VX_csr_unit.sv:98:5
+											// Trace: src/VX_csr_unit.sv:96:5
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.unlock_warp = ((csr_req_valid && csr_req_ready) && Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[0]) && is_fpu_csr;
-											// Trace: src/VX_csr_unit.sv:99:5
-											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.unlock_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2];
-											// Trace: src/VX_csr_unit.sv:100:5
+											// Trace: src/VX_csr_unit.sv:97:5
+											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.sched_csr_if.unlock_wid = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2];
+											// Trace: src/VX_csr_unit.sv:98:5
 											VX_elastic_buffer #(
 												.DATAW(DATAW),
 												.SIZE(2)
@@ -24907,8 +21464,8 @@ module Vortex (
 												.reset(reset),
 												.valid_in(csr_req_valid),
 												.ready_in(csr_req_ready),
-												.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[471], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[468-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[464-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[392-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[393], csr_read_data, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[0]}),
-												.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[174], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[173-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[171-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[167-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[136-:6], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[137], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[130-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[0]}),
+												.data_in({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[470], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[469-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[467-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[463-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[391-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[392], csr_read_data, Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_execute_if[_mbase_execute_if].data[0]}),
+												.data_out({Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[173], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[172-:2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[170-:4], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[166-:30], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[135-:5], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[136], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[130-:128], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[2], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[1], Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].data[0]}),
 												.valid_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].valid),
 												.ready_out(Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.pe_result_if[_mbase_result_if].ready)
 											);
@@ -24916,7 +21473,7 @@ module Vortex (
 										assign csr_unit.clk = clk;
 										assign csr_unit.reset = reset;
 										assign csr_unit.base_dcrs = base_dcrs;
-										// Trace: src/VX_sfu_unit.sv:89:5
+										// Trace: src/VX_sfu_unit.sv:87:5
 										// expanded module instance: gather_unit
 										localparam _bbase_8E516_result_if = 0;
 										localparam _bbase_8E516_commit_if = 2;
@@ -24952,21 +21509,21 @@ module Vortex (
 											// Trace: src/VX_gather_unit.sv:16:5
 											localparam GPID_WIDTH = 1;
 											// Trace: src/VX_gather_unit.sv:17:5
-											localparam VX_gpu_pkg_REG_TYPES = 2;
+											localparam VX_gpu_pkg_REG_TYPES = 1;
 											localparam VX_gpu_pkg_RV_REGS = 32;
-											localparam VX_gpu_pkg_NUM_REGS = 64;
-											localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+											localparam VX_gpu_pkg_NUM_REGS = 32;
+											localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 											localparam VX_gpu_pkg_NW_BITS = 2;
 											localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 											localparam VX_gpu_pkg_PC_BITS = 30;
 											localparam VX_gpu_pkg_UUID_WIDTH = 1;
-											localparam DATAW = 175;
+											localparam DATAW = 174;
 											// Trace: src/VX_gather_unit.sv:18:5
-											localparam DATA_WIS_OFF = 172;
+											localparam DATA_WIS_OFF = 171;
 											// Trace: src/VX_gather_unit.sv:19:5
 											wire [0:0] result_in_valid;
 											// Trace: src/VX_gather_unit.sv:20:5
-											wire [174:0] result_in_data;
+											wire [173:0] result_in_data;
 											// Trace: src/VX_gather_unit.sv:21:5
 											wire [0:0] result_in_ready;
 											// Trace: src/VX_gather_unit.sv:22:5
@@ -24980,7 +21537,7 @@ module Vortex (
 												// Trace: src/VX_gather_unit.sv:24:9
 												assign result_in_valid[i] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_result_if[i + _mbase_result_if].valid;
 												// Trace: src/VX_gather_unit.sv:25:9
-												assign result_in_data[i * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_result_if[i + _mbase_result_if].data;
+												assign result_in_data[i * 174+:174] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_result_if[i + _mbase_result_if].data;
 												// Trace: src/VX_gather_unit.sv:26:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.execute.sfu_unit.per_block_result_if[i + _mbase_result_if].ready = result_in_ready[i];
 												if (1) begin : g_result_in_isw_full
@@ -24991,7 +21548,7 @@ module Vortex (
 											// Trace: src/VX_gather_unit.sv:37:5
 											reg [0:0] result_out_valid;
 											// Trace: src/VX_gather_unit.sv:38:5
-											reg [174:0] result_out_data;
+											reg [173:0] result_out_data;
 											// Trace: src/VX_gather_unit.sv:39:5
 											wire [0:0] result_out_ready;
 											// Trace: src/VX_gather_unit.sv:40:5
@@ -24999,17 +21556,17 @@ module Vortex (
 												// Trace: src/VX_gather_unit.sv:41:9
 												result_out_valid = 1'sb0;
 												// Trace: src/VX_gather_unit.sv:42:9
-												begin : sv2v_autoblock_20
+												begin : sv2v_autoblock_15
 													// Trace: src/VX_gather_unit.sv:42:14
 													integer i;
 													// Trace: src/VX_gather_unit.sv:42:14
 													for (i = 0; i < 1; i = i + 1)
 														begin
 															// Trace: src/VX_gather_unit.sv:43:13
-															result_out_data[i * 175+:175] = 1'sbx;
+															result_out_data[i * 174+:174] = 1'sbx;
 														end
 												end
-												begin : sv2v_autoblock_21
+												begin : sv2v_autoblock_16
 													// Trace: src/VX_gather_unit.sv:45:14
 													integer i;
 													// Trace: src/VX_gather_unit.sv:45:14
@@ -25018,7 +21575,7 @@ module Vortex (
 															// Trace: src/VX_gather_unit.sv:46:13
 															result_out_valid[result_in_isw[i+:1]] = result_in_valid[i];
 															// Trace: src/VX_gather_unit.sv:47:13
-															result_out_data[result_in_isw[i+:1] * 175+:175] = result_in_data[i * 175+:175];
+															result_out_data[result_in_isw[i+:1] * 174+:174] = result_in_data[i * 174+:174];
 														end
 												end
 											end
@@ -25046,10 +21603,10 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:3:15
 													localparam PID_WIDTH = 1;
 													// Trace: src/VX_result_if.sv:5:5
-													localparam VX_gpu_pkg_REG_TYPES = 2;
+													localparam VX_gpu_pkg_REG_TYPES = 1;
 													localparam VX_gpu_pkg_RV_REGS = 32;
-													localparam VX_gpu_pkg_NUM_REGS = 64;
-													localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+													localparam VX_gpu_pkg_NUM_REGS = 32;
+													localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 													localparam VX_gpu_pkg_NW_BITS = 2;
 													localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 													localparam VX_gpu_pkg_PC_BITS = 30;
@@ -25058,7 +21615,7 @@ module Vortex (
 													// Trace: src/VX_result_if.sv:17:5
 													wire valid;
 													// Trace: src/VX_result_if.sv:18:5
-													wire [174:0] data;
+													wire [173:0] data;
 													// Trace: src/VX_result_if.sv:19:5
 													wire ready;
 													// Trace: src/VX_result_if.sv:20:5
@@ -25074,7 +21631,7 @@ module Vortex (
 													.reset(reset),
 													.valid_in(result_out_valid[i]),
 													.ready_in(result_out_ready[i]),
-													.data_in(result_out_data[i * 175+:175]),
+													.data_in(result_out_data[i * 174+:174]),
 													.data_out(result_tmp_if.data),
 													.valid_out(result_tmp_if.valid),
 													.ready_out(result_tmp_if.ready)
@@ -25089,14 +21646,14 @@ module Vortex (
 													// Trace: src/VX_gather_unit.sv:91:13
 													assign commit_sid_w = result_tmp_if.data[2];
 													// Trace: src/VX_gather_unit.sv:92:13
-													assign commit_tmask_w = result_tmp_if.data[171-:4];
+													assign commit_tmask_w = result_tmp_if.data[170-:4];
 													// Trace: src/VX_gather_unit.sv:93:13
 													assign commit_data_w = result_tmp_if.data[130-:128];
 												end
 												// Trace: src/VX_gather_unit.sv:95:9
 												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].valid = result_tmp_if.valid;
 												// Trace: src/VX_gather_unit.sv:96:9
-												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[174], result_tmp_if.data[173-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[167-:30], result_tmp_if.data[137], result_tmp_if.data[136-:6], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
+												assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].data = {result_tmp_if.data[173], result_tmp_if.data[172-:2], commit_sid_w, commit_tmask_w, result_tmp_if.data[166-:30], result_tmp_if.data[136], result_tmp_if.data[135-:5], commit_data_w, result_tmp_if.data[1], result_tmp_if.data[0]};
 												// Trace: src/VX_gather_unit.sv:108:9
 												assign result_tmp_if.ready = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[i + _mbase_commit_if].ready;
 											end
@@ -25126,9 +21683,9 @@ module Vortex (
 									wire reset;
 									// Trace: src/VX_commit.sv:6:5
 									localparam VX_gpu_pkg_EX_SFU = 2;
-									localparam VX_gpu_pkg_EX_FPU = 3;
-									localparam VX_gpu_pkg_EX_TCU = 3;
-									localparam VX_gpu_pkg_NUM_EX_UNITS = 4;
+									localparam VX_gpu_pkg_EX_FPU = 2;
+									localparam VX_gpu_pkg_EX_TCU = 2;
+									localparam VX_gpu_pkg_NUM_EX_UNITS = 3;
 									localparam _mbase_commit_if = 0;
 									// Trace: src/VX_commit.sv:7:5
 									localparam _mbase_writeback_if = 0;
@@ -25137,10 +21694,10 @@ module Vortex (
 									// Trace: src/VX_commit.sv:9:5
 									// removed modport instance commit_sched_if
 									// Trace: src/VX_commit.sv:11:5
-									localparam VX_gpu_pkg_REG_TYPES = 2;
+									localparam VX_gpu_pkg_REG_TYPES = 1;
 									localparam VX_gpu_pkg_RV_REGS = 32;
-									localparam VX_gpu_pkg_NUM_REGS = 64;
-									localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+									localparam VX_gpu_pkg_NUM_REGS = 32;
+									localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 									localparam VX_gpu_pkg_NW_BITS = 2;
 									localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 									localparam VX_gpu_pkg_PC_BITS = 30;
@@ -25149,7 +21706,7 @@ module Vortex (
 									localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 									localparam VX_gpu_pkg_UUID_WIDTH = 1;
 									// removed localparam type VX_gpu_pkg_commit_t
-									localparam OUT_DATAW = 175;
+									localparam OUT_DATAW = 174;
 									// Trace: src/VX_commit.sv:12:5
 									localparam COMMIT_SIZEW = 3;
 									// Trace: src/VX_commit.sv:13:5
@@ -25162,10 +21719,10 @@ module Vortex (
 										// Trace: src/VX_commit_if.sv:2:5
 										wire valid;
 										// Trace: src/VX_commit_if.sv:3:5
-										localparam VX_gpu_pkg_REG_TYPES = 2;
+										localparam VX_gpu_pkg_REG_TYPES = 1;
 										localparam VX_gpu_pkg_RV_REGS = 32;
-										localparam VX_gpu_pkg_NUM_REGS = 64;
-										localparam VX_gpu_pkg_NUM_REGS_BITS = 6;
+										localparam VX_gpu_pkg_NUM_REGS = 32;
+										localparam VX_gpu_pkg_NUM_REGS_BITS = 5;
 										localparam VX_gpu_pkg_NW_BITS = 2;
 										localparam VX_gpu_pkg_NW_WIDTH = VX_gpu_pkg_NW_BITS;
 										localparam VX_gpu_pkg_PC_BITS = 30;
@@ -25174,7 +21731,7 @@ module Vortex (
 										localparam VX_gpu_pkg_SIMD_IDX_W = 1;
 										localparam VX_gpu_pkg_UUID_WIDTH = 1;
 										// removed localparam type VX_gpu_pkg_commit_t
-										wire [174:0] data;
+										wire [173:0] data;
 										// Trace: src/VX_commit_if.sv:4:5
 										wire ready;
 										// Trace: src/VX_commit_if.sv:5:5
@@ -25193,18 +21750,18 @@ module Vortex (
 									for (_gv_i_80 = 0; _gv_i_80 < 1; _gv_i_80 = _gv_i_80 + 1) begin : g_commit_arbs
 										localparam i = _gv_i_80;
 										// Trace: src/VX_commit.sv:20:9
-										wire [3:0] valid_in;
+										wire [2:0] valid_in;
 										// Trace: src/VX_commit.sv:21:9
-										wire [699:0] data_in;
+										wire [521:0] data_in;
 										// Trace: src/VX_commit.sv:22:9
-										wire [3:0] ready_in;
+										wire [2:0] ready_in;
 										genvar _gv_j_12;
 										for (_gv_j_12 = 0; _gv_j_12 < VX_gpu_pkg_NUM_EX_UNITS; _gv_j_12 = _gv_j_12 + 1) begin : g_data_in
 											localparam j = _gv_j_12;
 											// Trace: src/VX_commit.sv:24:13
 											assign valid_in[j] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[((j * 1) + i) + _mbase_commit_if].valid;
 											// Trace: src/VX_commit.sv:25:13
-											assign data_in[j * 175+:175] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[((j * 1) + i) + _mbase_commit_if].data;
+											assign data_in[j * 174+:174] = Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[((j * 1) + i) + _mbase_commit_if].data;
 											// Trace: src/VX_commit.sv:26:13
 											assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.commit_if[((j * 1) + i) + _mbase_commit_if].ready = ready_in[j];
 										end
@@ -25228,9 +21785,9 @@ module Vortex (
 										// Trace: src/VX_commit.sv:44:9
 										assign per_issue_commit_fire[i] = commit_arb_if[i].valid && commit_arb_if[i].ready;
 										// Trace: src/VX_commit.sv:45:9
-										assign per_issue_commit_tmask[i * 4+:4] = {4 {per_issue_commit_fire[i]}} & commit_arb_if[i].data[170-:4];
+										assign per_issue_commit_tmask[i * 4+:4] = {4 {per_issue_commit_fire[i]}} & commit_arb_if[i].data[169-:4];
 										// Trace: src/VX_commit.sv:46:9
-										assign per_issue_commit_wid[i * 2+:2] = commit_arb_if[i].data[173-:2];
+										assign per_issue_commit_wid[i * 2+:2] = commit_arb_if[i].data[172-:2];
 										// Trace: src/VX_commit.sv:47:9
 										assign per_issue_commit_eop[i] = commit_arb_if[i].data[0];
 									end
@@ -25318,7 +21875,7 @@ module Vortex (
 										// Trace: src/VX_commit.sv:106:9
 										committed_warps = 0;
 										// Trace: src/VX_commit.sv:107:9
-										begin : sv2v_autoblock_22
+										begin : sv2v_autoblock_17
 											// Trace: src/VX_commit.sv:107:14
 											integer i;
 											// Trace: src/VX_commit.sv:107:14
@@ -25360,19 +21917,19 @@ module Vortex (
 									for (_gv_i_82 = 0; _gv_i_82 < 1; _gv_i_82 = _gv_i_82 + 1) begin : g_writeback
 										localparam i = _gv_i_82;
 										// Trace: src/VX_commit.sv:124:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].valid = commit_arb_if[i].valid && commit_arb_if[i].data[136];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].valid = commit_arb_if[i].valid && commit_arb_if[i].data[135];
 										// Trace: src/VX_commit.sv:125:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[173] = commit_arb_if[i].data[174];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[172] = commit_arb_if[i].data[173];
 										// Trace: src/VX_commit.sv:126:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[172-:2] = VX_gpu_pkg_wid_to_wis(commit_arb_if[i].data[173-:2]);
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[171-:2] = VX_gpu_pkg_wid_to_wis(commit_arb_if[i].data[172-:2]);
 										// Trace: src/VX_commit.sv:127:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[170] = commit_arb_if[i].data[171];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[169] = commit_arb_if[i].data[170];
 										// Trace: src/VX_commit.sv:128:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[165-:30] = commit_arb_if[i].data[166-:30];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[164-:30] = commit_arb_if[i].data[165-:30];
 										// Trace: src/VX_commit.sv:129:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[169-:4] = commit_arb_if[i].data[170-:4];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[168-:4] = commit_arb_if[i].data[169-:4];
 										// Trace: src/VX_commit.sv:130:9
-										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[135-:6] = commit_arb_if[i].data[135-:6];
+										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[134-:5] = commit_arb_if[i].data[134-:5];
 										// Trace: src/VX_commit.sv:131:9
 										assign Vortex.g_clusters[_gv_cluster_id_1].cluster.g_sockets[_gv_socket_id_1].socket.g_cores[_gv_core_id_1].core.writeback_if[i + _mbase_writeback_if].data[129-:128] = commit_arb_if[i].data[129-:128];
 										// Trace: src/VX_commit.sv:132:9
@@ -26585,7 +23142,7 @@ module Vortex (
 						VX_pipe_register #(
 							.DATAW(1),
 							.RESETW(1),
-							.DEPTH(1'd1)
+							.DEPTH(1'd0)
 						) __buffer_ex253(
 							.clk(clk),
 							.reset(reset),
@@ -26602,7 +23159,7 @@ module Vortex (
 				VX_pipe_register #(
 					.DATAW(1),
 					.RESETW(1),
-					.DEPTH(1'd1)
+					.DEPTH(1'd0)
 				) __buffer_ex156(
 					.clk(clk),
 					.reset(reset),
@@ -26620,7 +23177,7 @@ module Vortex (
 	VX_pipe_register #(
 		.DATAW(1),
 		.RESETW(1),
-		.DEPTH(1'd1)
+		.DEPTH(1'd0)
 	) __buffer_ex161(
 		.clk(clk),
 		.reset(reset),
@@ -27013,37 +23570,6 @@ module VX_stream_xbar (
 			collisions_r <= collisions_r + sv2v_cast_8BEE5(collision_count);
 	// Trace: src/VX_stream_xbar.sv:185:5
 	assign collisions = collisions_r;
-endmodule
-module VX_bits_concat (
-	left_in,
-	right_in,
-	data_out
-);
-	// Trace: src/VX_bits_concat.sv:2:15
-	parameter L = 1;
-	// Trace: src/VX_bits_concat.sv:3:15
-	parameter R = 1;
-	// Trace: src/VX_bits_concat.sv:5:5
-	input wire [(L > 0 ? L : 1) - 1:0] left_in;
-	// Trace: src/VX_bits_concat.sv:6:5
-	input wire [(R > 0 ? R : 1) - 1:0] right_in;
-	// Trace: src/VX_bits_concat.sv:7:5
-	output wire [(L + R) - 1:0] data_out;
-	// Trace: src/VX_bits_concat.sv:9:5
-	generate
-		if (L == 0) begin : g_right_only
-			// Trace: src/VX_bits_concat.sv:10:9
-			assign data_out = right_in;
-		end
-		else if (R == 0) begin : g_left_only
-			// Trace: src/VX_bits_concat.sv:12:9
-			assign data_out = left_in;
-		end
-		else begin : g_concat
-			// Trace: src/VX_bits_concat.sv:14:9
-			assign data_out = {left_in, right_in};
-		end
-	endgenerate
 endmodule
 // removed interface: VX_schedule_if
 // removed module with interface ports: VX_mem_switch
@@ -28411,187 +24937,6 @@ module VX_sp_ram (
 		end
 	endgenerate
 endmodule
-module VX_fpu_sqrt (
-	clk,
-	reset,
-	ready_in,
-	valid_in,
-	mask_in,
-	tag_in,
-	frm,
-	dataa,
-	result,
-	has_fflags,
-	fflags,
-	tag_out,
-	ready_out,
-	valid_out
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fpu_sqrt.sv:2:15
-	parameter NUM_LANES = 1;
-	// Trace: src/VX_fpu_sqrt.sv:3:15
-	parameter NUM_PES = ((NUM_LANES / 8) > 0 ? NUM_LANES / 8 : 1);
-	// Trace: src/VX_fpu_sqrt.sv:4:15
-	parameter TAG_WIDTH = 1;
-	// Trace: src/VX_fpu_sqrt.sv:6:5
-	input wire clk;
-	// Trace: src/VX_fpu_sqrt.sv:7:5
-	input wire reset;
-	// Trace: src/VX_fpu_sqrt.sv:8:5
-	output wire ready_in;
-	// Trace: src/VX_fpu_sqrt.sv:9:5
-	input wire valid_in;
-	// Trace: src/VX_fpu_sqrt.sv:10:5
-	input wire [NUM_LANES - 1:0] mask_in;
-	// Trace: src/VX_fpu_sqrt.sv:11:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_fpu_sqrt.sv:12:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fpu_sqrt.sv:13:5
-	input wire [(NUM_LANES * 32) - 1:0] dataa;
-	// Trace: src/VX_fpu_sqrt.sv:14:5
-	output wire [(NUM_LANES * 32) - 1:0] result;
-	// Trace: src/VX_fpu_sqrt.sv:15:5
-	output wire has_fflags;
-	// Trace: src/VX_fpu_sqrt.sv:16:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fpu_sqrt.sv:17:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_fpu_sqrt.sv:18:5
-	input wire ready_out;
-	// Trace: src/VX_fpu_sqrt.sv:19:5
-	output wire valid_out;
-	// Trace: src/VX_fpu_sqrt.sv:21:5
-	localparam DATAW = 35;
-	// Trace: src/VX_fpu_sqrt.sv:22:5
-	wire [(NUM_LANES * 35) - 1:0] data_in;
-	// Trace: src/VX_fpu_sqrt.sv:23:5
-	wire [NUM_LANES - 1:0] mask_out;
-	// Trace: src/VX_fpu_sqrt.sv:24:5
-	wire [(NUM_LANES * 37) - 1:0] data_out;
-	// Trace: src/VX_fpu_sqrt.sv:25:5
-	wire [(NUM_LANES * 5) - 1:0] fflags_out;
-	// Trace: src/VX_fpu_sqrt.sv:26:5
-	wire pe_enable;
-	// Trace: src/VX_fpu_sqrt.sv:27:5
-	wire [(NUM_PES * 35) - 1:0] pe_data_in;
-	// Trace: src/VX_fpu_sqrt.sv:28:5
-	wire [(NUM_PES * 37) - 1:0] pe_data_out;
-	// Trace: src/VX_fpu_sqrt.sv:29:5
-	genvar _gv_i_123;
-	generate
-		for (_gv_i_123 = 0; _gv_i_123 < NUM_LANES; _gv_i_123 = _gv_i_123 + 1) begin : g_data_in
-			localparam i = _gv_i_123;
-			// Trace: src/VX_fpu_sqrt.sv:30:9
-			assign data_in[i * 35+:32] = dataa[i * 32+:32];
-			// Trace: src/VX_fpu_sqrt.sv:31:9
-			assign data_in[(i * 35) + 32+:VX_gpu_pkg_INST_FRM_BITS] = frm;
-		end
-	endgenerate
-	// Trace: src/VX_fpu_sqrt.sv:33:5
-	VX_pe_serializer #(
-		.NUM_LANES(NUM_LANES),
-		.NUM_PES(NUM_PES),
-		.LATENCY(16),
-		.DATA_IN_WIDTH(DATAW),
-		.DATA_OUT_WIDTH(37),
-		.TAG_WIDTH(NUM_LANES + TAG_WIDTH),
-		.PE_REG(0),
-		.OUT_BUF(2)
-	) pe_serializer(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(valid_in),
-		.data_in(data_in),
-		.tag_in({mask_in, tag_in}),
-		.ready_in(ready_in),
-		.pe_enable(pe_enable),
-		.pe_data_out(pe_data_in),
-		.pe_data_in(pe_data_out),
-		.valid_out(valid_out),
-		.data_out(data_out),
-		.tag_out({mask_out, tag_out}),
-		.ready_out(ready_out)
-	);
-	// Trace: src/VX_fpu_sqrt.sv:57:5
-	genvar _gv_i_124;
-	generate
-		for (_gv_i_124 = 0; _gv_i_124 < NUM_LANES; _gv_i_124 = _gv_i_124 + 1) begin : g_result
-			localparam i = _gv_i_124;
-			// Trace: src/VX_fpu_sqrt.sv:58:9
-			assign result[i * 32+:32] = data_out[i * 37+:32];
-			// Trace: src/VX_fpu_sqrt.sv:59:9
-			assign fflags_out[i * 5+:5] = data_out[(i * 37) + 32+:5];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_sqrt.sv:61:5
-	wire [(NUM_LANES * 5) - 1:0] per_lane_fflags;
-	// Trace: src/VX_fpu_sqrt.sv:62:5
-	genvar _gv_i_125;
-	generate
-		for (_gv_i_125 = 0; _gv_i_125 < NUM_PES; _gv_i_125 = _gv_i_125 + 1) begin : g_fsqrts
-			localparam i = _gv_i_125;
-			// Trace: src/VX_fpu_sqrt.sv:63:9
-			reg [63:0] r;
-			// Trace: src/VX_fpu_sqrt.sv:64:9
-			wire [4:0] f;
-			// Trace: src/VX_fpu_sqrt.sv:65:9
-			always @(*)
-				// Trace: src/VX_fpu_sqrt.sv:66:13
-				dpi_fsqrt(pe_enable, 32'sd0, {32'hffffffff, pe_data_in[i * 35+:32]}, pe_data_in[32+:VX_gpu_pkg_INST_FRM_BITS], r, f);
-			// Trace: src/VX_fpu_sqrt.sv:75:9
-			VX_shift_register #(
-				.DATAW(37),
-				.DEPTH(16)
-			) shift_req_dpi(
-				.clk(clk),
-				.reset(),
-				.enable(pe_enable),
-				.data_in({f, r[31:0]}),
-				.data_out(pe_data_out[i * 37+:37])
-			);
-		end
-	endgenerate
-	// Trace: src/VX_fpu_sqrt.sv:86:5
-	assign has_fflags = 1;
-	// Trace: src/VX_fpu_sqrt.sv:87:5
-	assign per_lane_fflags = fflags_out;
-	// Trace: src/VX_fpu_sqrt.sv:88:5
-	reg [4:0] __fflags;
-	// Trace: src/VX_fpu_sqrt.sv:89:5
-	always @(*) begin
-		// Trace: src/VX_fpu_sqrt.sv:90:9
-		__fflags = 1'sb0;
-		// Trace: src/VX_fpu_sqrt.sv:91:9
-		begin : sv2v_autoblock_1
-			// Trace: src/VX_fpu_sqrt.sv:91:14
-			integer __i;
-			// Trace: src/VX_fpu_sqrt.sv:91:14
-			for (__i = 0; __i < NUM_LANES; __i = __i + 1)
-				begin
-					// Trace: src/VX_fpu_sqrt.sv:92:13
-					if (mask_out[__i]) begin
-						// Trace: src/VX_fpu_sqrt.sv:93:17
-						__fflags[0] = __fflags[0] | per_lane_fflags[__i * 5];
-						// Trace: src/VX_fpu_sqrt.sv:94:17
-						__fflags[1] = __fflags[1] | per_lane_fflags[(__i * 5) + 1];
-						// Trace: src/VX_fpu_sqrt.sv:95:17
-						__fflags[2] = __fflags[2] | per_lane_fflags[(__i * 5) + 2];
-						// Trace: src/VX_fpu_sqrt.sv:96:17
-						__fflags[3] = __fflags[3] | per_lane_fflags[(__i * 5) + 3];
-						// Trace: src/VX_fpu_sqrt.sv:97:17
-						__fflags[4] = __fflags[4] | per_lane_fflags[(__i * 5) + 4];
-					end
-				end
-		end
-	end
-	// Trace: src/VX_fpu_sqrt.sv:101:5
-	assign fflags = __fflags;
-endmodule
 module VX_transpose (
 	data_in,
 	data_out
@@ -29821,663 +26166,7 @@ module VX_cache_repl (
 	endgenerate
 endmodule
 // removed interface: VX_result_if
-module VX_fpu_cvt (
-	clk,
-	reset,
-	ready_in,
-	valid_in,
-	mask_in,
-	tag_in,
-	frm,
-	is_itof,
-	is_signed,
-	dataa,
-	result,
-	has_fflags,
-	fflags,
-	tag_out,
-	ready_out,
-	valid_out
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fpu_cvt.sv:2:15
-	parameter NUM_LANES = 5;
-	// Trace: src/VX_fpu_cvt.sv:3:15
-	parameter NUM_PES = ((NUM_LANES / 8) > 0 ? NUM_LANES / 8 : 1);
-	// Trace: src/VX_fpu_cvt.sv:4:15
-	parameter TAG_WIDTH = 1;
-	// Trace: src/VX_fpu_cvt.sv:6:5
-	input wire clk;
-	// Trace: src/VX_fpu_cvt.sv:7:5
-	input wire reset;
-	// Trace: src/VX_fpu_cvt.sv:8:5
-	output wire ready_in;
-	// Trace: src/VX_fpu_cvt.sv:9:5
-	input wire valid_in;
-	// Trace: src/VX_fpu_cvt.sv:10:5
-	input wire [NUM_LANES - 1:0] mask_in;
-	// Trace: src/VX_fpu_cvt.sv:11:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_fpu_cvt.sv:12:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fpu_cvt.sv:13:5
-	input wire is_itof;
-	// Trace: src/VX_fpu_cvt.sv:14:5
-	input wire is_signed;
-	// Trace: src/VX_fpu_cvt.sv:15:5
-	input wire [(NUM_LANES * 32) - 1:0] dataa;
-	// Trace: src/VX_fpu_cvt.sv:16:5
-	output wire [(NUM_LANES * 32) - 1:0] result;
-	// Trace: src/VX_fpu_cvt.sv:17:5
-	output wire has_fflags;
-	// Trace: src/VX_fpu_cvt.sv:18:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fpu_cvt.sv:19:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_fpu_cvt.sv:20:5
-	input wire ready_out;
-	// Trace: src/VX_fpu_cvt.sv:21:5
-	output wire valid_out;
-	// Trace: src/VX_fpu_cvt.sv:23:5
-	localparam DATAW = 37;
-	// Trace: src/VX_fpu_cvt.sv:24:5
-	wire [(NUM_LANES * 37) - 1:0] data_in;
-	// Trace: src/VX_fpu_cvt.sv:25:5
-	wire [NUM_LANES - 1:0] mask_out;
-	// Trace: src/VX_fpu_cvt.sv:26:5
-	wire [(NUM_LANES * 37) - 1:0] data_out;
-	// Trace: src/VX_fpu_cvt.sv:27:5
-	wire [(NUM_LANES * 5) - 1:0] fflags_out;
-	// Trace: src/VX_fpu_cvt.sv:28:5
-	wire pe_enable;
-	// Trace: src/VX_fpu_cvt.sv:29:5
-	wire [(NUM_PES * 37) - 1:0] pe_data_in;
-	// Trace: src/VX_fpu_cvt.sv:30:5
-	wire [(NUM_PES * 37) - 1:0] pe_data_out;
-	// Trace: src/VX_fpu_cvt.sv:31:5
-	genvar _gv_i_163;
-	generate
-		for (_gv_i_163 = 0; _gv_i_163 < NUM_LANES; _gv_i_163 = _gv_i_163 + 1) begin : g_data_in
-			localparam i = _gv_i_163;
-			// Trace: src/VX_fpu_cvt.sv:32:9
-			assign data_in[i * 37+:32] = dataa[i * 32+:32];
-			// Trace: src/VX_fpu_cvt.sv:33:9
-			assign data_in[(i * 37) + 32+:VX_gpu_pkg_INST_FRM_BITS] = frm;
-			// Trace: src/VX_fpu_cvt.sv:34:9
-			assign data_in[(i * 37) + 35+:1] = is_itof;
-			// Trace: src/VX_fpu_cvt.sv:35:9
-			assign data_in[(i * 37) + 36+:1] = is_signed;
-		end
-	endgenerate
-	// Trace: src/VX_fpu_cvt.sv:37:5
-	VX_pe_serializer #(
-		.NUM_LANES(NUM_LANES),
-		.NUM_PES(NUM_PES),
-		.LATENCY(5),
-		.DATA_IN_WIDTH(DATAW),
-		.DATA_OUT_WIDTH(37),
-		.TAG_WIDTH(NUM_LANES + TAG_WIDTH),
-		.PE_REG(0),
-		.OUT_BUF(2)
-	) pe_serializer(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(valid_in),
-		.data_in(data_in),
-		.tag_in({mask_in, tag_in}),
-		.ready_in(ready_in),
-		.pe_enable(pe_enable),
-		.pe_data_out(pe_data_in),
-		.pe_data_in(pe_data_out),
-		.valid_out(valid_out),
-		.data_out(data_out),
-		.tag_out({mask_out, tag_out}),
-		.ready_out(ready_out)
-	);
-	// Trace: src/VX_fpu_cvt.sv:61:5
-	genvar _gv_i_164;
-	generate
-		for (_gv_i_164 = 0; _gv_i_164 < NUM_LANES; _gv_i_164 = _gv_i_164 + 1) begin : g_result
-			localparam i = _gv_i_164;
-			// Trace: src/VX_fpu_cvt.sv:62:9
-			assign result[i * 32+:32] = data_out[i * 37+:32];
-			// Trace: src/VX_fpu_cvt.sv:63:9
-			assign fflags_out[i * 5+:5] = data_out[(i * 37) + 32+:5];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_cvt.sv:65:5
-	genvar _gv_i_165;
-	generate
-		for (_gv_i_165 = 0; _gv_i_165 < NUM_PES; _gv_i_165 = _gv_i_165 + 1) begin : g_fcvt_units
-			localparam i = _gv_i_165;
-			// Trace: src/VX_fpu_cvt.sv:66:9
-			VX_fcvt_unit #(
-				.LATENCY(5),
-				.OUT_REG(1)
-			) fcvt_unit(
-				.clk(clk),
-				.reset(reset),
-				.enable(pe_enable),
-				.frm(pe_data_in[32+:VX_gpu_pkg_INST_FRM_BITS]),
-				.is_itof(pe_data_in[35+:1]),
-				.is_signed(pe_data_in[36+:1]),
-				.dataa(pe_data_in[i * 37+:32]),
-				.result(pe_data_out[i * 37+:32]),
-				.fflags(pe_data_out[(i * 37) + 32+:5])
-			);
-		end
-	endgenerate
-	// Trace: src/VX_fpu_cvt.sv:81:5
-	assign has_fflags = 1;
-	// Trace: src/VX_fpu_cvt.sv:82:5
-	reg [4:0] __fflags;
-	// Trace: src/VX_fpu_cvt.sv:83:5
-	always @(*) begin
-		// Trace: src/VX_fpu_cvt.sv:84:9
-		__fflags = 1'sb0;
-		// Trace: src/VX_fpu_cvt.sv:85:9
-		begin : sv2v_autoblock_1
-			// Trace: src/VX_fpu_cvt.sv:85:14
-			integer __i;
-			// Trace: src/VX_fpu_cvt.sv:85:14
-			for (__i = 0; __i < NUM_LANES; __i = __i + 1)
-				begin
-					// Trace: src/VX_fpu_cvt.sv:86:13
-					if (mask_out[__i]) begin
-						// Trace: src/VX_fpu_cvt.sv:87:17
-						__fflags[0] = __fflags[0] | fflags_out[__i * 5];
-						// Trace: src/VX_fpu_cvt.sv:88:17
-						__fflags[1] = __fflags[1] | fflags_out[(__i * 5) + 1];
-						// Trace: src/VX_fpu_cvt.sv:89:17
-						__fflags[2] = __fflags[2] | fflags_out[(__i * 5) + 2];
-						// Trace: src/VX_fpu_cvt.sv:90:17
-						__fflags[3] = __fflags[3] | fflags_out[(__i * 5) + 3];
-						// Trace: src/VX_fpu_cvt.sv:91:17
-						__fflags[4] = __fflags[4] | fflags_out[(__i * 5) + 4];
-					end
-				end
-		end
-	end
-	// Trace: src/VX_fpu_cvt.sv:95:5
-	assign fflags = __fflags;
-endmodule
 // removed package "VX_trace_pkg"
-module VX_fpu_dsp (
-	clk,
-	reset,
-	valid_in,
-	ready_in,
-	mask_in,
-	tag_in,
-	op_type,
-	fmt,
-	frm,
-	dataa,
-	datab,
-	datac,
-	result,
-	has_fflags,
-	fflags,
-	tag_out,
-	ready_out,
-	valid_out
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fpu_dsp.sv:2:15
-	parameter NUM_LANES = 4;
-	// Trace: src/VX_fpu_dsp.sv:3:15
-	parameter TAG_WIDTH = 4;
-	// Trace: src/VX_fpu_dsp.sv:4:15
-	parameter OUT_BUF = 0;
-	// Trace: src/VX_fpu_dsp.sv:6:5
-	input wire clk;
-	// Trace: src/VX_fpu_dsp.sv:7:5
-	input wire reset;
-	// Trace: src/VX_fpu_dsp.sv:8:5
-	input wire valid_in;
-	// Trace: src/VX_fpu_dsp.sv:9:5
-	output wire ready_in;
-	// Trace: src/VX_fpu_dsp.sv:10:5
-	input wire [NUM_LANES - 1:0] mask_in;
-	// Trace: src/VX_fpu_dsp.sv:11:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_fpu_dsp.sv:12:5
-	localparam VX_gpu_pkg_INST_FPU_BITS = 4;
-	input wire [3:0] op_type;
-	// Trace: src/VX_fpu_dsp.sv:13:5
-	localparam VX_gpu_pkg_INST_FMT_BITS = 2;
-	input wire [1:0] fmt;
-	// Trace: src/VX_fpu_dsp.sv:14:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fpu_dsp.sv:15:5
-	input wire [(NUM_LANES * 32) - 1:0] dataa;
-	// Trace: src/VX_fpu_dsp.sv:16:5
-	input wire [(NUM_LANES * 32) - 1:0] datab;
-	// Trace: src/VX_fpu_dsp.sv:17:5
-	input wire [(NUM_LANES * 32) - 1:0] datac;
-	// Trace: src/VX_fpu_dsp.sv:18:5
-	output wire [(NUM_LANES * 32) - 1:0] result;
-	// Trace: src/VX_fpu_dsp.sv:19:5
-	output wire has_fflags;
-	// Trace: src/VX_fpu_dsp.sv:20:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fpu_dsp.sv:21:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_fpu_dsp.sv:22:5
-	input wire ready_out;
-	// Trace: src/VX_fpu_dsp.sv:23:5
-	output wire valid_out;
-	// Trace: src/VX_fpu_dsp.sv:25:5
-	localparam FPU_FMA = 0;
-	// Trace: src/VX_fpu_dsp.sv:26:5
-	localparam FPU_DIVSQRT = 1;
-	// Trace: src/VX_fpu_dsp.sv:27:5
-	localparam FPU_CVT = 2;
-	// Trace: src/VX_fpu_dsp.sv:28:5
-	localparam FPU_NCP = 3;
-	// Trace: src/VX_fpu_dsp.sv:29:5
-	localparam NUM_FPCORES = 4;
-	// Trace: src/VX_fpu_dsp.sv:30:5
-	localparam FPCORES_BITS = 2;
-	// Trace: src/VX_fpu_dsp.sv:31:5
-	localparam REQ_DATAW = ((((NUM_LANES + TAG_WIDTH) + VX_gpu_pkg_INST_FPU_BITS) + VX_gpu_pkg_INST_FMT_BITS) + VX_gpu_pkg_INST_FRM_BITS) + (3 * (NUM_LANES * 32));
-	// Trace: src/VX_fpu_dsp.sv:32:5
-	localparam RSP_DATAW = ((NUM_LANES * 32) + 6) + TAG_WIDTH;
-	// Trace: src/VX_fpu_dsp.sv:33:5
-	wire [3:0] per_core_valid_in;
-	// Trace: src/VX_fpu_dsp.sv:34:5
-	wire [(4 * REQ_DATAW) - 1:0] per_core_data_in;
-	// Trace: src/VX_fpu_dsp.sv:35:5
-	wire [3:0] per_core_ready_in;
-	// Trace: src/VX_fpu_dsp.sv:36:5
-	wire [(4 * NUM_LANES) - 1:0] per_core_mask_in;
-	// Trace: src/VX_fpu_dsp.sv:37:5
-	wire [(4 * TAG_WIDTH) - 1:0] per_core_tag_in;
-	// Trace: src/VX_fpu_dsp.sv:38:5
-	wire [15:0] per_core_op_type;
-	// Trace: src/VX_fpu_dsp.sv:39:5
-	wire [7:0] per_core_fmt;
-	// Trace: src/VX_fpu_dsp.sv:40:5
-	wire [11:0] per_core_frm;
-	// Trace: src/VX_fpu_dsp.sv:41:5
-	wire [((4 * NUM_LANES) * 32) - 1:0] per_core_dataa;
-	// Trace: src/VX_fpu_dsp.sv:42:5
-	wire [((4 * NUM_LANES) * 32) - 1:0] per_core_datab;
-	// Trace: src/VX_fpu_dsp.sv:43:5
-	wire [((4 * NUM_LANES) * 32) - 1:0] per_core_datac;
-	// Trace: src/VX_fpu_dsp.sv:44:5
-	wire [3:0] per_core_valid_out;
-	// Trace: src/VX_fpu_dsp.sv:45:5
-	wire [((4 * NUM_LANES) * 32) - 1:0] per_core_result;
-	// Trace: src/VX_fpu_dsp.sv:46:5
-	wire [(4 * TAG_WIDTH) - 1:0] per_core_tag_out;
-	// Trace: src/VX_fpu_dsp.sv:47:5
-	wire [3:0] per_core_has_fflags;
-	// Trace: src/VX_fpu_dsp.sv:48:5
-	wire [19:0] per_core_fflags;
-	// Trace: src/VX_fpu_dsp.sv:49:5
-	wire [3:0] per_core_ready_out;
-	// Trace: src/VX_fpu_dsp.sv:50:5
-	wire [(NUM_LANES * 32) - 1:0] dataa_s;
-	// Trace: src/VX_fpu_dsp.sv:51:5
-	wire [(NUM_LANES * 32) - 1:0] datab_s;
-	// Trace: src/VX_fpu_dsp.sv:52:5
-	wire [(NUM_LANES * 32) - 1:0] datac_s;
-	// Trace: src/VX_fpu_dsp.sv:53:5
-	genvar _gv_i_166;
-	generate
-		for (_gv_i_166 = 0; _gv_i_166 < NUM_LANES; _gv_i_166 = _gv_i_166 + 1) begin : g_data
-			localparam i = _gv_i_166;
-			// Trace: src/VX_fpu_dsp.sv:54:9
-			assign dataa_s[i * 32+:32] = dataa[(i * 32) + 31-:32];
-			// Trace: src/VX_fpu_dsp.sv:55:9
-			assign datab_s[i * 32+:32] = datab[(i * 32) + 31-:32];
-			// Trace: src/VX_fpu_dsp.sv:56:9
-			assign datac_s[i * 32+:32] = datac[(i * 32) + 31-:32];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_dsp.sv:58:5
-	wire [1:0] core_select = op_type[3:2];
-	// Trace: src/VX_fpu_dsp.sv:59:5
-	VX_stream_switch #(
-		.DATAW(REQ_DATAW),
-		.NUM_INPUTS(1),
-		.NUM_OUTPUTS(NUM_FPCORES)
-	) req_switch(
-		.clk(clk),
-		.reset(reset),
-		.sel_in(core_select),
-		.valid_in(valid_in),
-		.ready_in(ready_in),
-		.data_in({mask_in, tag_in, fmt, frm, dataa_s, datab_s, datac_s, op_type}),
-		.data_out(per_core_data_in),
-		.valid_out(per_core_valid_in),
-		.ready_out(per_core_ready_in)
-	);
-	// Trace: src/VX_fpu_dsp.sv:74:5
-	genvar _gv_i_167;
-	generate
-		for (_gv_i_167 = 0; _gv_i_167 < NUM_FPCORES; _gv_i_167 = _gv_i_167 + 1) begin : g_per_core_data_in
-			localparam i = _gv_i_167;
-			// Trace: src/VX_fpu_dsp.sv:75:9
-			assign {per_core_mask_in[i * NUM_LANES+:NUM_LANES], per_core_tag_in[i * TAG_WIDTH+:TAG_WIDTH], per_core_fmt[i * 2+:2], per_core_frm[i * 3+:3], per_core_dataa[32 * (i * NUM_LANES)+:32 * NUM_LANES], per_core_datab[32 * (i * NUM_LANES)+:32 * NUM_LANES], per_core_datac[32 * (i * NUM_LANES)+:32 * NUM_LANES], per_core_op_type[i * 4+:4]} = per_core_data_in[i * REQ_DATAW+:REQ_DATAW];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_dsp.sv:86:5
-	wire is_madd = per_core_op_type[1];
-	// Trace: src/VX_fpu_dsp.sv:87:5
-	wire is_neg = per_core_op_type[0];
-	// Trace: src/VX_fpu_dsp.sv:88:5
-	wire is_sub = per_core_fmt[1];
-	// Trace: src/VX_fpu_dsp.sv:89:5
-	VX_fpu_fma #(
-		.NUM_LANES(NUM_LANES),
-		.TAG_WIDTH(TAG_WIDTH)
-	) fpu_fma(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(per_core_valid_in[FPU_FMA]),
-		.ready_in(per_core_ready_in[FPU_FMA]),
-		.mask_in(per_core_mask_in[0+:NUM_LANES]),
-		.tag_in(per_core_tag_in[0+:TAG_WIDTH]),
-		.frm(per_core_frm[0+:3]),
-		.is_madd(is_madd),
-		.is_sub(is_sub),
-		.is_neg(is_neg),
-		.dataa(per_core_dataa[0+:32 * NUM_LANES]),
-		.datab(per_core_datab[0+:32 * NUM_LANES]),
-		.datac(per_core_datac[0+:32 * NUM_LANES]),
-		.has_fflags(per_core_has_fflags[FPU_FMA]),
-		.fflags(per_core_fflags[0+:5]),
-		.result(per_core_result[0+:32 * NUM_LANES]),
-		.tag_out(per_core_tag_out[0+:TAG_WIDTH]),
-		.ready_out(per_core_ready_out[FPU_FMA]),
-		.valid_out(per_core_valid_out[FPU_FMA])
-	);
-	// Trace: src/VX_fpu_dsp.sv:113:5
-	wire [1:0] div_sqrt_valid_in;
-	// Trace: src/VX_fpu_dsp.sv:114:5
-	wire [(2 * REQ_DATAW) - 1:0] div_sqrt_data_in;
-	// Trace: src/VX_fpu_dsp.sv:115:5
-	wire [1:0] div_sqrt_ready_in;
-	// Trace: src/VX_fpu_dsp.sv:116:5
-	wire [(2 * NUM_LANES) - 1:0] div_sqrt_mask_in;
-	// Trace: src/VX_fpu_dsp.sv:117:5
-	wire [(2 * TAG_WIDTH) - 1:0] div_sqrt_tag_in;
-	// Trace: src/VX_fpu_dsp.sv:118:5
-	wire [7:0] div_sqrt_op_type;
-	// Trace: src/VX_fpu_dsp.sv:119:5
-	wire [3:0] div_sqrt_fmt;
-	// Trace: src/VX_fpu_dsp.sv:120:5
-	wire [5:0] div_sqrt_frm;
-	// Trace: src/VX_fpu_dsp.sv:121:5
-	wire [((2 * NUM_LANES) * 32) - 1:0] div_sqrt_dataa;
-	// Trace: src/VX_fpu_dsp.sv:122:5
-	wire [((2 * NUM_LANES) * 32) - 1:0] div_sqrt_datab;
-	// Trace: src/VX_fpu_dsp.sv:123:5
-	wire [((2 * NUM_LANES) * 32) - 1:0] div_sqrt_datac;
-	// Trace: src/VX_fpu_dsp.sv:124:5
-	wire [1:0] div_sqrt_valid_out;
-	// Trace: src/VX_fpu_dsp.sv:125:5
-	wire [((2 * NUM_LANES) * 32) - 1:0] div_sqrt_result;
-	// Trace: src/VX_fpu_dsp.sv:126:5
-	wire [(2 * TAG_WIDTH) - 1:0] div_sqrt_tag_out;
-	// Trace: src/VX_fpu_dsp.sv:127:5
-	wire [1:0] div_sqrt_has_fflags;
-	// Trace: src/VX_fpu_dsp.sv:128:5
-	wire [9:0] div_sqrt_fflags;
-	// Trace: src/VX_fpu_dsp.sv:129:5
-	wire [1:0] div_sqrt_ready_out;
-	// Trace: src/VX_fpu_dsp.sv:130:5
-	wire div_sqrt_valid_tmp_in;
-	// Trace: src/VX_fpu_dsp.sv:131:5
-	wire [REQ_DATAW - 1:0] div_sqrt_data_tmp_in;
-	// Trace: src/VX_fpu_dsp.sv:132:5
-	wire div_sqrt_ready_tmp_in;
-	// Trace: src/VX_fpu_dsp.sv:133:5
-	VX_elastic_buffer #(.DATAW(REQ_DATAW)) div_sqrt_req_buffer(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(per_core_valid_in[FPU_DIVSQRT]),
-		.ready_in(per_core_ready_in[FPU_DIVSQRT]),
-		.data_in(per_core_data_in[FPU_DIVSQRT * REQ_DATAW+:REQ_DATAW]),
-		.data_out(div_sqrt_data_tmp_in),
-		.valid_out(div_sqrt_valid_tmp_in),
-		.ready_out(div_sqrt_ready_tmp_in)
-	);
-	// Trace: src/VX_fpu_dsp.sv:145:5
-	wire is_sqrt = div_sqrt_data_tmp_in[0];
-	// Trace: src/VX_fpu_dsp.sv:146:5
-	VX_stream_switch #(
-		.DATAW(REQ_DATAW),
-		.NUM_INPUTS(1),
-		.NUM_OUTPUTS(2)
-	) div_sqrt_req_switch(
-		.clk(clk),
-		.reset(reset),
-		.sel_in(is_sqrt),
-		.valid_in(div_sqrt_valid_tmp_in),
-		.ready_in(div_sqrt_ready_tmp_in),
-		.data_in(div_sqrt_data_tmp_in),
-		.data_out(div_sqrt_data_in),
-		.valid_out(div_sqrt_valid_in),
-		.ready_out(div_sqrt_ready_in)
-	);
-	// Trace: src/VX_fpu_dsp.sv:161:5
-	genvar _gv_i_168;
-	generate
-		for (_gv_i_168 = 0; _gv_i_168 < 2; _gv_i_168 = _gv_i_168 + 1) begin : g_div_sqrt_data_in
-			localparam i = _gv_i_168;
-			// Trace: src/VX_fpu_dsp.sv:162:9
-			assign {div_sqrt_mask_in[i * NUM_LANES+:NUM_LANES], div_sqrt_tag_in[i * TAG_WIDTH+:TAG_WIDTH], div_sqrt_fmt[i * 2+:2], div_sqrt_frm[i * 3+:3], div_sqrt_dataa[32 * (i * NUM_LANES)+:32 * NUM_LANES], div_sqrt_datab[32 * (i * NUM_LANES)+:32 * NUM_LANES], div_sqrt_datac[32 * (i * NUM_LANES)+:32 * NUM_LANES], div_sqrt_op_type[i * 4+:4]} = div_sqrt_data_in[i * REQ_DATAW+:REQ_DATAW];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_dsp.sv:173:5
-	VX_fpu_div #(
-		.NUM_LANES(NUM_LANES),
-		.TAG_WIDTH(TAG_WIDTH)
-	) fpu_div(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(div_sqrt_valid_in[0]),
-		.ready_in(div_sqrt_ready_in[0]),
-		.mask_in(div_sqrt_mask_in[0+:NUM_LANES]),
-		.tag_in(div_sqrt_tag_in[0+:TAG_WIDTH]),
-		.frm(div_sqrt_frm[0+:3]),
-		.dataa(div_sqrt_dataa[0+:32 * NUM_LANES]),
-		.datab(div_sqrt_datab[0+:32 * NUM_LANES]),
-		.has_fflags(div_sqrt_has_fflags[0]),
-		.fflags(div_sqrt_fflags[0+:5]),
-		.result(div_sqrt_result[0+:32 * NUM_LANES]),
-		.tag_out(div_sqrt_tag_out[0+:TAG_WIDTH]),
-		.valid_out(div_sqrt_valid_out[0]),
-		.ready_out(div_sqrt_ready_out[0])
-	);
-	// Trace: src/VX_fpu_dsp.sv:193:5
-	VX_fpu_sqrt #(
-		.NUM_LANES(NUM_LANES),
-		.TAG_WIDTH(TAG_WIDTH)
-	) fpu_sqrt(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(div_sqrt_valid_in[1]),
-		.ready_in(div_sqrt_ready_in[1]),
-		.mask_in(div_sqrt_mask_in[NUM_LANES+:NUM_LANES]),
-		.tag_in(div_sqrt_tag_in[TAG_WIDTH+:TAG_WIDTH]),
-		.frm(div_sqrt_frm[3+:3]),
-		.dataa(div_sqrt_dataa[32 * NUM_LANES+:32 * NUM_LANES]),
-		.has_fflags(div_sqrt_has_fflags[1]),
-		.fflags(div_sqrt_fflags[5+:5]),
-		.result(div_sqrt_result[32 * NUM_LANES+:32 * NUM_LANES]),
-		.tag_out(div_sqrt_tag_out[TAG_WIDTH+:TAG_WIDTH]),
-		.valid_out(div_sqrt_valid_out[1]),
-		.ready_out(div_sqrt_ready_out[1])
-	);
-	// Trace: src/VX_fpu_dsp.sv:212:5
-	wire [(2 * RSP_DATAW) - 1:0] div_sqrt_arb_data_in;
-	// Trace: src/VX_fpu_dsp.sv:213:5
-	genvar _gv_i_169;
-	generate
-		for (_gv_i_169 = 0; _gv_i_169 < 2; _gv_i_169 = _gv_i_169 + 1) begin : g_div_sqrt_arb_data_in
-			localparam i = _gv_i_169;
-			// Trace: src/VX_fpu_dsp.sv:214:9
-			assign div_sqrt_arb_data_in[i * RSP_DATAW+:RSP_DATAW] = {div_sqrt_result[32 * (i * NUM_LANES)+:32 * NUM_LANES], div_sqrt_has_fflags[i], div_sqrt_fflags[i * 5+:5], div_sqrt_tag_out[i * TAG_WIDTH+:TAG_WIDTH]};
-		end
-	endgenerate
-	// Trace: src/VX_fpu_dsp.sv:221:5
-	VX_stream_arb #(
-		.NUM_INPUTS(2),
-		.DATAW(RSP_DATAW),
-		.ARBITER("P"),
-		.OUT_BUF(0)
-	) div_sqrt_rsp_arb(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(div_sqrt_valid_out),
-		.ready_in(div_sqrt_ready_out),
-		.data_in(div_sqrt_arb_data_in),
-		.data_out({per_core_result[32 * (FPU_DIVSQRT * NUM_LANES)+:32 * NUM_LANES], per_core_has_fflags[FPU_DIVSQRT], per_core_fflags[5+:5], per_core_tag_out[FPU_DIVSQRT * TAG_WIDTH+:TAG_WIDTH]}),
-		.valid_out(per_core_valid_out[FPU_DIVSQRT]),
-		.ready_out(per_core_ready_out[FPU_DIVSQRT]),
-		.sel_out()
-	);
-	// Trace: src/VX_fpu_dsp.sv:242:5
-	wire is_itof = per_core_op_type[9];
-	// Trace: src/VX_fpu_dsp.sv:243:5
-	wire is_signed = ~per_core_op_type[8];
-	// Trace: src/VX_fpu_dsp.sv:244:5
-	wire cvt_ret_int_in = ~is_itof;
-	// Trace: src/VX_fpu_dsp.sv:245:5
-	wire cvt_ret_int_out;
-	// Trace: src/VX_fpu_dsp.sv:246:5
-	VX_fpu_cvt #(
-		.NUM_LANES(NUM_LANES),
-		.TAG_WIDTH(1 + TAG_WIDTH)
-	) fpu_cvt(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(per_core_valid_in[FPU_CVT]),
-		.ready_in(per_core_ready_in[FPU_CVT]),
-		.mask_in(per_core_mask_in[FPU_CVT * NUM_LANES+:NUM_LANES]),
-		.tag_in({cvt_ret_int_in, per_core_tag_in[FPU_CVT * TAG_WIDTH+:TAG_WIDTH]}),
-		.frm(per_core_frm[6+:3]),
-		.is_itof(is_itof),
-		.is_signed(is_signed),
-		.dataa(per_core_dataa[32 * (FPU_CVT * NUM_LANES)+:32 * NUM_LANES]),
-		.has_fflags(per_core_has_fflags[FPU_CVT]),
-		.fflags(per_core_fflags[10+:5]),
-		.result(per_core_result[32 * (FPU_CVT * NUM_LANES)+:32 * NUM_LANES]),
-		.tag_out({cvt_ret_int_out, per_core_tag_out[FPU_CVT * TAG_WIDTH+:TAG_WIDTH]}),
-		.valid_out(per_core_valid_out[FPU_CVT]),
-		.ready_out(per_core_ready_out[FPU_CVT])
-	);
-	// Trace: src/VX_fpu_dsp.sv:267:5
-	localparam VX_gpu_pkg_INST_FPU_CMP = 4'b1100;
-	localparam VX_gpu_pkg_INST_FPU_MISC = 4'b1110;
-	function automatic VX_gpu_pkg_inst_fpu_is_class;
-		// Trace: src/VX_gpu_pkg.sv:233:48
-		input reg [3:0] op;
-		// Trace: src/VX_gpu_pkg.sv:233:84
-		input reg [2:0] frm;
-		// Trace: src/VX_gpu_pkg.sv:234:9
-		VX_gpu_pkg_inst_fpu_is_class = (op == VX_gpu_pkg_INST_FPU_MISC) && (frm == 3);
-	endfunction
-	function automatic VX_gpu_pkg_inst_fpu_is_mvxw;
-		// Trace: src/VX_gpu_pkg.sv:236:47
-		input reg [3:0] op;
-		// Trace: src/VX_gpu_pkg.sv:236:83
-		input reg [2:0] frm;
-		// Trace: src/VX_gpu_pkg.sv:237:9
-		VX_gpu_pkg_inst_fpu_is_mvxw = (op == VX_gpu_pkg_INST_FPU_MISC) && (frm == 4);
-	endfunction
-	wire ncp_ret_int_in = ((per_core_op_type[12+:4] == VX_gpu_pkg_INST_FPU_CMP) || VX_gpu_pkg_inst_fpu_is_class(per_core_op_type[12+:4], per_core_frm[9+:3])) || VX_gpu_pkg_inst_fpu_is_mvxw(per_core_op_type[12+:4], per_core_frm[9+:3]);
-	// Trace: src/VX_fpu_dsp.sv:270:5
-	wire ncp_ret_int_out;
-	// Trace: src/VX_fpu_dsp.sv:271:5
-	wire ncp_ret_sext_in = VX_gpu_pkg_inst_fpu_is_mvxw(per_core_op_type[12+:4], per_core_frm[9+:3]);
-	// Trace: src/VX_fpu_dsp.sv:272:5
-	wire ncp_ret_sext_out;
-	// Trace: src/VX_fpu_dsp.sv:273:5
-	VX_fpu_ncp #(
-		.NUM_LANES(NUM_LANES),
-		.TAG_WIDTH(TAG_WIDTH + 2)
-	) fpu_ncp(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(per_core_valid_in[FPU_NCP]),
-		.ready_in(per_core_ready_in[FPU_NCP]),
-		.mask_in(per_core_mask_in[FPU_NCP * NUM_LANES+:NUM_LANES]),
-		.tag_in({ncp_ret_sext_in, ncp_ret_int_in, per_core_tag_in[FPU_NCP * TAG_WIDTH+:TAG_WIDTH]}),
-		.op_type(per_core_op_type[12+:4]),
-		.frm(per_core_frm[9+:3]),
-		.dataa(per_core_dataa[32 * (FPU_NCP * NUM_LANES)+:32 * NUM_LANES]),
-		.datab(per_core_datab[32 * (FPU_NCP * NUM_LANES)+:32 * NUM_LANES]),
-		.result(per_core_result[32 * (FPU_NCP * NUM_LANES)+:32 * NUM_LANES]),
-		.has_fflags(per_core_has_fflags[FPU_NCP]),
-		.fflags(per_core_fflags[15+:5]),
-		.tag_out({ncp_ret_sext_out, ncp_ret_int_out, per_core_tag_out[FPU_NCP * TAG_WIDTH+:TAG_WIDTH]}),
-		.valid_out(per_core_valid_out[FPU_NCP]),
-		.ready_out(per_core_ready_out[FPU_NCP])
-	);
-	// Trace: src/VX_fpu_dsp.sv:294:5
-	reg [((RSP_DATAW + 1) >= 0 ? (4 * (RSP_DATAW + 2)) - 1 : (4 * (1 - (RSP_DATAW + 1))) + (RSP_DATAW + 0)):((RSP_DATAW + 1) >= 0 ? 0 : RSP_DATAW + 1)] per_core_data_out;
-	// Trace: src/VX_fpu_dsp.sv:295:5
-	always @(*) begin
-		// Trace: src/VX_fpu_dsp.sv:296:9
-		begin : sv2v_autoblock_1
-			// Trace: src/VX_fpu_dsp.sv:296:14
-			integer i;
-			// Trace: src/VX_fpu_dsp.sv:296:14
-			for (i = 0; i < NUM_FPCORES; i = i + 1)
-				begin
-					// Trace: src/VX_fpu_dsp.sv:297:13
-					per_core_data_out[((RSP_DATAW + 1) >= 0 ? (i * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 1 : ((RSP_DATAW + 1) + ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 0 : 3 - (RSP_DATAW + 1))) - 1) : (RSP_DATAW + 1) - ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 1 : ((RSP_DATAW + 1) + ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 0 : 3 - (RSP_DATAW + 1))) - 1)) : (((i * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 1 : ((RSP_DATAW + 1) + ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 0 : 3 - (RSP_DATAW + 1))) - 1) : (RSP_DATAW + 1) - ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 1 : ((RSP_DATAW + 1) + ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 0 : 3 - (RSP_DATAW + 1))) - 1))) + ((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 0 : 3 - (RSP_DATAW + 1))) - 1)-:((RSP_DATAW + 1) >= 2 ? RSP_DATAW + 0 : 3 - (RSP_DATAW + 1))] = {per_core_result[32 * (i * NUM_LANES)+:32 * NUM_LANES], per_core_has_fflags[i], per_core_fflags[i * 5+:5], per_core_tag_out[i * TAG_WIDTH+:TAG_WIDTH]};
-					// Trace: src/VX_fpu_dsp.sv:303:13
-					per_core_data_out[((RSP_DATAW + 1) >= 0 ? (i * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? 1 : RSP_DATAW + 0) : ((i * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? 1 : RSP_DATAW + 0)) + 1)-:2] = 1'sb0;
-				end
-		end
-		// Trace: src/VX_fpu_dsp.sv:305:9
-		per_core_data_out[((RSP_DATAW + 1) >= 0 ? (FPU_CVT * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? 1 : RSP_DATAW + 0) : ((FPU_CVT * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? 1 : RSP_DATAW + 0)) + 1)-:2] = {1'b1, cvt_ret_int_out};
-		// Trace: src/VX_fpu_dsp.sv:306:9
-		per_core_data_out[((RSP_DATAW + 1) >= 0 ? (FPU_NCP * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? 1 : RSP_DATAW + 0) : ((FPU_NCP * ((RSP_DATAW + 1) >= 0 ? RSP_DATAW + 2 : 1 - (RSP_DATAW + 1))) + ((RSP_DATAW + 1) >= 0 ? 1 : RSP_DATAW + 0)) + 1)-:2] = {ncp_ret_sext_out, ncp_ret_int_out};
-	end
-	// Trace: src/VX_fpu_dsp.sv:308:5
-	wire [(NUM_LANES * 32) - 1:0] result_s;
-	// Trace: src/VX_fpu_dsp.sv:309:5
-	wire [1:0] op_ret_int_out;
-	// Trace: src/VX_fpu_dsp.sv:310:5
-	VX_stream_arb #(
-		.NUM_INPUTS(NUM_FPCORES),
-		.DATAW(RSP_DATAW + 2),
-		.ARBITER("R"),
-		.OUT_BUF(OUT_BUF)
-	) rsp_arb(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(per_core_valid_out),
-		.ready_in(per_core_ready_out),
-		.data_in(per_core_data_out),
-		.data_out({result_s, has_fflags, fflags, tag_out, op_ret_int_out}),
-		.valid_out(valid_out),
-		.ready_out(ready_out),
-		.sel_out()
-	);
-	// Trace: src/VX_fpu_dsp.sv:326:5
-	genvar _gv_i_170;
-	generate
-		for (_gv_i_170 = 0; _gv_i_170 < NUM_LANES; _gv_i_170 = _gv_i_170 + 1) begin : g_result
-			localparam i = _gv_i_170;
-			// Trace: src/VX_fpu_dsp.sv:327:9
-			assign result[i * 32+:32] = result_s[i * 32+:32];
-		end
-	endgenerate
-endmodule
 module VX_popcount63 (
 	data_in,
 	data_out
@@ -31201,246 +26890,6 @@ module VX_popcount (
 	endgenerate
 endmodule
 // removed interface: VX_warp_ctl_if
-module VX_fpu_fma (
-	clk,
-	reset,
-	ready_in,
-	valid_in,
-	mask_in,
-	tag_in,
-	frm,
-	is_madd,
-	is_sub,
-	is_neg,
-	dataa,
-	datab,
-	datac,
-	result,
-	has_fflags,
-	fflags,
-	tag_out,
-	ready_out,
-	valid_out
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fpu_fma.sv:2:15
-	parameter NUM_LANES = 1;
-	// Trace: src/VX_fpu_fma.sv:3:15
-	parameter NUM_PES = ((NUM_LANES / 1) > 0 ? NUM_LANES / 1 : 1);
-	// Trace: src/VX_fpu_fma.sv:4:15
-	parameter TAG_WIDTH = 1;
-	// Trace: src/VX_fpu_fma.sv:6:5
-	input wire clk;
-	// Trace: src/VX_fpu_fma.sv:7:5
-	input wire reset;
-	// Trace: src/VX_fpu_fma.sv:8:5
-	output wire ready_in;
-	// Trace: src/VX_fpu_fma.sv:9:5
-	input wire valid_in;
-	// Trace: src/VX_fpu_fma.sv:10:5
-	input wire [NUM_LANES - 1:0] mask_in;
-	// Trace: src/VX_fpu_fma.sv:11:5
-	input wire [TAG_WIDTH - 1:0] tag_in;
-	// Trace: src/VX_fpu_fma.sv:12:5
-	localparam VX_gpu_pkg_INST_FRM_BITS = 3;
-	input wire [2:0] frm;
-	// Trace: src/VX_fpu_fma.sv:13:5
-	input wire is_madd;
-	// Trace: src/VX_fpu_fma.sv:14:5
-	input wire is_sub;
-	// Trace: src/VX_fpu_fma.sv:15:5
-	input wire is_neg;
-	// Trace: src/VX_fpu_fma.sv:16:5
-	input wire [(NUM_LANES * 32) - 1:0] dataa;
-	// Trace: src/VX_fpu_fma.sv:17:5
-	input wire [(NUM_LANES * 32) - 1:0] datab;
-	// Trace: src/VX_fpu_fma.sv:18:5
-	input wire [(NUM_LANES * 32) - 1:0] datac;
-	// Trace: src/VX_fpu_fma.sv:19:5
-	output wire [(NUM_LANES * 32) - 1:0] result;
-	// Trace: src/VX_fpu_fma.sv:20:5
-	output wire has_fflags;
-	// Trace: src/VX_fpu_fma.sv:21:5
-	// removed localparam type VX_fpu_pkg_fflags_t
-	output wire [4:0] fflags;
-	// Trace: src/VX_fpu_fma.sv:22:5
-	output wire [TAG_WIDTH - 1:0] tag_out;
-	// Trace: src/VX_fpu_fma.sv:23:5
-	input wire ready_out;
-	// Trace: src/VX_fpu_fma.sv:24:5
-	output wire valid_out;
-	// Trace: src/VX_fpu_fma.sv:26:5
-	localparam DATAW = 99;
-	// Trace: src/VX_fpu_fma.sv:27:5
-	wire [(NUM_LANES * 99) - 1:0] data_in;
-	// Trace: src/VX_fpu_fma.sv:28:5
-	wire [NUM_LANES - 1:0] mask_out;
-	// Trace: src/VX_fpu_fma.sv:29:5
-	wire [(NUM_LANES * 37) - 1:0] data_out;
-	// Trace: src/VX_fpu_fma.sv:30:5
-	wire [(NUM_LANES * 5) - 1:0] fflags_out;
-	// Trace: src/VX_fpu_fma.sv:31:5
-	wire pe_enable;
-	// Trace: src/VX_fpu_fma.sv:32:5
-	wire [(NUM_PES * 99) - 1:0] pe_data_in;
-	// Trace: src/VX_fpu_fma.sv:33:5
-	wire [(NUM_PES * 37) - 1:0] pe_data_out;
-	// Trace: src/VX_fpu_fma.sv:34:5
-	reg [(NUM_LANES * 32) - 1:0] a;
-	reg [(NUM_LANES * 32) - 1:0] b;
-	reg [(NUM_LANES * 32) - 1:0] c;
-	// Trace: src/VX_fpu_fma.sv:35:5
-	genvar _gv_i_173;
-	generate
-		for (_gv_i_173 = 0; _gv_i_173 < NUM_LANES; _gv_i_173 = _gv_i_173 + 1) begin : g_select
-			localparam i = _gv_i_173;
-			// Trace: src/VX_fpu_fma.sv:36:9
-			always @(*)
-				// Trace: src/VX_fpu_fma.sv:37:13
-				if (is_madd) begin
-					// Trace: src/VX_fpu_fma.sv:38:17
-					a[i * 32+:32] = {is_neg ^ dataa[(i * 32) + 31], dataa[(i * 32) + 30-:31]};
-					// Trace: src/VX_fpu_fma.sv:39:17
-					b[i * 32+:32] = datab[i * 32+:32];
-					// Trace: src/VX_fpu_fma.sv:40:17
-					c[i * 32+:32] = {(is_neg ^ is_sub) ^ datac[(i * 32) + 31], datac[(i * 32) + 30-:31]};
-				end
-				else
-					// Trace: src/VX_fpu_fma.sv:42:17
-					if (is_neg) begin
-						// Trace: src/VX_fpu_fma.sv:43:21
-						a[i * 32+:32] = dataa[i * 32+:32];
-						// Trace: src/VX_fpu_fma.sv:44:21
-						b[i * 32+:32] = datab[i * 32+:32];
-						// Trace: src/VX_fpu_fma.sv:45:21
-						c[i * 32+:32] = 1'sb0;
-					end
-					else begin
-						// Trace: src/VX_fpu_fma.sv:47:21
-						a[i * 32+:32] = dataa[i * 32+:32];
-						// Trace: src/VX_fpu_fma.sv:48:21
-						b[i * 32+:32] = 32'h3f800000;
-						// Trace: src/VX_fpu_fma.sv:49:21
-						c[i * 32+:32] = {is_sub ^ datab[(i * 32) + 31], datab[(i * 32) + 30-:31]};
-					end
-		end
-	endgenerate
-	// Trace: src/VX_fpu_fma.sv:54:5
-	genvar _gv_i_174;
-	generate
-		for (_gv_i_174 = 0; _gv_i_174 < NUM_LANES; _gv_i_174 = _gv_i_174 + 1) begin : g_data_in
-			localparam i = _gv_i_174;
-			// Trace: src/VX_fpu_fma.sv:55:9
-			assign data_in[i * 99+:32] = a[i * 32+:32];
-			// Trace: src/VX_fpu_fma.sv:56:9
-			assign data_in[(i * 99) + 32+:32] = b[i * 32+:32];
-			// Trace: src/VX_fpu_fma.sv:57:9
-			assign data_in[(i * 99) + 64+:32] = c[i * 32+:32];
-			// Trace: src/VX_fpu_fma.sv:58:9
-			assign data_in[(i * 99) + 96+:VX_gpu_pkg_INST_FRM_BITS] = frm;
-		end
-	endgenerate
-	// Trace: src/VX_fpu_fma.sv:60:5
-	VX_pe_serializer #(
-		.NUM_LANES(NUM_LANES),
-		.NUM_PES(NUM_PES),
-		.LATENCY(4),
-		.DATA_IN_WIDTH(DATAW),
-		.DATA_OUT_WIDTH(37),
-		.TAG_WIDTH(NUM_LANES + TAG_WIDTH),
-		.PE_REG(0),
-		.OUT_BUF(2)
-	) pe_serializer(
-		.clk(clk),
-		.reset(reset),
-		.valid_in(valid_in),
-		.data_in(data_in),
-		.tag_in({mask_in, tag_in}),
-		.ready_in(ready_in),
-		.pe_enable(pe_enable),
-		.pe_data_out(pe_data_in),
-		.pe_data_in(pe_data_out),
-		.valid_out(valid_out),
-		.data_out(data_out),
-		.tag_out({mask_out, tag_out}),
-		.ready_out(ready_out)
-	);
-	// Trace: src/VX_fpu_fma.sv:84:5
-	genvar _gv_i_175;
-	generate
-		for (_gv_i_175 = 0; _gv_i_175 < NUM_LANES; _gv_i_175 = _gv_i_175 + 1) begin : g_result
-			localparam i = _gv_i_175;
-			// Trace: src/VX_fpu_fma.sv:85:9
-			assign result[i * 32+:32] = data_out[i * 37+:32];
-			// Trace: src/VX_fpu_fma.sv:86:9
-			assign fflags_out[i * 5+:5] = data_out[(i * 37) + 32+:5];
-		end
-	endgenerate
-	// Trace: src/VX_fpu_fma.sv:88:5
-	wire [(NUM_LANES * 5) - 1:0] per_lane_fflags;
-	// Trace: src/VX_fpu_fma.sv:89:5
-	genvar _gv_i_176;
-	generate
-		for (_gv_i_176 = 0; _gv_i_176 < NUM_PES; _gv_i_176 = _gv_i_176 + 1) begin : g_fmas
-			localparam i = _gv_i_176;
-			// Trace: src/VX_fpu_fma.sv:90:9
-			reg [63:0] r;
-			// Trace: src/VX_fpu_fma.sv:91:9
-			wire [4:0] f;
-			// Trace: src/VX_fpu_fma.sv:92:9
-			always @(*)
-				// Trace: src/VX_fpu_fma.sv:93:13
-				dpi_fmadd(pe_enable, 32'sd0, {32'hffffffff, pe_data_in[i * 99+:32]}, {32'hffffffff, pe_data_in[(i * 99) + 32+:32]}, {32'hffffffff, pe_data_in[(i * 99) + 64+:32]}, pe_data_in[96+:VX_gpu_pkg_INST_FRM_BITS], r, f);
-			// Trace: src/VX_fpu_fma.sv:104:9
-			VX_shift_register #(
-				.DATAW(37),
-				.DEPTH(4)
-			) shift_req_dpi(
-				.clk(clk),
-				.reset(),
-				.enable(pe_enable),
-				.data_in({f, r[31:0]}),
-				.data_out(pe_data_out[i * 37+:37])
-			);
-		end
-	endgenerate
-	// Trace: src/VX_fpu_fma.sv:115:5
-	assign has_fflags = 1;
-	// Trace: src/VX_fpu_fma.sv:116:5
-	assign per_lane_fflags = fflags_out;
-	// Trace: src/VX_fpu_fma.sv:117:5
-	reg [4:0] __fflags;
-	// Trace: src/VX_fpu_fma.sv:118:5
-	always @(*) begin
-		// Trace: src/VX_fpu_fma.sv:119:9
-		__fflags = 1'sb0;
-		// Trace: src/VX_fpu_fma.sv:120:9
-		begin : sv2v_autoblock_1
-			// Trace: src/VX_fpu_fma.sv:120:14
-			integer __i;
-			// Trace: src/VX_fpu_fma.sv:120:14
-			for (__i = 0; __i < NUM_LANES; __i = __i + 1)
-				begin
-					// Trace: src/VX_fpu_fma.sv:121:13
-					if (mask_out[__i]) begin
-						// Trace: src/VX_fpu_fma.sv:122:17
-						__fflags[0] = __fflags[0] | per_lane_fflags[__i * 5];
-						// Trace: src/VX_fpu_fma.sv:123:17
-						__fflags[1] = __fflags[1] | per_lane_fflags[(__i * 5) + 1];
-						// Trace: src/VX_fpu_fma.sv:124:17
-						__fflags[2] = __fflags[2] | per_lane_fflags[(__i * 5) + 2];
-						// Trace: src/VX_fpu_fma.sv:125:17
-						__fflags[3] = __fflags[3] | per_lane_fflags[(__i * 5) + 3];
-						// Trace: src/VX_fpu_fma.sv:126:17
-						__fflags[4] = __fflags[4] | per_lane_fflags[(__i * 5) + 4];
-					end
-				end
-		end
-	end
-	// Trace: src/VX_fpu_fma.sv:130:5
-	assign fflags = __fflags;
-endmodule
 // removed module with interface ports: VX_lsu_adapter
 // removed module with interface ports: VX_socket
 // removed module with interface ports: VX_gbar_arb
@@ -34572,17 +30021,17 @@ module VX_reset_relay (
 			localparam R = N / F;
 			// Trace: src/VX_reset_relay.sv:12:10
 			reg [R - 1:0] reset_r;
-			genvar _gv_i_246;
-			for (_gv_i_246 = 0; _gv_i_246 < R; _gv_i_246 = _gv_i_246 + 1) begin : g_reset_r
-				localparam i = _gv_i_246;
+			genvar _gv_i_244;
+			for (_gv_i_244 = 0; _gv_i_244 < R; _gv_i_244 = _gv_i_244 + 1) begin : g_reset_r
+				localparam i = _gv_i_244;
 				// Trace: src/VX_reset_relay.sv:14:13
 				always @(posedge clk)
 					// Trace: src/VX_reset_relay.sv:15:17
 					reset_r[i] <= reset;
 			end
-			genvar _gv_i_247;
-			for (_gv_i_247 = 0; _gv_i_247 < N; _gv_i_247 = _gv_i_247 + 1) begin : g_reset_o
-				localparam i = _gv_i_247;
+			genvar _gv_i_245;
+			for (_gv_i_245 = 0; _gv_i_245 < N; _gv_i_245 = _gv_i_245 + 1) begin : g_reset_o
+				localparam i = _gv_i_245;
 				// Trace: src/VX_reset_relay.sv:19:13
 				assign reset_o[i] = reset_r[i / F];
 			end
@@ -34594,85 +30043,5 @@ module VX_reset_relay (
 	endgenerate
 endmodule
 // removed interface: VX_fpu_csr_if
-module VX_fp_rounding (
-	abs_value_i,
-	sign_i,
-	round_sticky_bits_i,
-	rnd_mode_i,
-	effective_subtraction_i,
-	abs_rounded_o,
-	sign_o,
-	exact_zero_o
-);
-	// removed import VX_gpu_pkg::*;
-	// removed import VX_fpu_pkg::*;
-	// Trace: src/VX_fp_rounding.sv:2:15
-	parameter DAT_WIDTH = 2;
-	// Trace: src/VX_fp_rounding.sv:4:5
-	input wire [DAT_WIDTH - 1:0] abs_value_i;
-	// Trace: src/VX_fp_rounding.sv:5:5
-	input wire sign_i;
-	// Trace: src/VX_fp_rounding.sv:6:5
-	input wire [1:0] round_sticky_bits_i;
-	// Trace: src/VX_fp_rounding.sv:7:5
-	input wire [2:0] rnd_mode_i;
-	// Trace: src/VX_fp_rounding.sv:8:5
-	input wire effective_subtraction_i;
-	// Trace: src/VX_fp_rounding.sv:9:5
-	output wire [DAT_WIDTH - 1:0] abs_rounded_o;
-	// Trace: src/VX_fp_rounding.sv:10:5
-	output wire sign_o;
-	// Trace: src/VX_fp_rounding.sv:11:5
-	output wire exact_zero_o;
-	// Trace: src/VX_fp_rounding.sv:13:5
-	reg round_up;
-	// Trace: src/VX_fp_rounding.sv:14:5
-	localparam VX_gpu_pkg_INST_FRM_RDN = 3'b010;
-	localparam VX_gpu_pkg_INST_FRM_RMM = 3'b100;
-	localparam VX_gpu_pkg_INST_FRM_RNE = 3'b000;
-	localparam VX_gpu_pkg_INST_FRM_RTZ = 3'b001;
-	localparam VX_gpu_pkg_INST_FRM_RUP = 3'b011;
-	always @(*)
-		// Trace: src/VX_fp_rounding.sv:15:9
-		case (rnd_mode_i)
-			VX_gpu_pkg_INST_FRM_RNE:
-				case (round_sticky_bits_i)
-					2'b00, 2'b01:
-						// Trace: src/VX_fp_rounding.sv:19:30
-						round_up = 1'b0;
-					2'b10:
-						// Trace: src/VX_fp_rounding.sv:20:30
-						round_up = abs_value_i[0];
-					2'b11:
-						// Trace: src/VX_fp_rounding.sv:21:30
-						round_up = 1'b1;
-				endcase
-			VX_gpu_pkg_INST_FRM_RTZ:
-				// Trace: src/VX_fp_rounding.sv:23:27
-				round_up = 1'b0;
-			VX_gpu_pkg_INST_FRM_RDN:
-				// Trace: src/VX_fp_rounding.sv:24:27
-				round_up = |round_sticky_bits_i & sign_i;
-			VX_gpu_pkg_INST_FRM_RUP:
-				// Trace: src/VX_fp_rounding.sv:25:27
-				round_up = |round_sticky_bits_i & ~sign_i;
-			VX_gpu_pkg_INST_FRM_RMM:
-				// Trace: src/VX_fp_rounding.sv:26:27
-				round_up = round_sticky_bits_i[1];
-			default:
-				// Trace: src/VX_fp_rounding.sv:27:23
-				round_up = 1'bx;
-		endcase
-	// Trace: src/VX_fp_rounding.sv:30:5
-	function automatic [DAT_WIDTH - 1:0] sv2v_cast_8455B;
-		input reg [DAT_WIDTH - 1:0] inp;
-		sv2v_cast_8455B = inp;
-	endfunction
-	assign abs_rounded_o = abs_value_i + sv2v_cast_8455B(round_up);
-	// Trace: src/VX_fp_rounding.sv:31:5
-	assign exact_zero_o = (abs_value_i == 0) && (round_sticky_bits_i == 0);
-	// Trace: src/VX_fp_rounding.sv:32:5
-	assign sign_o = (exact_zero_o && effective_subtraction_i ? rnd_mode_i == VX_gpu_pkg_INST_FRM_RDN : sign_i);
-endmodule
 // removed module with interface ports: VX_cluster
 // removed interface: VX_mem_bus_if

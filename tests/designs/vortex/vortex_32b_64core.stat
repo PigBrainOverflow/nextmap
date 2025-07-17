@@ -1,0 +1,939 @@
+
+2. Printing statistics.
+
+=== VX_reset_relay ===
+
+   Number of wires:                  5
+   Number of wire bits:              5
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_elastic_adapter ===
+
+   Number of wires:                 17
+   Number of wire bits:             17
+   Number of public wires:          11
+   Number of public wire bits:      11
+   Number of ports:                  8
+   Number of port bits:              8
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  5
+     $logic_and                      3
+     $not                            2
+
+=== VX_multiplier ===
+
+   Number of wires:                 13
+   Number of wire bits:             22
+   Number of public wires:           9
+   Number of public wire bits:      14
+   Number of ports:                  5
+   Number of port bits:              6
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  2
+     $mul                            1
+     VX_pipe_register                1
+
+=== VX_lzc ===
+
+   Number of wires:                  4
+   Number of wire bits:              6
+   Number of public wires:           4
+   Number of public wire bits:       6
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     VX_find_first                   1
+
+=== VX_shift_register ===
+
+   Number of wires:                  7
+   Number of wire bits:              7
+   Number of public wires:           6
+   Number of public wire bits:       6
+   Number of ports:                  5
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_generic_arbiter ===
+
+   Number of wires:                  7
+   Number of wire bits:              7
+   Number of public wires:           7
+   Number of public wire bits:       7
+   Number of ports:                  7
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     VX_priority_arbiter             1
+
+=== VX_fifo_queue ===
+
+   Number of wires:                 24
+   Number of wire bits:            170
+   Number of public wires:          16
+   Number of public wire bits:     130
+   Number of ports:                 11
+   Number of port bits:             78
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  4
+     $add                            2
+     VX_dp_ram                       1
+     VX_pending_size                 1
+
+=== VX_cyclic_arbiter ===
+
+   Number of wires:                  7
+   Number of wire bits:              7
+   Number of public wires:           7
+   Number of public wire bits:       7
+   Number of ports:                  7
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_priority_arbiter ===
+
+   Number of wires:                  7
+   Number of wire bits:              7
+   Number of public wires:           7
+   Number of public wire bits:       7
+   Number of ports:                  7
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_cache_tags ===
+
+   Number of wires:                 46
+   Number of wire bits:            163
+   Number of public wires:          29
+   Number of public wire bits:     146
+   Number of ports:                 15
+   Number of port bits:             67
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 20
+     $eq                             3
+     $logic_and                      6
+     $logic_or                       7
+     $not                            1
+     VX_dp_ram                       1
+     VX_pipe_register                2
+
+=== VX_dp_ram ===
+
+   Number of wires:                 19
+   Number of wire bits:             19
+   Number of public wires:           9
+   Number of public wire bits:       9
+   Number of ports:                  9
+   Number of port bits:              9
+   Number of memories:               1
+   Number of memory bits:            1
+   Number of processes:              1
+   Number of cells:                  1
+     $memrd                          1
+
+=== VX_pending_size ===
+
+   Number of wires:                 14
+   Number of wire bits:             14
+   Number of public wires:          10
+   Number of public wire bits:      10
+   Number of ports:                  9
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $eq                             1
+     $ne                             1
+     $not                            1
+
+=== VX_stream_switch ===
+
+   Number of wires:                 12
+   Number of wire bits:             12
+   Number of public wires:          12
+   Number of public wire bits:      12
+   Number of ports:                  9
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     VX_elastic_buffer               1
+
+=== VX_cache_bank ===
+
+   Number of wires:                397
+   Number of wire bits:           2285
+   Number of public wires:         184
+   Number of public wire bits:    1792
+   Number of ports:                 32
+   Number of port bits:            429
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                223
+     $add                            1
+     $logic_and                     68
+     $logic_or                      10
+     $mul                            1
+     $mux                           80
+     $not                           46
+     $or                             2
+     $reduce_or                      1
+     $shiftx                         1
+     VX_cache_data                   1
+     VX_cache_flush                  1
+     VX_cache_mshr                   1
+     VX_cache_repl                   1
+     VX_cache_tags                   1
+     VX_demux                        1
+     VX_elastic_buffer               1
+     VX_fifo_queue                   1
+     VX_onehot_encoder               1
+     VX_pending_size                 1
+     VX_pipe_register                2
+     VX_popcount                     1
+
+=== VX_stream_unpack ===
+
+   Number of wires:                 11
+   Number of wire bits:             11
+   Number of public wires:          11
+   Number of public wire bits:      11
+   Number of ports:                 11
+   Number of port bits:             11
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_popcount ===
+
+   Number of wires:                  2
+   Number of wire bits:              2
+   Number of public wires:           2
+   Number of public wire bits:       2
+   Number of ports:                  2
+   Number of port bits:              2
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_sum33 ===
+
+   Number of wires:                  6
+   Number of wire bits:             22
+   Number of public wires:           4
+   Number of public wire bits:      14
+   Number of ports:                  3
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_popcount32 ===
+
+   Number of wires:                  5
+   Number of wire bits:             11
+   Number of public wires:           3
+   Number of public wire bits:       7
+   Number of ports:                  2
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_popcount63 ===
+
+   Number of wires:                  5
+   Number of wire bits:             18
+   Number of public wires:           3
+   Number of public wire bits:      12
+   Number of ports:                  2
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_cache_repl ===
+
+   Number of wires:                 11
+   Number of wire bits:             17
+   Number of public wires:          11
+   Number of public wire bits:      17
+   Number of ports:                 11
+   Number of port bits:             17
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== plru_encoder ===
+
+   Number of wires:                  2
+   Number of wire bits:              2
+   Number of public wires:           2
+   Number of public wire bits:       2
+   Number of ports:                  2
+   Number of port bits:              2
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== plru_decoder ===
+
+   Number of wires:                  3
+   Number of wire bits:              3
+   Number of public wires:           3
+   Number of public wire bits:       3
+   Number of ports:                  3
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_nz_iterator ===
+
+   Number of wires:                 59
+   Number of wire bits:            386
+   Number of public wires:          19
+   Number of public wire bits:      85
+   Number of ports:                 10
+   Number of port bits:             49
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              2
+   Number of cells:                 28
+     $add                            1
+     $and                            2
+     $eq                             1
+     $logic_and                      3
+     $logic_or                       4
+     $mul                            1
+     $neg                            2
+     $not                            3
+     $or                             1
+     $reduce_or                      4
+     $shift                          2
+     $shiftx                         1
+     VX_find_first                   2
+     VX_pipe_register                1
+
+=== VX_split_join ===
+
+   Number of wires:                 38
+   Number of wire bits:            349
+   Number of public wires:          25
+   Number of public wire bits:     207
+   Number of ports:                 14
+   Number of port bits:             91
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 15
+     $add                            2
+     $logic_and                      4
+     $mul                            2
+     $ne                             1
+     $not                            1
+     $or                             1
+     $shiftx                         2
+     VX_ipdom_stack                  1
+     VX_pipe_register                1
+
+=== VX_rr_arbiter ===
+
+   Number of wires:                  7
+   Number of wire bits:              7
+   Number of public wires:           7
+   Number of public wire bits:       7
+   Number of ports:                  7
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_demux ===
+
+   Number of wires:                  3
+   Number of wire bits:              4
+   Number of public wires:           3
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_transpose ===
+
+   Number of wires:                  2
+   Number of wire bits:              2
+   Number of public wires:           2
+   Number of public wire bits:       2
+   Number of ports:                  2
+   Number of port bits:              2
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_sp_ram ===
+
+   Number of wires:                 18
+   Number of wire bits:             18
+   Number of public wires:           8
+   Number of public wire bits:       8
+   Number of ports:                  8
+   Number of port bits:              8
+   Number of memories:               1
+   Number of memory bits:            1
+   Number of processes:              1
+   Number of cells:                  1
+     $memrd                          1
+
+=== VX_stream_omega ===
+
+   Number of wires:                159
+   Number of wire bits:           1774
+   Number of public wires:          76
+   Number of public wire bits:     966
+   Number of ports:                 11
+   Number of port bits:             98
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:             15
+   Number of cells:                 31
+     $add                            1
+     $eq                             4
+     $logic_and                     12
+     $or                             8
+     VX_pipe_register                1
+     VX_popcount                     1
+     VX_stream_xbar                  4
+
+=== VX_stream_xbar ===
+
+   Number of wires:                 80
+   Number of wire bits:            543
+   Number of public wires:          27
+   Number of public wire bits:     317
+   Number of ports:                 11
+   Number of port bits:             69
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              3
+   Number of cells:                 53
+     $add                            1
+     $eq                             6
+     $logic_and                     18
+     $or                            12
+     $reduce_or                      4
+     VX_demux                        4
+     VX_pipe_register                1
+     VX_popcount                     1
+     VX_stream_arb                   4
+     VX_transpose                    2
+
+=== VX_scan ===
+
+   Number of wires:                 17
+   Number of wire bits:             79
+   Number of public wires:          10
+   Number of public wire bits:      41
+   Number of ports:                  2
+   Number of port bits:              2
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  1
+     $shl                            1
+
+=== Vortex ===
+
+   Number of wires:               5281
+   Number of wire bits:         208362
+   Number of public wires:        2508
+   Number of public wire bits:  145699
+   Number of ports:                 17
+   Number of port bits:           1181
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:            197
+   Number of cells:               1808
+     $add                          183
+     $and                          147
+     $eq                            86
+     $ge                            17
+     $le                            15
+     $logic_and                    301
+     $logic_or                      23
+     $lt                            15
+     $mul                          102
+     $mux                           60
+     $ne                            37
+     $neg                          102
+     $not                          150
+     $or                           101
+     $reduce_and                     4
+     $reduce_or                     23
+     $shift                        102
+     $shiftx                        92
+     $shl                           44
+     $shr                            6
+     $sshr                           8
+     $sub                           22
+     $xor                           17
+     VX_bits_insert                  3
+     VX_bits_remove                  3
+     VX_cache_bank                   2
+     VX_dp_ram                       5
+     VX_elastic_adapter              1
+     VX_elastic_buffer              30
+     VX_mem_coalescer                1
+     VX_mem_scheduler                1
+     VX_multiplier                   4
+     VX_nz_iterator                  1
+     VX_pending_size                 4
+     VX_pipe_buffer                 10
+     VX_pipe_register                9
+     VX_popcount                     4
+     VX_priority_encoder             3
+     VX_reduce_tree                  1
+     VX_reset_relay                  7
+     VX_serial_div                   1
+     VX_shift_register               1
+     VX_sp_ram                       4
+     VX_split_join                   1
+     VX_stream_arb                  35
+     VX_stream_omega                 2
+     VX_stream_pack                  2
+     VX_stream_switch                7
+     VX_stream_unpack                2
+     VX_stream_xbar                  7
+
+=== VX_ipdom_stack ===
+
+   Number of wires:                134
+   Number of wire bits:            152
+   Number of public wires:          48
+   Number of public wire bits:      63
+   Number of ports:                 13
+   Number of port bits:             17
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              4
+   Number of cells:                 43
+     $add                            4
+     $eq                            16
+     $logic_and                     12
+     $logic_or                       1
+     $mux                            3
+     $shiftx                         2
+     $sub                            4
+     VX_dp_ram                       1
+
+=== VX_stream_arb ===
+
+   Number of wires:                  9
+   Number of wire bits:              9
+   Number of public wires:           9
+   Number of public wire bits:       9
+   Number of ports:                  9
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     VX_elastic_buffer               1
+
+=== VX_matrix_arbiter ===
+
+   Number of wires:                  7
+   Number of wire bits:              7
+   Number of public wires:           7
+   Number of public wire bits:       7
+   Number of ports:                  7
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_cache_data ===
+
+   Number of wires:                102
+   Number of wire bits:           1032
+   Number of public wires:          39
+   Number of public wire bits:     607
+   Number of ports:                 17
+   Number of port bits:            301
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 64
+     $add                            1
+     $and                           16
+     $eq                            17
+     $logic_and                      4
+     $logic_or                      20
+     $mul                            2
+     $mux                            1
+     $or                             1
+     $shiftx                         1
+     VX_sp_ram                       1
+
+=== VX_elastic_buffer ===
+
+   Number of wires:                  8
+   Number of wire bits:              8
+   Number of public wires:           8
+   Number of public wire bits:       8
+   Number of ports:                  8
+   Number of port bits:              8
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     VX_pipe_buffer                  1
+
+=== VX_cache_flush ===
+
+   Number of wires:                 35
+   Number of wire bits:             67
+   Number of public wires:          14
+   Number of public wire bits:      24
+   Number of ports:                 11
+   Number of port bits:             14
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              2
+   Number of cells:                 12
+     $add                            1
+     $eq                             7
+     $logic_and                      2
+     $logic_or                       1
+     $ne                             1
+
+=== VX_mem_coalescer ===
+
+   Number of wires:                188
+   Number of wire bits:           1265
+   Number of public wires:          91
+   Number of public wire bits:     318
+   Number of ports:                 31
+   Number of port bits:            152
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              3
+   Number of cells:                 59
+     $add                            4
+     $and                            7
+     $eq                             1
+     $logic_and                      7
+     $mul                            3
+     $mux                            1
+     $ne                             1
+     $neg                            4
+     $not                           10
+     $or                             2
+     $reduce_or                      2
+     $shift                          4
+     $shiftx                         1
+     $sub                           10
+     VX_index_buffer                 1
+     VX_pipe_register                1
+
+=== VX_cache_mshr ===
+
+   Number of wires:                188
+   Number of wire bits:           1544
+   Number of public wires:          47
+   Number of public wire bits:     161
+   Number of ports:                 27
+   Number of port bits:            114
+   Number of memories:               2
+   Number of memory bits:          120
+   Number of processes:              4
+   Number of cells:                 74
+     $and                            8
+     $eq                             5
+     $logic_and                      9
+     $memrd                          7
+     $neg                           12
+     $not                            9
+     $or                             6
+     $reduce_or                      1
+     $shift                         12
+     $shiftx                         2
+     VX_dp_ram                       1
+     VX_priority_encoder             2
+
+=== VX_onehot_encoder ===
+
+   Number of wires:                  3
+   Number of wire bits:              3
+   Number of public wires:           3
+   Number of public wire bits:       3
+   Number of ports:                  3
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_stream_buffer ===
+
+   Number of wires:                 25
+   Number of wire bits:             25
+   Number of public wires:          14
+   Number of public wire bits:      14
+   Number of ports:                  8
+   Number of port bits:              8
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              4
+   Number of cells:                  7
+     $logic_and                      1
+     $logic_or                       3
+     $mux                            1
+     $not                            2
+
+=== VX_mem_scheduler ===
+
+   Number of wires:                128
+   Number of wire bits:           1180
+   Number of public wires:          96
+   Number of public wire bits:     651
+   Number of ports:                 34
+   Number of port bits:            240
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 36
+     $add                            5
+     $logic_and                      9
+     $logic_not                      1
+     $logic_or                       1
+     $mul                            9
+     $not                            2
+     $shiftx                         5
+     VX_elastic_buffer               3
+     VX_index_buffer                 1
+
+=== VX_priority_encoder ===
+
+   Number of wires:                  4
+   Number of wire bits:              4
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of ports:                  4
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_bits_remove ===
+
+   Number of wires:                  3
+   Number of wire bits:              4
+   Number of public wires:           3
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_pipe_buffer ===
+
+   Number of wires:                 16
+   Number of wire bits:             18
+   Number of public wires:          12
+   Number of public wire bits:      14
+   Number of ports:                  8
+   Number of port bits:              8
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $logic_or                       1
+     $not                            1
+     VX_pipe_register                1
+
+=== VX_find_first ===
+
+   Number of wires:                  8
+   Number of wire bits:              8
+   Number of public wires:           6
+   Number of public wire bits:       6
+   Number of ports:                  4
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_bits_insert ===
+
+   Number of wires:                  3
+   Number of wire bits:              4
+   Number of public wires:           3
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_allocator ===
+
+   Number of wires:                 46
+   Number of wire bits:            360
+   Number of public wires:          15
+   Number of public wire bits:      15
+   Number of ports:                  8
+   Number of port bits:              8
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              2
+   Number of cells:                 19
+     $and                            2
+     $logic_and                      1
+     $logic_or                       1
+     $neg                            4
+     $not                            3
+     $or                             2
+     $reduce_and                     1
+     $shift                          4
+     VX_priority_encoder             1
+
+=== VX_stream_pack ===
+
+   Number of wires:                 11
+   Number of wire bits:             11
+   Number of public wires:          11
+   Number of public wire bits:      11
+   Number of ports:                 11
+   Number of port bits:             11
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_pipe_register ===
+
+   Number of wires:                  5
+   Number of wire bits:              5
+   Number of public wires:           5
+   Number of public wire bits:       5
+   Number of ports:                  5
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     VX_shift_register               1
+
+=== VX_mux ===
+
+   Number of wires:                  3
+   Number of wire bits:              3
+   Number of public wires:           3
+   Number of public wire bits:       3
+   Number of ports:                  3
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== VX_reduce_tree ===
+
+   Number of wires:                  8
+   Number of wire bits:              8
+   Number of public wires:           5
+   Number of public wire bits:       5
+   Number of ports:                  2
+   Number of port bits:              2
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== VX_index_buffer ===
+
+   Number of wires:                 10
+   Number of wire bits:             10
+   Number of public wires:          10
+   Number of public wire bits:      10
+   Number of ports:                 10
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     VX_allocator                    1
+     VX_dp_ram                       1
+
+=== VX_serial_div ===
+
+   Number of wires:                 48
+   Number of wire bits:            874
+   Number of public wires:          22
+   Number of public wire bits:     401
+   Number of ports:                  9
+   Number of port bits:            133
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              2
+   Number of cells:                 20
+     $eq                             1
+     $logic_and                      6
+     $mux                            5
+     $ne                             1
+     $neg                            4
+     $sub                            2
+     $xor                            1
+

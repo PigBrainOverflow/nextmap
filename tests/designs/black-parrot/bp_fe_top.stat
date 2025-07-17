@@ -1,0 +1,1670 @@
+
+2. Printing statistics.
+
+=== bp_fe_top ===
+
+   Number of wires:                122
+   Number of wire bits:           2416
+   Number of public wires:         116
+   Number of public wire bits:    2410
+   Number of ports:                 32
+   Number of port bits:           1230
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 14
+     $not                            3
+     $or                             3
+     bp_fe_controller_00             1
+     bp_fe_icache_00                 1
+     bp_fe_pc_gen_00                 1
+     bp_fe_realigner_00              1
+     bp_fe_scan_00                   1
+     bp_mmu_00_00000008_00000002_00000001_1      1
+     bsg_dff_reset_en_bypass_width_p1      1
+     bsg_dff_reset_en_bypass_width_p2      1
+
+=== bp_fe_controller_00 ===
+
+   Number of wires:                672
+   Number of wire bits:           1635
+   Number of public wires:         436
+   Number of public wire bits:    1287
+   Number of ports:                 55
+   Number of port bits:            904
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                235
+     $and                           51
+     $gt                             3
+     $mux                           73
+     $not                           46
+     $or                            54
+     $pos                            6
+     $sub                            1
+     bsg_dff_reset_en_width_p3       1
+
+=== bsg_dff_reset_en_width_p3 ===
+
+   Number of wires:                 17
+   Number of wire bits:             21
+   Number of public wires:          11
+   Number of public wire bits:      15
+   Number of ports:                  5
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bp_fe_scan_00 ===
+
+   Number of wires:               3813
+   Number of wire bits:           7158
+   Number of public wires:        2279
+   Number of public wire bits:    3193
+   Number of ports:                 21
+   Number of port bits:            481
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1539
+     $add                           25
+     $and                          188
+     $eq                             6
+     $gt                             3
+     $lt                             6
+     $mux                           52
+     $ne                             1
+     $not                          214
+     $or                          1017
+     $pos                           20
+     $sub                            2
+     bsg_mux_47_00000006             2
+     bsg_priority_encode_00000005_0      1
+     bsg_priority_encode_00000005_1      1
+     bsg_priority_encode_00000006_0      1
+
+=== bsg_mux_47_00000006 ===
+
+   Number of wires:                319
+   Number of wire bits:            648
+   Number of public wires:          22
+   Number of public wire bits:     351
+   Number of ports:                  3
+   Number of port bits:            332
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                297
+     $and                            8
+     $mux                          282
+     $not                            7
+
+=== bsg_priority_encode_00000006_0 ===
+
+   Number of wires:                  4
+   Number of wire bits:             16
+   Number of public wires:           4
+   Number of public wire bits:      16
+   Number of ports:                  3
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_encode_one_hot_00000006_0      1
+     bsg_priority_encode_one_hot_out_00000006_0      1
+
+=== bsg_encode_one_hot_00000006_0 ===
+
+   Number of wires:                 20
+   Number of wire bits:             27
+   Number of public wires:          10
+   Number of public wire bits:      17
+   Number of ports:                  3
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 10
+     $or                            10
+
+=== bsg_priority_encode_one_hot_out_00000006_0 ===
+
+   Number of wires:                 19
+   Number of wire bits:             32
+   Number of public wires:           9
+   Number of public wire bits:      22
+   Number of ports:                  3
+   Number of port bits:             13
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 11
+     $and                            5
+     $not                            5
+     bsg_scan_00000006_1_0           1
+
+=== bsg_scan_00000006_1_0 ===
+
+   Number of wires:                 32
+   Number of wire bits:             42
+   Number of public wires:          14
+   Number of public wire bits:      24
+   Number of ports:                  2
+   Number of port bits:             12
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 18
+     $or                            18
+
+=== bsg_priority_encode_00000005_1 ===
+
+   Number of wires:                  4
+   Number of wire bits:             14
+   Number of public wires:           4
+   Number of public wire bits:      14
+   Number of ports:                  3
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_encode_one_hot_00000005_1      1
+     bsg_priority_encode_one_hot_out_00000005_1      1
+
+=== bsg_encode_one_hot_00000005_1 ===
+
+   Number of wires:                 19
+   Number of wire bits:             25
+   Number of public wires:          10
+   Number of public wire bits:      16
+   Number of ports:                  3
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $or                             9
+
+=== bsg_priority_encode_one_hot_out_00000005_1 ===
+
+   Number of wires:                 16
+   Number of wire bits:             26
+   Number of public wires:           8
+   Number of public wire bits:      18
+   Number of ports:                  3
+   Number of port bits:             11
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $and                            4
+     $not                            4
+     bsg_scan_00000005_1_1           1
+
+=== bsg_scan_00000005_1_1 ===
+
+   Number of wires:                 27
+   Number of wire bits:             35
+   Number of public wires:          12
+   Number of public wire bits:      20
+   Number of ports:                  2
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 15
+     $or                            15
+
+=== bsg_priority_encode_00000005_0 ===
+
+   Number of wires:                  4
+   Number of wire bits:             14
+   Number of public wires:           4
+   Number of public wire bits:      14
+   Number of ports:                  3
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_encode_one_hot_00000005_0      1
+     bsg_priority_encode_one_hot_out_00000005_0      1
+
+=== bsg_encode_one_hot_00000005_0 ===
+
+   Number of wires:                 19
+   Number of wire bits:             25
+   Number of public wires:          10
+   Number of public wire bits:      16
+   Number of ports:                  3
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $or                             9
+
+=== bsg_priority_encode_one_hot_out_00000005_0 ===
+
+   Number of wires:                 16
+   Number of wire bits:             26
+   Number of public wires:           8
+   Number of public wire bits:      18
+   Number of ports:                  3
+   Number of port bits:             11
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $and                            4
+     $not                            4
+     bsg_scan_00000005_1_0           1
+
+=== bsg_scan_00000005_1_0 ===
+
+   Number of wires:                 27
+   Number of wire bits:             35
+   Number of public wires:          12
+   Number of public wire bits:      20
+   Number of ports:                  2
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 15
+     $or                            15
+
+=== bp_fe_realigner_00 ===
+
+   Number of wires:                164
+   Number of wire bits:           1421
+   Number of public wires:         116
+   Number of public wire bits:     691
+   Number of ports:                 21
+   Number of port bits:            440
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 49
+     $add                            1
+     $and                            5
+     $eq                             1
+     $gt                             1
+     $mux                           17
+     $not                            7
+     $or                             6
+     $pos                            6
+     $shr                            1
+     $sub                            3
+     bsg_dff_reset_en_00000038       1
+
+=== bsg_dff_reset_en_00000038 ===
+
+   Number of wires:                123
+   Number of wire bits:            233
+   Number of public wires:          64
+   Number of public wire bits:     174
+   Number of ports:                  5
+   Number of port bits:            115
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bp_fe_icache_00 ===
+
+   Number of wires:               1692
+   Number of wire bits:           7772
+   Number of public wires:         782
+   Number of public wire bits:    4461
+   Number of ports:                 43
+   Number of port bits:           1116
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                943
+     $and                          149
+     $eq                            19
+     $mux                          311
+     $not                          119
+     $or                           256
+     $pos                           44
+     $shl                            2
+     $sub                            8
+     bsg_adder_one_hot_00000008      2
+     bsg_decode_00000008             3
+     bsg_dff_00000003                2
+     bsg_dff_00000004                1
+     bsg_dff_en_00000028             1
+     bsg_dff_reset_en_0000002a       1
+     bsg_dff_reset_en_0000021d       1
+     bsg_dff_reset_en_width_p1       2
+     bsg_dff_reset_width_p1          1
+     bsg_encode_one_hot_00000008_1      1
+     bsg_expand_bitmask_00000004_00000002      1
+     bsg_lru_pseudo_tree_decode_00000008      1
+     bsg_lru_pseudo_tree_encode_00000008      1
+     bsg_mem_1rw_sync_00000040_00000200_1      8
+     bsg_mem_1rw_sync_mask_write_bit_00000007_00000040_1      1
+     bsg_mem_1rw_sync_mask_write_bit_000000b8_00000040_1      1
+     bsg_mux_00000040_00000001       1
+     bsg_mux_0000021c_2              1
+     bsg_mux_one_hot_00000040_00000008      1
+     bsg_priority_encode_00000008_1      1
+     bsg_rotate_left_00000008        1
+     bsg_rotate_left_00000080        1
+     bsg_rotate_right_00000200       1
+
+=== bsg_rotate_right_00000200 ===
+
+   Number of wires:                515
+   Number of wire bits:           2567
+   Number of public wires:         514
+   Number of public wire bits:    1544
+   Number of ports:                  3
+   Number of port bits:           1033
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shr                            1
+
+=== bsg_rotate_left_00000008 ===
+
+   Number of wires:                 11
+   Number of wire bits:             41
+   Number of public wires:          10
+   Number of public wire bits:      26
+   Number of ports:                  3
+   Number of port bits:             19
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shl                            1
+
+=== bsg_expand_bitmask_00000004_00000002 ===
+
+   Number of wires:                  6
+   Number of wire bits:             16
+   Number of public wires:           6
+   Number of public wire bits:      16
+   Number of ports:                  2
+   Number of port bits:             12
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== bsg_rotate_left_00000080 ===
+
+   Number of wires:                131
+   Number of wire bits:            645
+   Number of public wires:         130
+   Number of public wire bits:     390
+   Number of ports:                  3
+   Number of port bits:            263
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shl                            1
+
+=== bsg_dff_00000003 ===
+
+   Number of wires:                  9
+   Number of wire bits:             13
+   Number of public wires:           6
+   Number of public wire bits:      10
+   Number of ports:                  3
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_dff_00000004 ===
+
+   Number of wires:                 11
+   Number of wire bits:             17
+   Number of public wires:           7
+   Number of public wire bits:      13
+   Number of ports:                  3
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_dff_reset_width_p1 ===
+
+   Number of wires:                  6
+   Number of wire bits:              6
+   Number of public wires:           5
+   Number of public wire bits:       5
+   Number of ports:                  4
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_mem_1rw_sync_mask_write_bit_00000007_00000040_1 ===
+
+   Number of wires:                  8
+   Number of wire bits:             31
+   Number of public wires:           8
+   Number of public wire bits:      31
+   Number of ports:                  8
+   Number of port bits:             31
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mem_1rw_sync_mask_write_bit_synth      1
+
+=== bsg_mux_00000040_00000001 ===
+
+   Number of wires:                  3
+   Number of wire bits:            129
+   Number of public wires:           3
+   Number of public wire bits:     129
+   Number of ports:                  3
+   Number of port bits:            129
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== bsg_mux_one_hot_00000040_00000008 ===
+
+   Number of wires:               1348
+   Number of wire bits:           2440
+   Number of public wires:         388
+   Number of public wire bits:    1480
+   Number of ports:                  3
+   Number of port bits:            584
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                960
+     $and                          512
+     $or                           448
+
+=== bsg_adder_one_hot_00000008 ===
+
+   Number of wires:                179
+   Number of wire bits:            256
+   Number of public wires:          59
+   Number of public wire bits:     136
+   Number of ports:                  3
+   Number of port bits:             24
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                120
+     $and                           64
+     $or                            56
+
+=== bsg_dff_en_00000028 ===
+
+   Number of wires:                 84
+   Number of wire bits:            162
+   Number of public wires:          44
+   Number of public wire bits:     122
+   Number of ports:                  4
+   Number of port bits:             82
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_dff_reset_en_0000021d ===
+
+   Number of wires:               1099
+   Number of wire bits:           2194
+   Number of public wires:         554
+   Number of public wire bits:    1634
+   Number of ports:                  5
+   Number of port bits:           1085
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  4
+     $mux                            2
+     $not                            1
+     $pos                            1
+
+=== bsg_mux_0000021c_2 ===
+
+   Number of wires:               1086
+   Number of wire bits:           2704
+   Number of public wires:           5
+   Number of public wire bits:    1623
+   Number of ports:                  3
+   Number of port bits:           1621
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:               1081
+     $mux                         1080
+     $not                            1
+
+=== bsg_dff_reset_en_0000002a ===
+
+   Number of wires:                 95
+   Number of wire bits:            177
+   Number of public wires:          50
+   Number of public wire bits:     132
+   Number of ports:                  5
+   Number of port bits:             87
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_mem_1rw_sync_00000040_00000200_1 ===
+
+   Number of wires:                  7
+   Number of wire bits:            141
+   Number of public wires:           7
+   Number of public wire bits:     141
+   Number of ports:                  7
+   Number of port bits:            141
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mem_1rw_sync_synth          1
+
+=== bsg_mem_1rw_sync_mask_write_bit_000000b8_00000040_1 ===
+
+   Number of wires:                  8
+   Number of wire bits:            562
+   Number of public wires:           8
+   Number of public wire bits:     562
+   Number of ports:                  8
+   Number of port bits:            562
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mem_1rw_sync_mask_write_bit_synth      1
+
+=== bp_mmu_00_00000008_00000002_00000001_1 ===
+
+   Number of wires:                414
+   Number of wire bits:            866
+   Number of public wires:         243
+   Number of public wire bits:     521
+   Number of ports:                 39
+   Number of port bits:            198
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                176
+     $and                           80
+     $mux                           12
+     $not                           22
+     $or                            55
+     $pos                            2
+     bp_pma_00                       1
+     bp_tlb_00_00000001_00000002_00000008      1
+     bsg_dff_reset_en_width_p59      1
+     bsg_dff_reset_set_clear_width_p1      1
+     bsg_dff_sync_read_width_p37_bypass_p1      1
+
+=== bp_pma_00 ===
+
+   Number of wires:                 61
+   Number of wire bits:             88
+   Number of public wires:          33
+   Number of public wire bits:      60
+   Number of ports:                  8
+   Number of port bits:             35
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 28
+     $and                            2
+     $not                            4
+     $or                            22
+
+=== bsg_dff_sync_read_width_p37_bypass_p1 ===
+
+   Number of wires:                  6
+   Number of wire bits:             78
+   Number of public wires:           6
+   Number of public wire bits:      78
+   Number of ports:                  5
+   Number of port bits:             77
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_dff_en_bypass_width_p37      1
+     bsg_dff_width_p1                1
+
+=== bsg_dff_en_bypass_width_p37 ===
+
+   Number of wires:                 13
+   Number of wire bits:            229
+   Number of public wires:           9
+   Number of public wire bits:     117
+   Number of ports:                  4
+   Number of port bits:             76
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  5
+     $mux                            2
+     $not                            1
+     $pos                            1
+     bsg_dff_en_width_p37_harden_p0_strength_p0      1
+
+=== bsg_dff_en_width_p37_harden_p0_strength_p0 ===
+
+   Number of wires:                 78
+   Number of wire bits:            150
+   Number of public wires:          41
+   Number of public wire bits:     113
+   Number of ports:                  4
+   Number of port bits:             76
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_dff_width_p1 ===
+
+   Number of wires:                  5
+   Number of wire bits:              5
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bp_tlb_00_00000001_00000002_00000008 ===
+
+   Number of wires:                133
+   Number of wire bits:            720
+   Number of public wires:          72
+   Number of public wire bits:     659
+   Number of ports:                  9
+   Number of port bits:            105
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 85
+     $and                           30
+     $not                            7
+     $or                            24
+     bsg_cam_1r1w_replacement_00000001      1
+     bsg_cam_1r1w_replacement_00000002      1
+     bsg_cam_1r1w_replacement_00000008      1
+     bsg_cam_1r1w_tag_array_0000001b_00000001      1
+     bsg_cam_1r1w_tag_array_0000001b_00000002      1
+     bsg_cam_1r1w_tag_array_0000001b_00000008      1
+     bsg_dff_en_0000001b             3
+     bsg_dff_en_00000024             8
+     bsg_dff_en_width_p18            1
+     bsg_mux_one_hot_18_0000000b      1
+     bsg_mux_one_hot_9_00000009      1
+     bsg_mux_one_hot_9_0000000b      1
+     bsg_popcount_width_p3           1
+     bsg_rotate_left_width_p36       1
+     bsg_rotate_right_width_p36      1
+
+=== bsg_rotate_right_width_p36 ===
+
+   Number of wires:                 40
+   Number of wire bits:            186
+   Number of public wires:          39
+   Number of public wire bits:     114
+   Number of ports:                  3
+   Number of port bits:             78
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shr                            1
+
+=== bsg_popcount_width_p3 ===
+
+   Number of wires:                 14
+   Number of wire bits:             17
+   Number of public wires:           7
+   Number of public wire bits:      10
+   Number of ports:                  2
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  7
+     $and                            3
+     $or                             2
+     $xor                            2
+
+=== bsg_mux_one_hot_18_0000000b ===
+
+   Number of wires:                544
+   Number of wire bits:            965
+   Number of public wires:         166
+   Number of public wire bits:     587
+   Number of ports:                  3
+   Number of port bits:            227
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                378
+     $and                          198
+     $or                           180
+
+=== bsg_mux_one_hot_9_0000000b ===
+
+   Number of wires:                274
+   Number of wire bits:            488
+   Number of public wires:          85
+   Number of public wire bits:     299
+   Number of ports:                  3
+   Number of port bits:            119
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                189
+     $and                           99
+     $or                            90
+
+=== bsg_mux_one_hot_9_00000009 ===
+
+   Number of wires:                220
+   Number of wire bits:            396
+   Number of public wires:          67
+   Number of public wire bits:     243
+   Number of ports:                  3
+   Number of port bits:             99
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                153
+     $and                           81
+     $or                            72
+
+=== bsg_dff_en_width_p18 ===
+
+   Number of wires:                 40
+   Number of wire bits:             74
+   Number of public wires:          22
+   Number of public wire bits:      56
+   Number of ports:                  4
+   Number of port bits:             38
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_dff_en_00000024 ===
+
+   Number of wires:                 76
+   Number of wire bits:            146
+   Number of public wires:          40
+   Number of public wire bits:     110
+   Number of ports:                  4
+   Number of port bits:             74
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_cam_1r1w_replacement_00000001 ===
+
+   Number of wires:                  6
+   Number of wire bits:              6
+   Number of public wires:           6
+   Number of public wire bits:       6
+   Number of ports:                  6
+   Number of port bits:              6
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== bsg_cam_1r1w_tag_array_0000001b_00000001 ===
+
+   Number of wires:                 19
+   Number of wire bits:             97
+   Number of public wires:          14
+   Number of public wire bits:      92
+   Number of ports:                  9
+   Number of port bits:             61
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  7
+     $and                            3
+     $eq                             1
+     $not                            1
+     bsg_dff_en_0000001b             1
+     bsg_dff_reset_en_width_p1       1
+
+=== bsg_cam_1r1w_replacement_00000002 ===
+
+   Number of wires:                 32
+   Number of wire bits:             35
+   Number of public wires:          25
+   Number of public wire bits:      28
+   Number of ports:                  6
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 16
+     $and                            2
+     $mux                            2
+     $not                            1
+     $or                             2
+     bsg_decode_00000002             1
+     bsg_dff_reset_en_width_p1       1
+     bsg_encode_one_hot_00000002      1
+     bsg_lru_pseudo_tree_decode_00000002      2
+     bsg_lru_pseudo_tree_encode_00000002      1
+     bsg_mux_bitwise_00000001        2
+     bsg_priority_encode_00000002_1      1
+
+=== bsg_mux_bitwise_00000001 ===
+
+   Number of wires:                  4
+   Number of wire bits:              4
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of ports:                  4
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mux_segmented_00000001_1      1
+
+=== bsg_mux_segmented_00000001_1 ===
+
+   Number of wires:                  9
+   Number of wire bits:              9
+   Number of public wires:           6
+   Number of public wire bits:       6
+   Number of ports:                  4
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_lru_pseudo_tree_decode_00000002 ===
+
+   Number of wires:                  6
+   Number of wire bits:              6
+   Number of public wires:           4
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     $and                            1
+     $not                            1
+
+=== bsg_encode_one_hot_00000002 ===
+
+   Number of wires:                  4
+   Number of wire bits:              5
+   Number of public wires:           3
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $or                             1
+
+=== bsg_decode_00000002 ===
+
+   Number of wires:                  3
+   Number of wire bits:              5
+   Number of public wires:           2
+   Number of public wire bits:       3
+   Number of ports:                  2
+   Number of port bits:              3
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shl                            1
+
+=== bsg_priority_encode_00000002_1 ===
+
+   Number of wires:                  4
+   Number of wire bits:              6
+   Number of public wires:           4
+   Number of public wire bits:       6
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_encode_one_hot_00000002_1      1
+     bsg_priority_encode_one_hot_out_00000002_1      1
+
+=== bsg_encode_one_hot_00000002_1 ===
+
+   Number of wires:                  4
+   Number of wire bits:              5
+   Number of public wires:           3
+   Number of public wire bits:       4
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $or                             1
+
+=== bsg_priority_encode_one_hot_out_00000002_1 ===
+
+   Number of wires:                  6
+   Number of wire bits:              8
+   Number of public wires:           4
+   Number of public wire bits:       6
+   Number of ports:                  3
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  3
+     $and                            1
+     $not                            1
+     bsg_scan_00000002_1_1           1
+
+=== bsg_scan_00000002_1_1 ===
+
+   Number of wires:                  4
+   Number of wire bits:              6
+   Number of public wires:           2
+   Number of public wire bits:       4
+   Number of ports:                  2
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     $or                             2
+
+=== bsg_lru_pseudo_tree_encode_00000002 ===
+
+   Number of wires:                  2
+   Number of wire bits:              2
+   Number of public wires:           2
+   Number of public wire bits:       2
+   Number of ports:                  2
+   Number of port bits:              2
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  0
+
+=== bsg_cam_1r1w_tag_array_0000001b_00000002 ===
+
+   Number of wires:                 27
+   Number of wire bits:            136
+   Number of public wires:          17
+   Number of public wire bits:     126
+   Number of ports:                  9
+   Number of port bits:             64
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 14
+     $and                            6
+     $eq                             2
+     $not                            2
+     bsg_dff_en_0000001b             2
+     bsg_dff_reset_en_width_p1       2
+
+=== bsg_cam_1r1w_replacement_00000008 ===
+
+   Number of wires:                 57
+   Number of wire bits:            146
+   Number of public wires:          31
+   Number of public wire bits:     114
+   Number of ports:                  6
+   Number of port bits:             27
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 35
+     $and                           14
+     $mux                            2
+     $not                            1
+     $or                             8
+     $pos                            1
+     bsg_decode_00000008             1
+     bsg_dff_reset_en_00000007       1
+     bsg_encode_one_hot_00000008      1
+     bsg_lru_pseudo_tree_decode_00000008      2
+     bsg_lru_pseudo_tree_encode_00000008      1
+     bsg_mux_bitwise_00000007        2
+     bsg_priority_encode_00000008_1      1
+
+=== bsg_mux_bitwise_00000007 ===
+
+   Number of wires:                  4
+   Number of wire bits:             28
+   Number of public wires:           4
+   Number of public wire bits:      28
+   Number of ports:                  4
+   Number of port bits:             28
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mux_segmented_00000007_1      1
+
+=== bsg_mux_segmented_00000007_1 ===
+
+   Number of wires:                 39
+   Number of wire bits:             63
+   Number of public wires:          18
+   Number of public wire bits:      42
+   Number of ports:                  4
+   Number of port bits:             28
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 21
+     $mux                           14
+     $not                            7
+
+=== bsg_lru_pseudo_tree_decode_00000008 ===
+
+   Number of wires:                 22
+   Number of wire bits:             36
+   Number of public wires:           6
+   Number of public wire bits:      20
+   Number of ports:                  3
+   Number of port bits:             17
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 16
+     $and                           13
+     $not                            3
+
+=== bsg_encode_one_hot_00000008 ===
+
+   Number of wires:                 21
+   Number of wire bits:             30
+   Number of public wires:          10
+   Number of public wire bits:      19
+   Number of ports:                  3
+   Number of port bits:             12
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 11
+     $or                            11
+
+=== bsg_decode_00000008 ===
+
+   Number of wires:                  3
+   Number of wire bits:             19
+   Number of public wires:           2
+   Number of public wire bits:      11
+   Number of ports:                  2
+   Number of port bits:             11
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shl                            1
+
+=== bsg_priority_encode_00000008_1 ===
+
+   Number of wires:                  4
+   Number of wire bits:             20
+   Number of public wires:           4
+   Number of public wire bits:      20
+   Number of ports:                  3
+   Number of port bits:             12
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_encode_one_hot_00000008_1      1
+     bsg_priority_encode_one_hot_out_00000008_1      1
+
+=== bsg_encode_one_hot_00000008_1 ===
+
+   Number of wires:                 21
+   Number of wire bits:             30
+   Number of public wires:          10
+   Number of public wire bits:      19
+   Number of ports:                  3
+   Number of port bits:             12
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 11
+     $or                            11
+
+=== bsg_priority_encode_one_hot_out_00000008_1 ===
+
+   Number of wires:                 25
+   Number of wire bits:             44
+   Number of public wires:          11
+   Number of public wire bits:      30
+   Number of ports:                  3
+   Number of port bits:             17
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 15
+     $and                            7
+     $not                            7
+     bsg_scan_00000008_1_1           1
+
+=== bsg_scan_00000008_1_1 ===
+
+   Number of wires:                 42
+   Number of wire bits:             56
+   Number of public wires:          18
+   Number of public wire bits:      32
+   Number of ports:                  2
+   Number of port bits:             16
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 24
+     $or                            24
+
+=== bsg_lru_pseudo_tree_encode_00000008 ===
+
+   Number of wires:                  3
+   Number of wire bits:             11
+   Number of public wires:           3
+   Number of public wire bits:      11
+   Number of ports:                  2
+   Number of port bits:             10
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  2
+     bsg_mux_width_p1_els_p2         1
+     bsg_mux_width_p1_els_p4         1
+
+=== bsg_mux_width_p1_els_p4 ===
+
+   Number of wires:                 19
+   Number of wire bits:             23
+   Number of public wires:           9
+   Number of public wire bits:      13
+   Number of ports:                  3
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 10
+     $and                            4
+     $mux                            4
+     $not                            2
+
+=== bsg_mux_width_p1_els_p2 ===
+
+   Number of wires:                  8
+   Number of wire bits:              9
+   Number of public wires:           5
+   Number of public wire bits:       6
+   Number of ports:                  3
+   Number of port bits:              4
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_dff_reset_en_00000007 ===
+
+   Number of wires:                 25
+   Number of wire bits:             37
+   Number of public wires:          15
+   Number of public wire bits:      27
+   Number of ports:                  5
+   Number of port bits:             17
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_cam_1r1w_tag_array_0000001b_00000008 ===
+
+   Number of wires:                 75
+   Number of wire bits:            370
+   Number of public wires:          35
+   Number of public wire bits:     330
+   Number of ports:                  9
+   Number of port bits:             82
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 56
+     $and                           24
+     $eq                             8
+     $not                            8
+     bsg_dff_en_0000001b             8
+     bsg_dff_reset_en_width_p1       8
+
+=== bsg_dff_reset_en_width_p1 ===
+
+   Number of wires:                 13
+   Number of wire bits:             13
+   Number of public wires:           9
+   Number of public wire bits:       9
+   Number of ports:                  5
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_dff_en_0000001b ===
+
+   Number of wires:                 58
+   Number of wire bits:            110
+   Number of public wires:          31
+   Number of public wire bits:      83
+   Number of ports:                  4
+   Number of port bits:             56
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_rotate_left_width_p36 ===
+
+   Number of wires:                 40
+   Number of wire bits:            186
+   Number of public wires:          39
+   Number of public wire bits:     114
+   Number of ports:                  3
+   Number of port bits:             78
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     $shl                            1
+
+=== bsg_dff_reset_en_width_p59 ===
+
+   Number of wires:                129
+   Number of wire bits:            245
+   Number of public wires:          67
+   Number of public wire bits:     183
+   Number of ports:                  5
+   Number of port bits:            121
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bp_fe_pc_gen_00 ===
+
+   Number of wires:                465
+   Number of wire bits:           2903
+   Number of public wires:         304
+   Number of public wire bits:    1470
+   Number of ports:                 41
+   Number of port bits:            665
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                167
+     $add                            4
+     $and                           41
+     $mux                           43
+     $ne                             2
+     $not                           29
+     $or                            27
+     $pos                           15
+     bp_fe_bht_00                    1
+     bp_fe_btb_00                    1
+     bp_fe_ras_00                    1
+     bsg_dff_reset_en_00000002       1
+     bsg_dff_reset_en_0000005a       2
+
+=== bsg_dff_reset_en_00000002 ===
+
+   Number of wires:                 15
+   Number of wire bits:             17
+   Number of public wires:          10
+   Number of public wire bits:      12
+   Number of ports:                  5
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bp_fe_ras_00 ===
+
+   Number of wires:                125
+   Number of wire bits:            442
+   Number of public wires:          68
+   Number of public wire bits:     216
+   Number of ports:                 13
+   Number of port bits:            101
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                 58
+     $add                            1
+     $and                            6
+     $mux                           16
+     $not                           15
+     $or                            12
+     $pos                            5
+     bsg_counter_clear_up_max_val_p16_init_val_p0      1
+     bsg_dff_reset_00000008          1
+     bsg_mem_1r1w                    1
+
+=== bsg_dff_reset_00000008 ===
+
+   Number of wires:                 20
+   Number of wire bits:             34
+   Number of public wires:          12
+   Number of public wire bits:      26
+   Number of ports:                  4
+   Number of port bits:             18
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_counter_clear_up_max_val_p16_init_val_p0 ===
+
+   Number of wires:                 52
+   Number of wire bits:             60
+   Number of public wires:          30
+   Number of public wire bits:      34
+   Number of ports:                  5
+   Number of port bits:              9
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                 17
+     $add                            1
+     $and                            3
+     $mux                            7
+     $not                            4
+     $or                             2
+
+=== bsg_dff_reset_en_0000005a ===
+
+   Number of wires:                191
+   Number of wire bits:            369
+   Number of public wires:          98
+   Number of public wire bits:     276
+   Number of ports:                  5
+   Number of port bits:            183
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bp_fe_bht_00 ===
+
+   Number of wires:                271
+   Number of wire bits:            412
+   Number of public wires:         130
+   Number of public wire bits:     229
+   Number of ports:                 18
+   Number of port bits:             86
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                142
+     $add                            1
+     $and                           33
+     $eq                             1
+     $mux                           39
+     $not                           33
+     $or                            23
+     $pos                            3
+     $shl                            1
+     $xor                            5
+     bsg_counter_clear_up_max_val_p512_init_val_p0      1
+     bsg_dff_en_00000009             1
+     bsg_mem_1r1w_sync_00000008_512_1      1
+
+=== bsg_dff_en_00000009 ===
+
+   Number of wires:                 22
+   Number of wire bits:             38
+   Number of public wires:          13
+   Number of public wire bits:      29
+   Number of ports:                  4
+   Number of port bits:             20
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  0
+
+=== bsg_mem_1r1w_sync_00000008_512_1 ===
+
+   Number of wires:                  8
+   Number of wire bits:             38
+   Number of public wires:           8
+   Number of public wire bits:      38
+   Number of ports:                  8
+   Number of port bits:             38
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mem_1r1w_sync_synth         1
+
+=== bsg_counter_clear_up_max_val_p512_init_val_p0 ===
+
+   Number of wires:                 67
+   Number of wire bits:             85
+   Number of public wires:          40
+   Number of public wire bits:      49
+   Number of ports:                  5
+   Number of port bits:             14
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                 17
+     $add                            1
+     $and                            3
+     $mux                            7
+     $not                            4
+     $or                             2
+
+=== bp_fe_btb_00 ===
+
+   Number of wires:                149
+   Number of wire bits:            514
+   Number of public wires:          88
+   Number of public wire bits:     290
+   Number of ports:                 18
+   Number of port bits:            158
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                 63
+     $and                           14
+     $eq                             2
+     $mux                            7
+     $not                           19
+     $or                            13
+     $pos                            3
+     $xor                            1
+     bsg_counter_clear_up_max_val_p64_init_val_p0      1
+     bsg_dff_reset_en_0000000f       1
+     bsg_dff_reset_set_clear_width_p1      1
+     bsg_mem_1r1w_sync_width_p50_els_p64_latch_last_read_p1      1
+
+=== bsg_dff_reset_en_0000000f ===
+
+   Number of wires:                 41
+   Number of wire bits:             69
+   Number of public wires:          23
+   Number of public wire bits:      51
+   Number of ports:                  5
+   Number of port bits:             33
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_dff_reset_set_clear_width_p1 ===
+
+   Number of wires:                 13
+   Number of wire bits:             13
+   Number of public wires:           9
+   Number of public wire bits:       9
+   Number of ports:                  5
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $and                            1
+     $not                            1
+     $or                             1
+
+=== bsg_mem_1r1w_sync_width_p50_els_p64_latch_last_read_p1 ===
+
+   Number of wires:                  8
+   Number of wire bits:            116
+   Number of public wires:           8
+   Number of public wire bits:     116
+   Number of ports:                  8
+   Number of port bits:            116
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  1
+     bsg_mem_1r1w_sync_synth         1
+
+=== bsg_counter_clear_up_max_val_p64_init_val_p0 ===
+
+   Number of wires:                 58
+   Number of wire bits:             70
+   Number of public wires:          34
+   Number of public wire bits:      40
+   Number of ports:                  5
+   Number of port bits:             11
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                 17
+     $add                            1
+     $and                            3
+     $mux                            7
+     $not                            4
+     $or                             2
+
+=== bsg_dff_reset_en_bypass_width_p1 ===
+
+   Number of wires:                 13
+   Number of wire bits:             13
+   Number of public wires:          10
+   Number of public wire bits:      10
+   Number of ports:                  5
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  4
+     $mux                            2
+     $not                            1
+     bsg_dff_reset_en_width_p1_reset_val_p0_harden_p0      1
+
+=== bsg_dff_reset_en_width_p1_reset_val_p0_harden_p0 ===
+
+   Number of wires:                 13
+   Number of wire bits:             13
+   Number of public wires:           9
+   Number of public wire bits:       9
+   Number of ports:                  5
+   Number of port bits:              5
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
+=== bsg_dff_reset_en_bypass_width_p2 ===
+
+   Number of wires:                 14
+   Number of wire bits:             20
+   Number of public wires:          10
+   Number of public wire bits:      13
+   Number of ports:                  5
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  5
+     $mux                            2
+     $not                            1
+     $pos                            1
+     bsg_dff_reset_en_width_p2_reset_val_p0_harden_p0      1
+
+=== bsg_dff_reset_en_width_p2_reset_val_p0_harden_p0 ===
+
+   Number of wires:                 15
+   Number of wire bits:             17
+   Number of public wires:          10
+   Number of public wire bits:      12
+   Number of ports:                  5
+   Number of port bits:              7
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              1
+   Number of cells:                  3
+     $mux                            2
+     $not                            1
+
