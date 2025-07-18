@@ -81,7 +81,7 @@ class NetlistDB(sqlite3.Connection):
         self.executemany("INSERT OR IGNORE INTO ports (name, wire, direction) VALUES (?, ?, ?)", db_ports)
 
         # build cells
-        for cell in cells.values():
+        for name, cell in cells.items():
             type_: str = cell["type"]
             params: dict = cell["parameters"]
             conns: dict = cell["connections"]
@@ -97,10 +97,20 @@ class NetlistDB(sqlite3.Connection):
             elif type_ == "$mux":
                 a, b, s, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["S"]), NetlistDB.to_str(conns["Y"])
                 self.execute("INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
-            elif not type_.startswith("$"): # an instance
-                pass
             else:
-                raise ValueError(f"Unsupported cell type: {type_}")
+                attrs = cell["attributes"]
+                if "module_not_derived" in attrs and NetlistDB.to_int(attrs["module_not_derived"]): # blackbox cell
+                    self.execute("INSERT OR IGNORE INTO instances (id, module) VALUES (?, ?)", (name, type_))
+                    self.executemany(
+                        "INSERT OR IGNORE INTO instance_params (instance, param, val) VALUES (?, ?, ?)",
+                        ((name, param, val) for param, val in params.items())
+                    )
+                    self.executemany(
+                        "INSERT OR IGNORE INTO instance_ports (instance, port, wire) VALUES (?, ?, ?)",
+                        ((name, port, NetlistDB.to_str(conns[port])) for port in conns)
+                    )
+                else:
+                    raise ValueError(f"Unsupported cell type: {type_}")
 
         self.commit()
 

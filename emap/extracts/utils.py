@@ -140,5 +140,19 @@ def db_to_json(db: NetlistDB, choices: list[Cell | DFF], name: str) -> dict:
         else:   # DFF
             mod["cells"][f"$dff{choice.rowid}"] = _dff_to_json(db, choice)
 
+    # build blackboxes
+    cur = db.execute("SELECT id, module FROM instances")
+    for id, module in cur:
+        params = {param: val for param, val in db.execute("SELECT param, val FROM instance_params WHERE instance = ?", (id,))}
+        conns = {port: NetlistDB.to_bits(wire) for port, wire in db.execute("SELECT port, wire FROM instance_ports WHERE instance = ?", (id,))}
+        blackbox = {
+            "hide_name": 1,
+            "type": module,
+            "parameters": params,
+            "attributes": {"module_not_derived": f"{1:032b}"},
+            "connections": conns
+        }
+        mod["cells"][id] = blackbox
+
     # it's ok without netnames
     return mod

@@ -46,3 +46,10 @@ CREATE TABLE IF NOT EXISTS instance_ports (
     wire VARCHAR(64) NOT NULL,
     PRIMARY KEY (instance, port)
 );
+
+CREATE TABLE IF NOT EXISTS instance_params (
+    instance VARCHAR(64),
+    param VARCHAR(64),
+    val VARCHAR(64) NOT NULL,
+    PRIMARY KEY (instance, param)
+);

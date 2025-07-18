@@ -18,20 +18,28 @@ def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
         wires.update(bundle)
 
     for wire in wires:
+        # first, find a bundle that contains this wire
         wire_group = set()
         for bundle in bundles:
             if wire in bundle:
-                wire_group = wire_group.intersection(bundle) if wire_group else {w for w in bundle if not isinstance(w, str) or not w.startswith("group")}
+                wire_group = {w for w in bundle if not isinstance(w, str) or not w.startswith("group")}
+                break
         if not wire_group:  # this wire is not in any bundle
             continue
-        groups[f"group{cnt}"] = wire_group
+        # then, shrink the wire group
+        for bundle in bundles:
+            b = {w for w in bundle if not isinstance(w, str) or not w.startswith("group")}
+            if not wire_group <= b:
+                wire_group = b & wire_group if wire in b else wire_group - b
         # update bundles
+        groups[f"group{cnt}"] = wire_group
         for bundle in bundles:
             if wire_group <= bundle:
                 bundle -= wire_group
                 bundle.add(f"group{cnt}")
         cnt += 1
 
+    print(f"Grouped {len(wires)} wires into {len(groups)} groups.")
     return groups
 
 def _prune_cells(cells: list[Cell]):
@@ -152,13 +160,49 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         cells.update(Cell(table=dsp_table, rowid=row[0], inputs=set(",".join(row[2:-1]).split(",")), outputs=set(row[-1].split(",")), cost=0) for row in cur)
 
     cells, dffs = list(cells), list(dffs)
-    input, output = set(), set()
+    input, output = {0, 1}, set()   # GND and VCC are always inputs
     cur.execute("SELECT wire FROM ports WHERE direction = 'input'")
     for (wire,) in cur.fetchall():
         input.update(wire.split(","))
     cur.execute("SELECT wire FROM ports WHERE direction = 'output'")
     for (wire,) in cur.fetchall():
         output.update(wire.split(","))
+
+    # blackbox inputs and outputs
+    cur.execute("SELECT wire FROM instance_ports")
+    for (wire,) in cur:
+        for bit in wire.split(","):
+            found = False
+            for cell in cells:
+                if bit in cell.outputs:
+                    output.add(bit)
+                    found = True
+                    break
+            if not found:
+                for dff in dffs:
+                    if bit in dff.q:
+                        output.add(bit)
+                        found = True
+                        break
+            if not found:
+                for cell in cells:
+                    if bit in cell.inputs:
+                        input.add(bit)
+                        found = True
+                        break
+            if not found:
+                for dff in dffs:
+                    if bit in dff.d or bit in dff.clk:
+                        input.add(bit)
+                        found = True
+                        break
+            if not found:
+                if bit in output:
+                    input.add(bit)
+                elif bit in input:
+                    output.add(bit)
+    print(f"Input wires: {input}, Output wires: {output}")
+
     bundles = [input, output]
     bundles += [cell.inputs for cell in cells]
     bundles += [cell.outputs for cell in cells]
@@ -211,7 +255,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    # ilp_model.write("egraph_extraction.lp")
+    ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:

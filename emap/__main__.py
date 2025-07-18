@@ -51,13 +51,13 @@ if __name__ == "__main__":
     create_dsp_tables(db, dsp_rules)
     db.build_from_json(mod["modules"][args.top])
 
-    rewrite_complex_mul(db)
-    while rewrite_dff_backward_aby_cell(db, ["$adds", "$subs", "$muls"]) > 0:
-        pass
-    rewrite_comm(db, ["$adds", "$muls"])
+    # rewrite_complex_mul(db)
+    # while rewrite_dff_backward_aby_cell(db, ["$adds", "$subs", "$muls"]) > 0:
+    #     pass
+    # rewrite_comm(db, ["$adds", "$muls"])
 
-    for rule in dsp_rules:
-        rewrite_dsp(db, rule)
+    # for rule in dsp_rules:
+    #     rewrite_dsp(db, rule)
 
     with open("out_rewrite.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)
