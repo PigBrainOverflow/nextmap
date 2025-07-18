@@ -63,4 +63,4 @@ if __name__ == "__main__":
         json.dump(db.dump_tables(), f, indent=2)
 
     # test_greedy_extract_dsps(db, args.top)
-    # test_ilp_extract_dsps_by_count(db, args.top)
+    test_ilp_extract_dsps_by_count(db, args.top)
