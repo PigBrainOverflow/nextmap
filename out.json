@@ -191,6 +191,7 @@
   ],
   "instances": [],
   "instance_ports": [],
+  "instance_params": [],
   "dsp48e2_unsigned_mul_1_stage_26_17_48_bit": [
     {
       "value": 432,

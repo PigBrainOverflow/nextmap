@@ -201,7 +201,6 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
                     input.add(bit)
                 elif bit in input:
                     output.add(bit)
-    print(f"Input wires: {input}, Output wires: {output}")
 
     bundles = [input, output]
     bundles += [cell.inputs for cell in cells]
@@ -255,7 +254,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    ilp_model.write("egraph_extraction.lp")
+    # ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:
