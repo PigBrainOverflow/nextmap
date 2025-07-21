@@ -4,7 +4,7 @@ from typing import Iterable, Callable
 import gurobipy as grb
 
 
-def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
+def _group_wires(bundles: list[set]) -> dict[str, set]:
     """
     Return a dictionary mapping each wire group to its corresponding set of wires.
     Modifies the input list of wires in place.
@@ -13,19 +13,17 @@ def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
     """
     groups = {}
     cnt = 0
-    wires = set()
-    for bundle in bundles:
-        wires.update(bundle)
+    wires = set().union(*bundles)
 
     for wire in wires:
         # first, find a bundle that contains this wire
-        wire_group = set()
+        wire_group = None
         for bundle in bundles:
             if wire in bundle:
                 wire_group = {w for w in bundle if not isinstance(w, str) or not w.startswith("group")}
                 break
-        if not wire_group:  # this wire is not in any bundle
-            continue
+        else:
+            continue  # no bundle found for this wire, skip it
         # then, shrink the wire group
         for bundle in bundles:
             b = {w for w in bundle if not isinstance(w, str) or not w.startswith("group")}
@@ -38,9 +36,17 @@ def _group_wires(bundles: Iterable[set]) -> dict[str, set]:
                 bundle -= wire_group
                 bundle.add(f"group{cnt}")
         cnt += 1
+        print(f"Group {cnt} created for wires: {wire_group}")
 
     print(f"Grouped {len(wires)} wires into {len(groups)} groups.")
     return groups
+
+def _group_wires_fast(bundles: list[set]) -> dict[str, set]:
+    """
+    A faster version of _group_wires() in C++.
+    """
+    from ..cpp.build import emapcc
+    # TODO
 
 def _prune_cells(cells: list[Cell]):
     """
@@ -124,7 +130,7 @@ def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    # ilp_model.write("egraph_extraction.lp")
+    ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:

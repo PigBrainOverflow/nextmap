@@ -85,7 +85,7 @@ class NetlistDB(sqlite3.Connection):
             type_: str = cell["type"]
             params: dict = cell["parameters"]
             conns: dict = cell["connections"]
-            if type_ in {"$and", "$or", "$xor", "$add", "$sub", "$mul"}:
+            if type_ in {"$and", "$or", "$xor", "$add", "$sub", "$mul", "$mod"}:
                 type_ += "s" if NetlistDB.to_int(params["A_SIGNED"]) and NetlistDB.to_int(params["B_SIGNED"]) else "u"
                 a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
                 self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
@@ -97,6 +97,15 @@ class NetlistDB(sqlite3.Connection):
             elif type_ == "$mux":
                 a, b, s, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["S"]), NetlistDB.to_str(conns["Y"])
                 self.execute("INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
+            elif type_ in {"$not", "$logic_not"}:
+                a, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["Y"])
+                self.execute("INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)", (type_, a, y))
+            elif type_ in {
+                "$eq", "$ge", "$le", "$gt", "$lt",
+                "$logic_and", "$logic_or"
+            }:
+                a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
+                self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and NetlistDB.to_int(attrs["module_not_derived"]): # blackbox cell

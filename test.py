@@ -17,7 +17,7 @@ def synth_verilog(infile: str, outfile: str):
         raise RuntimeError(f"Yosys synthesis failed: {res.stderr}")
 
 def import_design(design_path: str, top: str = "top") -> NetlistDB:
-    db = NetlistDB("emap/schema.sql", ":memory:", cnt=1000)
+    db = NetlistDB("emap/schema.sql", ":memory:", cnt=1000000)
     with open(design_path, "r") as f:
         mod = json.load(f)
     db.build_from_json(mod["modules"][top])
@@ -171,11 +171,14 @@ def test_systolic():
         json.dump(db.dump_tables(), f, indent=2)
     # extract
     design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=1, cost_model=simple_cost_model)
-    with open("./tests/out/handcrafted/wide_multiplier.json", "w") as f:
+    with open("./tests/out/systolic/systolic.json", "w") as f:
         json.dump({"creator": "nextmap", "modules": {"top": design}}, f, indent=2)
 
 if __name__ == "__main__":
     # test_handcrafted_all()
-    test_systolic()
+    # test_systolic()
+
+    import emap.cpp.build.emapcc as emapcc
+    print("Testing C++ binding...")
 
     print("All tests completed successfully.")
