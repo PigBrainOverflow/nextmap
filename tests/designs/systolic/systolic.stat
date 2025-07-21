@@ -1,0 +1,105 @@
+
+9. Printing statistics.
+
+=== addr_sel ===
+
+   Number of wires:                124
+   Number of wire bits:           1142
+   Number of public wires:          34
+   Number of public wire bits:     328
+   Number of ports:                 18
+   Number of port bits:            168
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 90
+     $dff                           16
+     $ge                            14
+     $le                            16
+     $logic_and                     14
+     $mux                           16
+     $sub                           14
+
+=== quantize ===
+
+   Number of wires:                327
+   Number of wire bits:           4522
+   Number of public wires:           4
+   Number of public wire bits:    1237
+   Number of ports:                  2
+   Number of port bits:           1184
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                160
+     $ge                            32
+     $le                            32
+     $mux                           96
+
+=== systolic ===
+
+   Number of wires:              68681
+   Number of wire bits:         773902
+   Number of public wires:        4123
+   Number of public wire bits:   60686
+   Number of ports:                 22
+   Number of port bits:           1202
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:              39952
+     $add                         1025
+     $dff                         3076
+     $eq                          3069
+     $ge                          3072
+     $le                          1024
+     $logic_and                   3072
+     $logic_not                      3
+     $logic_or                    1024
+     $lt                             1
+     $mod                         2048
+     $mul                         2048
+     $mux                        17415
+     $not                            2
+     $sub                         3073
+
+=== systolic_controller ===
+
+   Number of wires:                138
+   Number of wire bits:            506
+   Number of public wires:          17
+   Number of public wire bits:      61
+   Number of ports:                 10
+   Number of port bits:             30
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 77
+     $add                            4
+     $dff                            6
+     $eq                            24
+     $ge                             1
+     $logic_and                      1
+     $logic_not                      4
+     $mux                           34
+     $not                            1
+     $pmux                           2
+
+=== tpu_top ===
+
+   Number of wires:                 53
+   Number of wire bits:           3443
+   Number of public wires:          53
+   Number of public wire bits:    3443
+   Number of ports:                 45
+   Number of port bits:           2233
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  5
+     addr_sel                        1
+     quantize                        1
+     systolic                        1
+     systolic_controll               1
+     write_out                       1
+

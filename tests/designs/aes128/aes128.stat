@@ -1,0 +1,166 @@
+
+13. Printing statistics.
+
+=== AddRoundKey ===
+
+   Number of wires:                 20
+   Number of wire bits:            782
+   Number of public wires:           8
+   Number of public wire bits:     389
+   Number of ports:                  8
+   Number of port bits:            389
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $adff                           2
+     $and                            1
+     $logic_and                      1
+     $logic_not                      1
+     $mux                            1
+     $not                            2
+     $xor                            1
+
+=== KeyExpantion ===
+
+   Number of wires:                 37
+   Number of wire bits:           3351
+   Number of public wires:          27
+   Number of public wire bits:    3031
+   Number of ports:                  6
+   Number of port bits:           1421
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 10
+     RoundKeyGen                    10
+
+=== MixColumns ===
+
+   Number of wires:                285
+   Number of wire bits:           2394
+   Number of public wires:          54
+   Number of public wire bits:     644
+   Number of ports:                  6
+   Number of port bits:            260
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                117
+     $adff                           2
+     $logic_not                      1
+     $mux                           32
+     $not                           18
+     $xor                           64
+
+=== Round ===
+
+   Number of wires:                 14
+   Number of wire bits:            776
+   Number of public wires:          14
+   Number of public wire bits:     776
+   Number of ports:                  8
+   Number of port bits:            389
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  4
+     AddRoundKey                     1
+     MixColumns                      1
+     ShiftRows                       1
+     SubBytes                        1
+
+=== RoundKeyGen ===
+
+   Number of wires:                 54
+   Number of wire bits:           2080
+   Number of public wires:          16
+   Number of public wire bits:     871
+   Number of ports:                  7
+   Number of port bits:            292
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 28
+     $adff                           7
+     $logic_not                      4
+     $mux                            4
+     $not                            7
+     $xor                            5
+     SubBytes                        1
+
+=== SBox ===
+
+   Number of wires:                 12
+   Number of wire bits:             47
+   Number of public wires:           5
+   Number of public wire bits:      19
+   Number of ports:                  5
+   Number of port bits:             19
+   Number of memories:               1
+   Number of memory bits:         2048
+   Number of processes:              0
+   Number of cells:                  6
+     $adff                           1
+     $logic_not                      1
+     $meminit                        1
+     $memrd_v2                       1
+     $mux                            1
+     $not                            1
+
+=== ShiftRows ===
+
+   Number of wires:                 53
+   Number of wire bits:            782
+   Number of public wires:          22
+   Number of public wire bits:     388
+   Number of ports:                  6
+   Number of port bits:            260
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                  9
+     $adff                           2
+     $logic_not                      1
+     $mux                            4
+     $not                            2
+
+=== SubBytes ===
+
+   Number of wires:                 10
+   Number of wire bits:            264
+   Number of public wires:           6
+   Number of public wire bits:     260
+   Number of ports:                  6
+   Number of port bits:            260
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 19
+     $adff                           1
+     $logic_not                      1
+     $not                            1
+     SBox                           16
+
+=== Top_PipelinedCipher ===
+
+   Number of wires:                 36
+   Number of wire bits:           3619
+   Number of public wires:          27
+   Number of public wire bits:    3356
+   Number of ports:                  8
+   Number of port bits:            389
+   Number of memories:               0
+   Number of memory bits:            0
+   Number of processes:              0
+   Number of cells:                 20
+     $adff                           2
+     $logic_not                      1
+     $mux                            1
+     $not                            2
+     AddRoundKey                     2
+     KeyExpantion                    1
+     Round                           9
+     ShiftRows                       1
+     SubBytes                        1
+
