@@ -170,15 +170,13 @@ def test_systolic():
     with open("out.json", "w") as f:
         json.dump(db.dump_tables(), f, indent=2)
     # extract
-    design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=1, cost_model=simple_cost_model)
+    design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=1024, cost_model=simple_cost_model)
+    # design = extracts.ilp.extract_dsps_by_cost(db, "dsp48e2", cost_model=simple_cost_model)
     with open("./tests/out/systolic/systolic.json", "w") as f:
         json.dump({"creator": "nextmap", "modules": {"top": design}}, f, indent=2)
 
 if __name__ == "__main__":
-    # test_handcrafted_all()
+    test_handcrafted_all()
     # test_systolic()
-
-    import emap.cpp.build.emapcc as emapcc
-    print("Testing C++ binding...")
 
     print("All tests completed successfully.")

@@ -27,8 +27,7 @@ def _group_wires(bundles: list[set]) -> dict[str, set]:
         # then, shrink the wire group
         for bundle in bundles:
             b = {w for w in bundle if not isinstance(w, str) or not w.startswith("group")}
-            if not wire_group <= b:
-                wire_group = b & wire_group if wire in b else wire_group - b
+            wire_group = b & wire_group if wire in b else wire_group - b
         # update bundles
         groups[f"group{cnt}"] = wire_group
         for bundle in bundles:
@@ -36,7 +35,7 @@ def _group_wires(bundles: list[set]) -> dict[str, set]:
                 bundle -= wire_group
                 bundle.add(f"group{cnt}")
         cnt += 1
-        print(f"Group {cnt} created for wires: {wire_group}")
+        # print(f"Group {cnt} created for wires: {wire_group}")
 
     print(f"Grouped {len(wires)} wires into {len(groups)} groups.")
     return groups
@@ -46,7 +45,14 @@ def _group_wires_fast(bundles: list[set]) -> dict[str, set]:
     A faster version of _group_wires() in C++.
     """
     from ..cpp.build import emapcc
-    # TODO
+    # new_bundles, groups = emapcc.group_wires([{-1 if w == "x" else int(w) for w in bundle} for bundle in bundles])
+    cnt = len(set().union(*bundles))
+    new_bundles, groups = emapcc.group_wires_v2([{-1 if w == "x" else int(w) for w in bundle} for bundle in bundles])   # faster when set size and element frequency are bounded
+    for i, bundle in enumerate(bundles):
+        bundle.clear()
+        bundle.update(f"group{gid}" for gid in new_bundles[i])
+    print(f"Grouped {cnt} wires into {len(groups)} groups.")
+    return {f"group{gid}": {int(w) for w in wires} for gid, wires in enumerate(groups)}
 
 def _prune_cells(cells: list[Cell]):
     """
@@ -89,7 +95,8 @@ def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict
     bundles += [dff.d for dff in dffs]
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
-    groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
+    # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
+    groups = list(_group_wires_fast(bundles))
     _prune_cells(cells)
 
     # call gurobi to solve it
@@ -166,7 +173,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         cells.update(Cell(table=dsp_table, rowid=row[0], inputs=set(",".join(row[2:-1]).split(",")), outputs=set(row[-1].split(",")), cost=0) for row in cur)
 
     cells, dffs = list(cells), list(dffs)
-    input, output = {0, 1}, set()   # GND and VCC are always inputs
+    input, output = {-1, 0, 1}, set()   # GND and VCC are always inputs
     cur.execute("SELECT wire FROM ports WHERE direction = 'input'")
     for (wire,) in cur.fetchall():
         input.update(wire.split(","))
@@ -214,7 +221,22 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     bundles += [dff.d for dff in dffs]
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
-    groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
+
+    # from collections import Counter
+    # # set size
+    # sets = Counter(len(bundle) for bundle in bundles)
+    # for k, v in sets.items():
+    #     print(f"Number of bundles with {k} wires: {v}")
+    # # element frequency
+    # element_freq = Counter()
+    # for bundle in bundles:
+    #     element_freq.update(bundle)
+    # for k, v in element_freq.most_common(10):
+    #     print(f"Element {k} appears in {v} bundles.")
+    # return {}
+
+    # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
+    groups = list(_group_wires_fast(bundles))
     before = len(cells)
     _prune_cells(cells)
     print(f"Pruned {before - len(cells)} cells, remaining {len(cells)} cells after pruning.")
