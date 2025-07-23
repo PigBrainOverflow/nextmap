@@ -60,6 +60,7 @@ def _prune_cells(cells: list[Cell]):
     """
     modified = True
     while modified:
+        # print(f"Pruning cells, current count: {len(cells)}")
         modified = False
         for i in range(len(cells)):
             for j in range(len(cells)):
@@ -70,6 +71,23 @@ def _prune_cells(cells: list[Cell]):
                     break
             if modified:
                 break
+
+def _prune_cells_fast(cells: list[Cell]):
+    """
+    A faster version of _prune_cells() in C++.
+    """
+    from ..cpp.build import emapcc
+    removed_indices = emapcc.prune_cells([(
+        cell.cost,
+        sorted(-1 if w == "x" else int(w) for w in cell.inputs),
+        sorted(-1 if w == "x" else int(w) for w in cell.outputs)
+    ) for cell in cells])
+    write = 0
+    for read in range(len(cells)):
+        if read not in removed_indices:
+            cells[write] = cells[read]
+            write += 1
+    cells[:] = cells[:write]  # truncate the list to the new length
 
 def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict:
     cells, dffs = db_to_normalized(db, cost_model)
@@ -96,8 +114,8 @@ def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict
     bundles += [dff.clk for dff in dffs]
     bundles += [dff.q for dff in dffs]
     # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
-    groups = list(_group_wires_fast(bundles))
     _prune_cells(cells)
+    groups = list(_group_wires_fast(bundles))   # this also modifies the input bundles into groups
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
@@ -159,7 +177,7 @@ def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict
 
     return db_to_json(db, res, name)
 
-def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Callable) -> dict:
+def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Callable, verbose: bool = False) -> dict:
     """
     Extract DSPs by a fixed count.
     It guarantees that the number of DSPs extracted is no more than `count`.
@@ -235,16 +253,17 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     #     print(f"Element {k} appears in {v} bundles.")
     # return {}
 
-    # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
-    groups = list(_group_wires_fast(bundles))
     before = len(cells)
     # print(before, "cells before pruning")   # 30804
-    _prune_cells(cells)
+    # _prune_cells(cells)
+    _prune_cells_fast(cells)
     print(f"Pruned {before - len(cells)} cells, remaining {len(cells)} cells after pruning.")
+    # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
+    groups = list(_group_wires_fast(bundles))
 
     # call gurobi to solve it
     ilp_model = grb.Model("egraph_extraction")
-    ilp_model.setParam("OutputFlag", 0) # silent
+    ilp_model.setParam("OutputFlag", verbose) # silent
     x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x") # choices of wires
     y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y") # choices of cells
     z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z") # choices of dffs
@@ -277,6 +296,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     # dsp count constraint
     ilp_model.addConstr(grb.quicksum(y[i] for i in range(len(cells)) if cells[i].table.startswith(name)) <= count, "dsp_count_constraint")
 
+    ilp_model.setParam("MIPGap", 0.05)  # accept 5% gap
     ilp_model.setObjective(
         grb.quicksum(y[i] * cells[i].cost for i in range(len(cells))) +
         grb.quicksum(z[i] * dffs[i].cost for i in range(len(dffs))),
@@ -287,7 +307,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     ilp_model.optimize()
 
     if ilp_model.status != grb.GRB.OPTIMAL:
-        raise ValueError("ILP model could not find an optimal solution.")
+        raise ValueError("ILP model could not find a solution.")
     if ilp_model.status == grb.GRB.INFEASIBLE:
         raise ValueError("ILP model is infeasible, no solution found.")
     if ilp_model.status == grb.GRB.UNBOUNDED:

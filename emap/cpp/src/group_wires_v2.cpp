@@ -69,7 +69,7 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> group_wi
 #ifdef DEBUG
 #include <iostream>
         std::cout << "Group for wire " << wire << ": ";
-        for (auto w : *group_candidate) {
+        for (auto w : group_candidate) {
             std::cout << w << " ";
         }
         std::cout << "\n";
