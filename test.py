@@ -176,7 +176,7 @@ def test_systolic():
         json.dump({"creator": "nextmap", "modules": {"top": design}}, f, indent=2)
 
 if __name__ == "__main__":
-    test_handcrafted_all()
-    # test_systolic()
+    # test_handcrafted_all()
+    test_systolic()
 
     print("All tests completed successfully.")

@@ -1,4 +1,3 @@
-#include <memory>
 #include <cstddef>
 
 #include "group_wires_v2.h"
@@ -8,7 +7,7 @@ namespace emapcc {
 
 std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> group_wires_v2(std::vector<std::set<int>> bundles) {
     // returns the new bundles and groups
-    std::vector<std::vector<int>> new_bundles(bundles.size(), std::vector<int>());
+    std::vector<std::vector<int>> new_bundles(bundles.size());
     std::vector<std::vector<int>> groups;
 
     // preprocess
@@ -36,14 +35,14 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> group_wi
             wire_to_bundles.erase(itr);
             continue;
         }
-        auto group_candidate = std::make_unique<std::set<int>>(bundles[*hitting_itr]);
+        auto group_candidate = std::set<int>(bundles[*hitting_itr]);
         ++hitting_itr;
         while (hitting_itr != hitting_bundles.end()) {
             const auto& bundle = bundles[*hitting_itr];
-            std::unique_ptr<std::set<int>> new_group_candidate = std::make_unique<std::set<int>>();
-            for (auto w : *group_candidate) {
+            std::set<int> new_group_candidate;
+            for (auto w : group_candidate) {
                 if (bundle.find(w) != bundle.end()) {
-                    new_group_candidate->insert(w);
+                    new_group_candidate.insert(w);
                 }
             }
             group_candidate = std::move(new_group_candidate);
@@ -52,7 +51,7 @@ std::pair<std::vector<std::vector<int>>, std::vector<std::vector<int>>> group_wi
 
         // check all wires in the group, if one exists in other bundles, remove it from group
         std::set<int> group;
-        for (auto wire : *group_candidate) {
+        for (auto wire : group_candidate) {
             auto other_itr = wire_to_bundles.find(wire);
             bool valid = true;
             if (other_itr != wire_to_bundles.end()) {

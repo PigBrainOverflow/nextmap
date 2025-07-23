@@ -238,6 +238,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
     groups = list(_group_wires_fast(bundles))
     before = len(cells)
+    # print(before, "cells before pruning")   # 30804
     _prune_cells(cells)
     print(f"Pruned {before - len(cells)} cells, remaining {len(cells)} cells after pruning.")
 
