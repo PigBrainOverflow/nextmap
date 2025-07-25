@@ -1,0 +1,16 @@
+\ Model _copy
+\ LP format - for model browsing. Use MPS format to capture full model detail.
+\ Signature: 0xaaa6f6763795e604
+Minimize
+ 
+Subject To
+ output_constraints[group73]: x[73] >= 1
+ wire_constraints[group73]: y[25069] - x[73] >= 0
+ wire_constraints[group7337]: - x[7337] >= 0
+ wire_constraints[group26207]: y[14633] - x[26207] >= 0
+ cell_14633_input_group7337_constraint: - y[14633] + x[7337] >= 0
+ cell_25069_input_group26207_constraint: - y[25069] + x[26207] >= 0
+Bounds
+Binaries
+ y[14633] y[25069] x[73] x[7337] x[26207]
+End

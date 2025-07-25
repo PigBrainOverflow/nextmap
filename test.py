@@ -163,12 +163,12 @@ def test_systolic():
     db = import_design("./tests/designs/systolic/systolic.json", top="systolic")
     rewrites.create_dsp_tables(db, dsp_rules)
     # rewrite
-    while rewrites.rewrite_dff_backward_aby_cell(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"]) > 0:
-        pass
-    rewrites.rewrite_comm(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"])
-    [rewrites.rewrite_dsp(db, rule) for rule in dsp_rules]
-    with open("out.json", "w") as f:
-        json.dump(db.dump_tables(), f, indent=2)
+    # while rewrites.rewrite_dff_backward_aby_cell(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"]) > 0:
+    #     pass
+    # rewrites.rewrite_comm(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"])
+    # print([rewrites.rewrite_dsp(db, rule) for rule in dsp_rules])
+    # with open("out.json", "w") as f:
+    #     json.dump(db.dump_tables(), f, indent=2)
     # extract
     design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=1024, cost_model=simple_cost_model, verbose=True)
     # design = extracts.ilp.extract_dsps_by_cost(db, "dsp48e2", cost_model=simple_cost_model)

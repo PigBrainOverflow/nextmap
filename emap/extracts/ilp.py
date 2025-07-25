@@ -2,6 +2,8 @@ from ..db import NetlistDB
 from .utils import Cell, DFF, db_to_normalized, db_to_json
 from typing import Iterable, Callable
 import gurobipy as grb
+import time
+import json
 
 
 def _group_wires(bundles: list[set]) -> dict[str, set]:
@@ -44,6 +46,7 @@ def _group_wires_fast(bundles: list[set]) -> dict[str, set]:
     """
     A faster version of _group_wires() in C++.
     """
+    phase_time = time.time()
     from ..cpp.build import emapcc
     # new_bundles, groups = emapcc.group_wires([{-1 if w == "x" else int(w) for w in bundle} for bundle in bundles])
     cnt = len(set().union(*bundles))
@@ -51,7 +54,9 @@ def _group_wires_fast(bundles: list[set]) -> dict[str, set]:
     for i, bundle in enumerate(bundles):
         bundle.clear()
         bundle.update(f"group{gid}" for gid in new_bundles[i])
-    print(f"Grouped {cnt} wires into {len(groups)} groups.")
+    print(f"_group_wires_fast() finished in {time.time() - phase_time:.2f} seconds, grouped {cnt} wires into {len(groups)} groups.")
+    with open("group.json", "w") as f:
+        json.dump(groups, f, indent=2)
     return {f"group{gid}": {int(w) for w in wires} for gid, wires in enumerate(groups)}
 
 def _prune_cells(cells: list[Cell]):
@@ -76,6 +81,7 @@ def _prune_cells_fast(cells: list[Cell]):
     """
     A faster version of _prune_cells() in C++.
     """
+    phase_time = time.time()
     from ..cpp.build import emapcc
     removed_indices = emapcc.prune_cells([(
         cell.cost,
@@ -88,6 +94,7 @@ def _prune_cells_fast(cells: list[Cell]):
             cells[write] = cells[read]
             write += 1
     cells[:] = cells[:write]  # truncate the list to the new length
+    print(f"_prune_cells_fast() finished in {time.time() - phase_time:.2f} seconds, removed {len(removed_indices)} cells, remaining {len(cells)} cells.")
 
 def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict:
     cells, dffs = db_to_normalized(db, cost_model)
@@ -191,7 +198,7 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         cells.update(Cell(table=dsp_table, rowid=row[0], inputs=set(",".join(row[2:-1]).split(",")), outputs=set(row[-1].split(",")), cost=0) for row in cur)
 
     cells, dffs = list(cells), list(dffs)
-    input, output = {-1, 0, 1}, set()   # GND and VCC are always inputs
+    input, output = {-1, 0, 1}, set()   # DC, GND and VCC are always inputs
     cur.execute("SELECT wire FROM ports WHERE direction = 'input'")
     for (wire,) in cur.fetchall():
         input.update(wire.split(","))
@@ -253,11 +260,9 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
     #     print(f"Element {k} appears in {v} bundles.")
     # return {}
 
-    before = len(cells)
     # print(before, "cells before pruning")   # 30804
     # _prune_cells(cells)
     _prune_cells_fast(cells)
-    print(f"Pruned {before - len(cells)} cells, remaining {len(cells)} cells after pruning.")
     # groups = list(_group_wires(bundles))    # this also modifies the input bundles into groups
     groups = list(_group_wires_fast(bundles))
 
@@ -272,29 +277,41 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         return int(name[5:])
 
     # output constraints
-    for group in output:
-        ilp_model.addConstr(x[gname_to_index(group)] >= 1, f"output_{group}_constraint")
+    phase_time = time.time()
+    ilp_model.addConstrs((x[gname_to_index(group)] >= 1 for group in output), "output_constraints")
+    # for group in output:
+    #     ilp_model.addConstr(x[gname_to_index(group)] >= 1, f"output_{group}_constraint")
+    print(f"Output constraints added in {time.time() - phase_time:.2f} seconds.")
 
     # wire constraints
-    for group in groups:
-        if group not in input:  # if the wire is not an input, it can be chosen or not
-            # if the wire is chosen, at least one of the cells or dffs must be chosen
-            ilp_model.addConstr(grb.quicksum(y[i] for i in range(len(cells)) if group in cells[i].outputs) + grb.quicksum(z[i] for i in range(len(dffs)) if group in dffs[i].q) >= x[gname_to_index(group)], f"wire_{group}_constraint")
+    phase_time = time.time()
+    ilp_model.addConstrs((grb.quicksum(y[i] for i in range(len(cells)) if group in cells[i].outputs) + grb.quicksum(z[i] for i in range(len(dffs)) if group in dffs[i].q) >= x[gname_to_index(group)] for group in groups if group not in input), "wire_constraints")
+    # for group in groups:
+    #     if group not in input:  # if the wire is not an input, it can be chosen or not
+    #         # if the wire is chosen, at least one of the cells or dffs must be chosen
+    #         ilp_model.addConstr(grb.quicksum(y[i] for i in range(len(cells)) if group in cells[i].outputs) + grb.quicksum(z[i] for i in range(len(dffs)) if group in dffs[i].q) >= x[gname_to_index(group)], f"wire_{group}_constraint")
+    print(f"Wire constraints added in {time.time() - phase_time:.2f} seconds.")
 
     # cell constraints
+    phase_time = time.time()
     for i, cell in enumerate(cells):
         for group in cell.inputs:
             ilp_model.addConstr(x[gname_to_index(group)] >= y[i], f"cell_{i}_input_{group}_constraint")    # if the cell is chosen, all its inputs must be chosen
+    print(f"Cell constraints added in {time.time() - phase_time:.2f} seconds.")
 
     # dff constraints
+    phase_time = time.time()
     for i, dff in enumerate(dffs):
         for group in dff.d:
             ilp_model.addConstr(x[gname_to_index(group)] >= z[i], f"dff_{i}_input_{group}_constraint")  # if the dff is chosen, all its inputs must be chosen
         for group in dff.clk:
             ilp_model.addConstr(x[gname_to_index(group)] >= z[i], f"dff_{i}_clk_{group}_constraint")    # if the dff is chosen, all its clocks must be chosen
+    print(f"DFF constraints added in {time.time() - phase_time:.2f} seconds.")
 
     # dsp count constraint
+    phase_time = time.time()
     ilp_model.addConstr(grb.quicksum(y[i] for i in range(len(cells)) if cells[i].table.startswith(name)) <= count, "dsp_count_constraint")
+    print(f"DSP count constraint added in {time.time() - phase_time:.2f} seconds.")
 
     ilp_model.setParam("MIPGap", 0.05)  # accept 5% gap
     ilp_model.setObjective(
@@ -303,11 +320,9 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
         grb.GRB.MINIMIZE
     )   # minimize the total cost
 
-    # ilp_model.write("egraph_extraction.lp")
+    ilp_model.write("egraph_extraction.lp")
     ilp_model.optimize()
 
-    if ilp_model.status != grb.GRB.OPTIMAL:
-        raise ValueError("ILP model could not find a solution.")
     if ilp_model.status == grb.GRB.INFEASIBLE:
         raise ValueError("ILP model is infeasible, no solution found.")
     if ilp_model.status == grb.GRB.UNBOUNDED:

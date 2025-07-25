@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/home/sijie/nextmap/test.py", line 180, in <module>
+    test_systolic()
+  File "/home/sijie/nextmap/test.py", line 173, in test_systolic
+    design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=1024, cost_model=simple_cost_model, verbose=True)
+  File "/home/sijie/nextmap/emap/extracts/ilp.py", line 341, in extract_dsps_by_count
+    return db_to_json(db, res, name)
+  File "/home/sijie/nextmap/emap/extracts/utils.py", line 139, in db_to_json
+    mod["cells"][f"{choice.table}{choice.rowid}"] = _cell_to_json(db, choice, name)
+  File "/home/sijie/nextmap/emap/extracts/utils.py", line 97, in _cell_to_json
+    raise ValueError(f"Unsupported cell table: {cell.table}")
+ValueError: Unsupported cell table: absy_cells

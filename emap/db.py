@@ -78,7 +78,7 @@ class NetlistDB(sqlite3.Connection):
 
         # build ports
         db_ports = [(name, NetlistDB.to_str(port["bits"]), port["direction"]) for name, port in ports.items()]
-        self.executemany("INSERT OR IGNORE INTO ports (name, wire, direction) VALUES (?, ?, ?)", db_ports)
+        self.executemany("INSERT INTO ports (name, wire, direction) VALUES (?, ?, ?)", db_ports)
 
         # build cells
         for name, cell in cells.items():
@@ -88,34 +88,34 @@ class NetlistDB(sqlite3.Connection):
             if type_ in {"$and", "$or", "$xor", "$add", "$sub", "$mul", "$mod"}:
                 type_ += "s" if NetlistDB.to_int(params["A_SIGNED"]) and NetlistDB.to_int(params["B_SIGNED"]) else "u"
                 a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
+                self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
             elif type_ == "$dff":
                 if not NetlistDB.to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
                 d, clk, q = NetlistDB.to_str(conns["D"]), NetlistDB.to_str(conns["CLK"]), NetlistDB.to_str(conns["Q"])
-                self.execute("INSERT OR IGNORE INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
+                self.execute("INSERT INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
             elif type_ == "$mux":
                 a, b, s, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["S"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
+                self.execute("INSERT INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
             elif type_ in {"$not", "$logic_not"}:
                 a, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)", (type_, a, y))
+                self.execute("INSERT INTO ay_cells (type, a, y) VALUES (?, ?, ?)", (type_, a, y))
             elif type_ in {
                 "$eq", "$ge", "$le", "$gt", "$lt",
                 "$logic_and", "$logic_or"
             }:
                 a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
+                self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and NetlistDB.to_int(attrs["module_not_derived"]): # blackbox cell
-                    self.execute("INSERT OR IGNORE INTO instances (id, module) VALUES (?, ?)", (name, type_))
+                    self.execute("INSERT INTO instances (id, module) VALUES (?, ?)", (name, type_))
                     self.executemany(
-                        "INSERT OR IGNORE INTO instance_params (instance, param, val) VALUES (?, ?, ?)",
+                        "INSERT INTO instance_params (instance, param, val) VALUES (?, ?, ?)",
                         ((name, param, val) for param, val in params.items())
                     )
                     self.executemany(
-                        "INSERT OR IGNORE INTO instance_ports (instance, port, wire) VALUES (?, ?, ?)",
+                        "INSERT INTO instance_ports (instance, port, wire) VALUES (?, ?, ?)",
                         ((name, port, NetlistDB.to_str(conns[port])) for port in conns)
                     )
                 else:
@@ -133,3 +133,10 @@ class NetlistDB(sqlite3.Connection):
             db[table] = [dict(zip([col[0] for col in cur.description], row)) for row in rows]
 
         return db
+
+    @staticmethod
+    def sanitize_json(mod: dict):
+        """
+        Sanitize the JSON module by removing redundant cells and merging equivalent wires.
+        """
+        # TODO
