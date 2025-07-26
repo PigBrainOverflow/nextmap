@@ -1,0 +1,56 @@
+emap is loaded successfully.
+Testing Systolic...
+Applied dsp48e2_unsigned_mul_0_stage_25_17_48_bit 0 times.
+Applied dsp48e2_signed_mul_0_stage_27_18_48_bit 2048 times.
+Applied dsp48e2_unsigned_mul_1_stage_26_17_48_bit 0 times.
+Applied dsp48e2_unsigned_muladd_1_stage_26_17_48_bit 0 times.
+Applied dsp48e2_unsigned_addmuladd_1_stage_25_17_48_25_bit 0 times.
+Applied dsp48e2_signed_mul_1_stage_27_18_48_bit 0 times.
+Applied dsp48e2_signed_muladd_1_stage_27_18_48_bit 0 times.
+Applied dsp48e2_signed_submul_1_stage_27_18_48_bit 0 times.
+Applied dsp48e2_signed_submuladd_1_stage_26_18_48_26_bit 0 times.
+Applied dsp48e2_signed_addmul_1_stage_27_18_48_bit 0 times.
+Applied dsp48e2_signed_addmuladd_1_stage_26_18_48_26_bit 0 times.
+Applied dsp48e2_signed_squarediff_1_stage_18_bit 0 times.
+_prune_cells_fast() finished in 58.64 seconds, removed 8194 cells, remaining 36876 cells.
+_group_wires_fast() finished in 10.99 seconds, grouped 554743 wires into 40022 groups.
+Set parameter Username
+Set parameter LicenseID to value 2690590
+Academic license - for non-commercial use only - expires 2026-07-24
+Set parameter OutputFlag to value 1
+Output constraints added in 0.00 seconds.
+Wire constraints added in 570.66 seconds.
+Cell constraints added in 3.39 seconds.
+DFF constraints added in 0.19 seconds.
+DSP count constraint added in 0.02 seconds.
+Set parameter MIPGap to value 0.05
+Gurobi Optimizer version 12.0.2 build v12.0.2rc0 (linux64 - "Ubuntu 22.04.5 LTS")
+
+CPU model: Intel(R) Xeon(R) CPU E5-2420 0 @ 1.90GHz, instruction set [SSE2|AVX]
+Thread count: 12 physical cores, 24 logical processors, using up to 24 threads
+
+Non-default parameters:
+MIPGap  0.05
+
+Optimize a model with 149587 rows, 79973 columns and 300164 nonzeros
+Model fingerprint: 0x1103c895
+Variable types: 0 continuous, 79973 integer (79973 binary)
+Coefficient statistics:
+  Matrix range     [1e+00, 1e+00]
+  Objective range  [2e+00, 6e+01]
+  Bounds range     [1e+00, 1e+00]
+  RHS range        [1e+00, 2e+03]
+Found heuristic solution: objective 1301355.0000
+Presolve removed 149587 rows and 79973 columns
+Presolve time: 0.37s
+Presolve: All rows and columns removed
+
+Explored 0 nodes (0 simplex iterations) in 0.43 seconds (0.20 work units)
+Thread count was 1 (of 24 available processors)
+
+Solution count 2: 1.13722e+06 1.30136e+06 
+
+Optimal solution found (tolerance 5.00e-02)
+Best objective 1.137223000000e+06, best bound 1.137223000000e+06, gap 0.0000%
+ILP model solved with objective value: 1137223.0
+All tests completed successfully.

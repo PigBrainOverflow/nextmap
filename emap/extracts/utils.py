@@ -59,7 +59,21 @@ def _cell_to_json(db: NetlistDB, cell: Cell, name: str) -> dict:
     if cell.table == "aby_cells":
         type_, a, b, y = row
         if not type_.endswith(("s", "u")):
-            raise ValueError(f"Unsupported cell type: {type_}")
+            return {
+                "hide_name": 1,
+                "type": type_,
+                "parameters": {},
+                "port_directions": {
+                    "A": "input",
+                    "B": "input",
+                    "Y": "output"
+                },
+                "connections": {
+                    "A": NetlistDB.to_bits(a),
+                    "B": NetlistDB.to_bits(b),
+                    "Y": NetlistDB.to_bits(y)
+                }
+            }
         is_signed = type_.endswith("s")
         return {
             "hide_name": 1,
@@ -79,6 +93,52 @@ def _cell_to_json(db: NetlistDB, cell: Cell, name: str) -> dict:
             "connections": {
                 "A": NetlistDB.to_bits(a),
                 "B": NetlistDB.to_bits(b),
+                "Y": NetlistDB.to_bits(y)
+            }
+        }
+    elif cell.table == "ay_cells":
+        type_, a, y = row
+        if type_ not in {"$not", "$logic_not"}:
+            raise ValueError(f"Unsupported cell type: {type_}")
+        return {
+            "hide_name": 1,
+            "type": type_,
+            "parameters": {
+                "A_WIDTH": f"{NetlistDB.width_of(a):032b}",
+                "Y_WIDTH": f"{NetlistDB.width_of(y):032b}"
+            },
+            "port_directions": {
+                "A": "input",
+                "Y": "output"
+            },
+            "connections": {
+                "A": NetlistDB.to_bits(a),
+                "Y": NetlistDB.to_bits(y)
+            }
+        }
+    elif cell.table == "absy_cells":
+        type_, a, b, s, y = row
+        if type_ != "$mux":
+            raise ValueError(f"Unsupported cell type: {type_}")
+        return {
+            "hide_name": 1,
+            "type": type_,
+            "parameters": {
+                "A_WIDTH": f"{NetlistDB.width_of(a):032b}",
+                "B_WIDTH": f"{NetlistDB.width_of(b):032b}",
+                "S_WIDTH": f"{NetlistDB.width_of(s):032b}",
+                "Y_WIDTH": f"{NetlistDB.width_of(y):032b}"
+            },
+            "port_directions": {
+                "A": "input",
+                "B": "input",
+                "S": "input",
+                "Y": "output"
+            },
+            "connections": {
+                "A": NetlistDB.to_bits(a),
+                "B": NetlistDB.to_bits(b),
+                "S": NetlistDB.to_bits(s),
                 "Y": NetlistDB.to_bits(y)
             }
         }

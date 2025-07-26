@@ -1,5 +1,55 @@
 [
     {
+        "name": "dsp48e2_unsigned_mul_0_stage_25_17_48_bit",
+        "description": "out = a * b",
+        "ports": [
+            {
+                "name": "a",
+                "width": 25,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "b",
+                "width": 17,
+                "is_input": true,
+                "is_signed": false
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": false
+            }
+        ],
+        "match_sql": "SELECT width_of(mul1.a) * width_of(mul1.b) AS value, mul1.a, mul1.b, mul1.y FROM aby_cells AS mul1 WHERE mul1.type = '$mulu' AND width_of(mul1.a) <= 25 AND width_of(mul1.b) <= 17 AND width_of(mul1.y) <= 48"
+    },
+    {
+        "name": "dsp48e2_signed_mul_0_stage_27_18_48_bit",
+        "description": "out = a * b",
+        "ports": [
+            {
+                "name": "a",
+                "width": 27,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "b",
+                "width": 18,
+                "is_input": true,
+                "is_signed": true
+            },
+            {
+                "name": "out",
+                "width": 48,
+                "is_input": false,
+                "is_signed": true
+            }
+        ],
+        "match_sql": "SELECT width_of(mul1.a) * width_of(mul1.b) AS value, mul1.a, mul1.b, mul1.y FROM aby_cells AS mul1 WHERE mul1.type = '$muls' AND width_of(mul1.a) <= 27 AND width_of(mul1.b) <= 18 AND width_of(mul1.y) <= 48"
+    },
+    {
         "name": "dsp48e2_unsigned_mul_1_stage_26_17_48_bit",
         "description": "out <= a * b",
         "ports": [

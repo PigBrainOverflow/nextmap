@@ -8,7 +8,5 @@
 
 import json
 
-with open("group.json", "r") as f:
-    groups = json.load(f)
-
-print(groups[7337])
+with open("hello.json", "w") as f:
+    json.dump({"hello": "world"}, f, indent=2)

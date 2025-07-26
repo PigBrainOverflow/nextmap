@@ -93,7 +93,7 @@ class NetlistDB(sqlite3.Connection):
                 if not NetlistDB.to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
                 d, clk, q = NetlistDB.to_str(conns["D"]), NetlistDB.to_str(conns["CLK"]), NetlistDB.to_str(conns["Q"])
-                self.execute("INSERT INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
+                self.execute("INSERT OR IGNORE INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
             elif type_ == "$mux":
                 a, b, s, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["S"]), NetlistDB.to_str(conns["Y"])
                 self.execute("INSERT INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
@@ -134,9 +134,12 @@ class NetlistDB(sqlite3.Connection):
 
         return db
 
-    @staticmethod
-    def sanitize_json(mod: dict):
-        """
-        Sanitize the JSON module by removing redundant cells and merging equivalent wires.
-        """
-        # TODO
+    # @staticmethod
+    # def sanitize_json(mod: dict):
+    #     """
+    #     Sanitize the JSON module by removing redundant cells and merging equivalent wires.
+    #     """
+    #     pass
+
+    # @staticmethod
+    # def json_to_db(mod: dict) -> 
