@@ -106,4 +106,4 @@ def build_and_sanitize_db_fast(mod_db: dict[str, Any]):
         mod_db["logic_aby_cells"],
         mod_db["muxes"],
         mod_db["dffs"]
-    )   # TODO
+    )   # TODO: decide return type
