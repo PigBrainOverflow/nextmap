@@ -1,4 +1,5 @@
 from __future__ import annotations
+from typing import Any
 import egglog
 
 
@@ -6,61 +7,132 @@ class Wire(egglog.Expr):
     @classmethod
     def from_input(cls, name: egglog.StringLike) -> Wire: ...
 
-    @egglog.method(egg_fn="&")
     def __and__(self, other: Wire) -> Wire: ...
 
-    @egglog.method(egg_fn="|")
     def __or__(self, other: Wire) -> Wire: ...
 
-    @egglog.method(egg_fn="^")
     def __xor__(self, other: Wire) -> Wire: ...
 
-    @egglog.method(egg_fn="~")
     def __invert__(self) -> Wire: ...
-
 
 class WireVec(egglog.Expr):
     @classmethod
+    def from_inputs(cls, name: egglog.StringLike, width: egglog.i64Like) -> WireVec: ...
+
+    @classmethod
     def from_wires(cls, wires: egglog.Vec[Wire]) -> WireVec: ...
 
-    @egglog.method(egg_fn="[]")
-    def extract(self, index: egglog.i64Like) -> Wire: ...
+    @classmethod
+    def add(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
 
-    @egglog.method(egg_fn="+")
-    def add(self, other: WireVec) -> WireVec: ...
+    @classmethod
+    def mul(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
 
-    @egglog.method(egg_fn="*")
-    def mul(self, other: WireVec) -> WireVec: ...
-
-
-egraph = egglog.EGraph()
-wv0, wv1 = egglog.vars_("wv0 wv1", WireVec)
-w0, w1 = egglog.vars_("w0 w1", Wire)
-
-egraph.register(
-    egglog.rewrite(w0 & w1).to(w1 & w0),
-    egglog.rewrite(w0 | w1).to(w1 | w0),
-    egglog.rewrite(w0 ^ w1).to(w1 ^ w0),
-    egglog.rewrite(~~w0).to(w0),
-)
+    def __getitem__(self, index: egglog.i64Like) -> Wire: ...   # this is necessary for indexing from_inputs
 
 
-ins0 = [egraph.let(f"ins0[{i}]", Wire.from_input(f"ins0[{i}]")) for i in range(4)]
-ins1 = [egraph.let(f"ins1[{i}]", Wire.from_input(f"ins1[{i}]")) for i in range(4)]
-# 4-bit adder example, use logic gates to compute the sum and carry
-sum0 = egraph.let("sum0", ins0[0] ^ ins1[0])
-carry0 = egraph.let("carry0", ins0[0] & ins1[0])
-sum1 = egraph.let("sum1", sum0 ^ ins0[1] ^ ins1[1])
-carry1 = egraph.let("carry1", (sum0 & (ins0[1] | ins1[1])) | carry0)
-sum2 = egraph.let("sum2", sum1 ^ ins0[2] ^ ins1[2])
-carry2 = egraph.let("carry2", (sum1 & (ins0[2] | ins1[2])) | carry1)
-sum3 = egraph.let("sum3", sum2 ^ ins0[3] ^ ins1[3])
-carry3 = egraph.let("carry3", (sum2 & (ins0[3] | ins1[3])) | carry2)
+class Netlist(egglog.EGraph):
+    _outputs: dict[str, WireVec]
 
-# add0 = egraph.let("add0", Add(WireVec.from_wires(egglog.Vec(ws[0], BitAnd(ws[5], ws[4]))), WireVec.from_wires(egglog.Vec(*ws[2:4]))))
-# out0 = egraph.let("out0", add0.extract(egglog.i64(0)))
-# out1 = egraph.let("out1", add0.extract(egglog.i64(1)))
+    @staticmethod
+    def bit_to_int(bit: str | int) -> int:
+        # DC is represented as "x" in the netlist, convert it to -1
+        return -1 if bit == "x" else int(bit)
 
-# egraph.run(10)
+    @staticmethod
+    def param_to_int(param: str | int) -> int:
+        # param is either a binary string or an integer
+        return param if isinstance(param, int) else int(param, base=2)
 
-egraph.display(graphviz=True)
+    @staticmethod
+    def cell_to_outputs(cell: dict[str, Any]) -> list[str]:
+        type_, conns = cell["type"], cell["connections"]
+        if type_ == "$dff":
+            return conns["Q"]
+        elif type_ in {"$and", "$or", "$xor"}:
+            return conns["Y"]
+        return []
+
+    @staticmethod
+    def make_wire(type_: str, *inputs: Wire) -> Wire:
+        if type_ == "$and":
+            return inputs[0] & inputs[1]
+        if type_ == "$or":
+            return inputs[0] | inputs[1]
+        if type_ == "$xor":
+            return inputs[0] ^ inputs[1]
+        raise ValueError(f"Unsupported cell type: {type_}")
+
+    @property
+    def outputs(self) -> dict[str, WireVec]:
+        return self._outputs
+
+    def __init__(self, **egraph_kwargs):
+        super().__init__(**egraph_kwargs)
+        self._outputs = {}
+
+    def build_from_json(self, mod: dict):
+        # NOTE: only support single global clock
+        # NOTE: not support blackbox cells
+        ports: dict[str, Any] = mod["ports"]
+        cells: list[dict[str, Any]] = [cell for cell in mod["cells"].values()]
+        wires: dict[int, Wire] = {}
+
+        # build inputs
+        for name, port in ports.items():
+            direction, bits = port["direction"], port["bits"]
+            if direction == "input":
+                wv = self.let(name, WireVec.from_inputs(name, len(bits)))
+                wires.update((Netlist.bit_to_int(bit), self.let(f"{name}[{i}]", wv[i])) for i, bit in enumerate(bits))
+
+        # build cells
+        # NOTE: the cells may not be in topological order, so dfs is used to ensure all dependencies are resolved
+        wire_from: dict[int, int] = {}  # maps wire index to cell index
+        for i, cell in enumerate(cells):
+            wire_from.update((Netlist.bit_to_int(bit), i) for bit in Netlist.cell_to_outputs(cell))
+
+        visited = set()
+        def dfs(i: int):
+            if i in visited:
+                return
+            cell = cells[i]
+            type_, params, conns = cell["type"], cell["parameters"], cell["connections"]
+            if type_ in {"$and", "$or", "$xor"}:    # bitwise logic gates, apply bitblast
+                for wa, wb, wy in zip(conns["A"], conns["B"], conns["Y"]):
+                    wa, wb, wy = Netlist.bit_to_int(wa), Netlist.bit_to_int(wb), Netlist.bit_to_int(wy)
+                    if wa in wire_from: # not an input wire or const
+                        dfs(wire_from[wa])
+                    if wb in wire_from:
+                        dfs(wire_from[wb])
+                    if wy not in wires:
+                        wires[wy] = self.let(str(wy), Netlist.make_wire(type_, wires[wa], wires[wb]))
+            else:
+                attrs = cell["attributes"]
+                if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]):    # blackbox cell
+                    raise RuntimeError("Blackbox cells are not supported")
+                else:
+                    raise ValueError(f"Unsupported cell type: {type_}")
+            visited.add(i)
+
+        for i in range(len(cells)):
+            dfs(i)
+
+        # build outputs
+        for name, port in ports.items():
+            direction, bits = port["direction"], port["bits"]
+            if direction == "output":
+                self._outputs[name] = self.let(name, WireVec.from_wires(egglog.Vec(*(wires[Netlist.bit_to_int(bit)] for bit in bits))))
+
+
+if __name__ == "__main__":
+    import json
+
+    with open("ripple_adder.json", "r") as f:
+        mod = json.load(f)["modules"]["top"]
+
+    netlist = Netlist()
+    netlist.build_from_json(mod)
+
+    netlist.display(graphviz=True)
+    for name, wv in netlist.outputs.items():
+        print(f"{name}: {wv}")
