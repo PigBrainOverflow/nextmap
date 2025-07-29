@@ -7,6 +7,9 @@ class Wire(egglog.Expr):
     @classmethod
     def from_input(cls, name: egglog.StringLike) -> Wire: ...
 
+    @classmethod
+    def from_dff(cls, dff_q: Wire) -> Wire: ...
+
     def __and__(self, other: Wire) -> Wire: ...
 
     def __or__(self, other: Wire) -> Wire: ...
@@ -16,11 +19,7 @@ class Wire(egglog.Expr):
     def __invert__(self) -> Wire: ...
 
 class WireVec(egglog.Expr):
-    @classmethod
-    def from_inputs(cls, name: egglog.StringLike, width: egglog.i64Like) -> WireVec: ...
-
-    @classmethod
-    def from_wires(cls, wires: egglog.Vec[Wire]) -> WireVec: ...
+    def __init__(self, vec: egglog.Vec[Wire]): ...
 
     @classmethod
     def add(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
@@ -28,11 +27,11 @@ class WireVec(egglog.Expr):
     @classmethod
     def mul(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
 
-    def __getitem__(self, index: egglog.i64Like) -> Wire: ...   # this is necessary for indexing from_inputs
-
+    def __getitem__(self, index: egglog.i64Like) -> Wire: ...   # this is necessary for indexing from ops
 
 class Netlist(egglog.EGraph):
-    _outputs: dict[str, WireVec]    # TODO: use egglog relation instead
+    _outputs: dict[str, WireVec]    # TODO: use egglog relation instead?
+    _clk: int | None
 
     @staticmethod
     def bit_to_int(bit: str | int) -> int:
@@ -65,6 +64,14 @@ class Netlist(egglog.EGraph):
             return ~inputs[0]
         raise ValueError(f"Unsupported cell type: {type_}")
 
+    @staticmethod
+    def make_wirevec(type_: str, out_width: int, *inputs: WireVec) -> WireVec:
+        if type_ == "$add":
+            return WireVec.add(out_width, inputs[0], inputs[1])
+        if type_ == "$mul":
+            return WireVec.mul(out_width, inputs[0], inputs[1])
+        raise ValueError(f"Unsupported cell type: {type_}")
+
     @property
     def outputs(self) -> dict[str, WireVec]:
         return self._outputs
@@ -72,8 +79,9 @@ class Netlist(egglog.EGraph):
     def __init__(self, **egraph_kwargs):
         super().__init__(**egraph_kwargs)
         self._outputs = {}
+        self._clk = None
 
-    def build_from_json(self, mod: dict):
+    def build_from_json(self, mod: dict, clk: str = "clk"):
         # NOTE: only support single global clock
         # NOTE: not support blackbox cells
         ports: dict[str, Any] = mod["ports"]
@@ -84,8 +92,16 @@ class Netlist(egglog.EGraph):
         for name, port in ports.items():
             direction, bits = port["direction"], port["bits"]
             if direction == "input":
-                wv = self.let(name, WireVec.from_inputs(name, len(bits)))
-                wires.update((Netlist.bit_to_int(bit), self.let(f"{name}[{i}]", wv[i])) for i, bit in enumerate(bits))
+                if name == clk:
+                    if len(bits) != 1:
+                        raise ValueError("Clock port must have exactly one bit")
+                    self._clk = Netlist.bit_to_int(bits[0])
+                wires.update((Netlist.bit_to_int(bit), self.let(f"{name}[{i}]", Wire.from_input(f"{name}[{i}]"))) for i, bit in enumerate(bits))
+
+        # build consts
+        wires[-1] = self.let("x", Wire.from_input("x")) # DC wire, represented as "x" in the netlist
+        wires[0] = self.let("0", Wire.from_input("0"))  # GND wire, represented as "0" in the netlist
+        wires[1] = self.let("1", Wire.from_input("1"))  # VCC wire, represented as "1" in the netlist
 
         # build cells
         # NOTE: the cells may not be in topological order, so dfs is used to ensure all dependencies are resolved
@@ -108,11 +124,47 @@ class Netlist(egglog.EGraph):
                         dfs(wire_from[wb])
                     if wy not in wires:
                         wires[wy] = self.let(str(wy), Netlist.make_wire(type_, wires[wa], wires[wb]))
+            elif type_ == "$not":
+                a, y = conns["A"], conns["Y"]
+                a, y = Netlist.bit_to_int(a[0]), Netlist.bit_to_int(y[0])
+                if a in wire_from:
+                    dfs(wire_from[a])
+                if y not in wires:
+                    wires[y] = self.let(str(y), Netlist.make_wire(type_, wires[a]))
+            elif type_ in {"$add", "$mul"}:  # word-level arithmetic operations
+                # NOTE: it's hard to handle weird input widths, signed & unsigned, etc. in a generic way
+                # NOTE: also it's hard to deal with different styles of extension, e.g., $signed(a) vs {16{a[15]}, a}
+                a_signed, b_signed = Netlist.param_to_int(params["A_SIGNED"]), Netlist.param_to_int(params["B_SIGNED"])
+                a, b, y = conns["A"], conns["B"], conns["Y"]
+                if len(a) < len(y): # apply extension
+                    adjusted_a = [Netlist.bit_to_int(bit) for bit in a] + [Netlist.bit_to_int(a[-1]) if a_signed else 0] * (len(y) - len(a))
+                else:   # apply truncation if necessary
+                    adjusted_a = [Netlist.bit_to_int(bit) for bit in a[:len(y)]]
+                if len(b) < len(y): # apply extension
+                    adjusted_b = [Netlist.bit_to_int(bit) for bit in b] + [Netlist.bit_to_int(b[-1]) if b_signed else 0] * (len(y) - len(b))
+                else:   # apply truncation if necessary
+                    adjusted_b = [Netlist.bit_to_int(bit) for bit in b[:len(y)]]
+                [dfs(wire_from[wa]) for wa in adjusted_a if wa in wire_from]
+                [dfs(wire_from[wb]) for wb in adjusted_b if wb in wire_from]
+                wva = self.let(str(a), WireVec(egglog.Vec(*(wires[wa] for wa in adjusted_a))))
+                wvb = self.let(str(b), WireVec(egglog.Vec(*(wires[wb] for wb in adjusted_b))))
+                wvy = Netlist.make_wirevec(type_, len(y), wva, wvb)
+                for i, wy in enumerate(y):
+                    wy = Netlist.bit_to_int(wy)
+                    if wy not in wires:
+                        wires[wy] = self.let(str(wy), wvy[i])
             elif type_ == "$dff":
                 if not self.param_to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
-                d, clk, q = Netlist.bit_to_int(conns["D"]), Netlist.bit_to_int(conns["CLK"]), Netlist.bit_to_int(conns["Q"])
-                
+                d, clk, q = conns["D"], conns["CLK"], conns["Q"]
+                if clk != self._clk:
+                    raise ValueError(f"Clock {clk} does not match global clock {self._clk}")
+                for wd, wq in zip(d, q):
+                    wd, wq = Netlist.bit_to_int(wd), Netlist.bit_to_int(wq)
+                    if wd in wire_from:
+                        dfs(wire_from[wd])
+                    if wq not in wires:
+                        wires[wq] = self.let(str(wq), Wire.from_dff(wires[wd]))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]):    # blackbox cell
@@ -128,18 +180,34 @@ class Netlist(egglog.EGraph):
         for name, port in ports.items():
             direction, bits = port["direction"], port["bits"]
             if direction == "output":
-                self._outputs[name] = self.let(name, WireVec.from_wires(egglog.Vec(*(wires[Netlist.bit_to_int(bit)] for bit in bits))))
+                self._outputs[name] = self.let(name, WireVec(egglog.Vec(*(wires[Netlist.bit_to_int(bit)] for bit in bits))))
 
 
-if __name__ == "__main__":
-    import json
+import json
 
-    with open("ripple_adder.json", "r") as f:
-        mod = json.load(f)["modules"]["top"]
+with open("ripple_adder.json", "r") as f:
+    mod = json.load(f)["modules"]["top"]
 
-    netlist = Netlist()
-    netlist.build_from_json(mod)
+netlist = Netlist()
+netlist.build_from_json(mod)
 
-    netlist.display(graphviz=True)
-    for name, wv in netlist.outputs.items():
-        print(f"{name}: {wv}")
+i, j = egglog.vars_("i j", egglog.i64)
+w0, w1 = egglog.vars_("w0 w1", Wire)
+wv0, wv1 = egglog.vars_("wv0 wv1", WireVec)
+logic_rules = egglog.ruleset(
+    egglog.rewrite(w0 & w1).to(w1 & w0),
+    egglog.rewrite(w0 | w1).to(w1 | w0),
+    egglog.rewrite(w0 ^ w1).to(w1 ^ w0),
+    egglog.rewrite(~~w0).to(w0)
+)
+
+arith_rules = egglog.ruleset(
+    egglog.rewrite(WireVec.add(i, wv0, wv1)).to(WireVec.add(i, wv1, wv0)),
+    egglog.rewrite(WireVec.mul(i, wv0, wv1)).to(WireVec.mul(i, wv1, wv0))
+)
+
+# netlist.run((logic_rules + arith_rules) * 10)
+
+netlist.display(graphviz=True)
+for name, wv in netlist.outputs.items():
+    print(f"{name}: {wv}")
