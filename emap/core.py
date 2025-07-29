@@ -32,7 +32,7 @@ class WireVec(egglog.Expr):
 
 
 class Netlist(egglog.EGraph):
-    _outputs: dict[str, WireVec]
+    _outputs: dict[str, WireVec]    # TODO: use egglog relation instead
 
     @staticmethod
     def bit_to_int(bit: str | int) -> int:
@@ -61,6 +61,8 @@ class Netlist(egglog.EGraph):
             return inputs[0] | inputs[1]
         if type_ == "$xor":
             return inputs[0] ^ inputs[1]
+        if type_ == "$not":
+            return ~inputs[0]
         raise ValueError(f"Unsupported cell type: {type_}")
 
     @property
@@ -106,6 +108,11 @@ class Netlist(egglog.EGraph):
                         dfs(wire_from[wb])
                     if wy not in wires:
                         wires[wy] = self.let(str(wy), Netlist.make_wire(type_, wires[wa], wires[wb]))
+            elif type_ == "$dff":
+                if not self.param_to_int(params["CLK_POLARITY"]):
+                    raise ValueError("$dff with negative clock polarity is not supported")
+                d, clk, q = Netlist.bit_to_int(conns["D"]), Netlist.bit_to_int(conns["CLK"]), Netlist.bit_to_int(conns["Q"])
+                
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]):    # blackbox cell
