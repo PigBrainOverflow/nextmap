@@ -25,6 +25,9 @@ class WireVec(egglog.Expr):
     def add(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
 
     @classmethod
+    def sub(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
+
+    @classmethod
     def mul(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
 
     def __getitem__(self, index: egglog.i64Like) -> Wire: ...   # this is necessary for indexing from ops
@@ -32,6 +35,7 @@ class WireVec(egglog.Expr):
 class Netlist(egglog.EGraph):
     _outputs: dict[str, WireVec]    # TODO: use egglog relation instead?
     _clk: int | None
+    _cnt: int
 
     @staticmethod
     def bit_to_int(bit: str | int) -> int:
@@ -46,10 +50,12 @@ class Netlist(egglog.EGraph):
     @staticmethod
     def cell_to_outputs(cell: dict[str, Any]) -> list[str]:
         type_, conns = cell["type"], cell["connections"]
-        if type_ == "$dff":
-            return conns["Q"]
-        elif type_ in {"$and", "$or", "$xor"}:
+        if type_ in {"$and", "$or", "$xor"}:
             return conns["Y"]
+        elif type_ in {"$add", "$mul"}:
+            return conns["Y"]
+        elif type_ == "$dff":
+            return conns["Q"]
         return []
 
     @staticmethod
@@ -80,6 +86,13 @@ class Netlist(egglog.EGraph):
         super().__init__(**egraph_kwargs)
         self._outputs = {}
         self._clk = None
+        self._cnt = 0
+
+    @property
+    def auto_id(self) -> str:
+        # generate a unique ID for each wire or wire vector
+        self._cnt += 1
+        return f"tmp{self._cnt}"
 
     def build_from_json(self, mod: dict, clk: str = "clk"):
         # NOTE: only support single global clock
@@ -146,8 +159,8 @@ class Netlist(egglog.EGraph):
                     adjusted_b = [Netlist.bit_to_int(bit) for bit in b[:len(y)]]
                 [dfs(wire_from[wa]) for wa in adjusted_a if wa in wire_from]
                 [dfs(wire_from[wb]) for wb in adjusted_b if wb in wire_from]
-                wva = self.let(str(a), WireVec(egglog.Vec(*(wires[wa] for wa in adjusted_a))))
-                wvb = self.let(str(b), WireVec(egglog.Vec(*(wires[wb] for wb in adjusted_b))))
+                wva = self.let(self.auto_id, WireVec(egglog.Vec(*(wires[wa] for wa in adjusted_a))))
+                wvb = self.let(self.auto_id, WireVec(egglog.Vec(*(wires[wb] for wb in adjusted_b))))
                 wvy = Netlist.make_wirevec(type_, len(y), wva, wvb)
                 for i, wy in enumerate(y):
                     wy = Netlist.bit_to_int(wy)
@@ -157,7 +170,7 @@ class Netlist(egglog.EGraph):
                 if not self.param_to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
                 d, clk, q = conns["D"], conns["CLK"], conns["Q"]
-                if clk != self._clk:
+                if len(clk) != 1 or Netlist.bit_to_int(clk[0]) != self._clk:
                     raise ValueError(f"Clock {clk} does not match global clock {self._clk}")
                 for wd, wq in zip(d, q):
                     wd, wq = Netlist.bit_to_int(wd), Netlist.bit_to_int(wq)
@@ -181,33 +194,3 @@ class Netlist(egglog.EGraph):
             direction, bits = port["direction"], port["bits"]
             if direction == "output":
                 self._outputs[name] = self.let(name, WireVec(egglog.Vec(*(wires[Netlist.bit_to_int(bit)] for bit in bits))))
-
-
-import json
-
-with open("ripple_adder.json", "r") as f:
-    mod = json.load(f)["modules"]["top"]
-
-netlist = Netlist()
-netlist.build_from_json(mod)
-
-i, j = egglog.vars_("i j", egglog.i64)
-w0, w1 = egglog.vars_("w0 w1", Wire)
-wv0, wv1 = egglog.vars_("wv0 wv1", WireVec)
-logic_rules = egglog.ruleset(
-    egglog.rewrite(w0 & w1).to(w1 & w0),
-    egglog.rewrite(w0 | w1).to(w1 | w0),
-    egglog.rewrite(w0 ^ w1).to(w1 ^ w0),
-    egglog.rewrite(~~w0).to(w0)
-)
-
-arith_rules = egglog.ruleset(
-    egglog.rewrite(WireVec.add(i, wv0, wv1)).to(WireVec.add(i, wv1, wv0)),
-    egglog.rewrite(WireVec.mul(i, wv0, wv1)).to(WireVec.mul(i, wv1, wv0))
-)
-
-# netlist.run((logic_rules + arith_rules) * 10)
-
-netlist.display(graphviz=True)
-for name, wv in netlist.outputs.items():
-    print(f"{name}: {wv}")
