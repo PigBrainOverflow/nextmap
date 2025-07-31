@@ -21,7 +21,7 @@ class BuildInputDffs(egglog.Expr):
 
 class UnionOutputs(egglog.Expr):
     @egglog.method(unextractable=True)
-    def __init__(self, target: egglog.Vec[Wire], index: egglog.i64Like, source: WireVec): ...
+    def __init__(self, targets: egglog.Vec[Wire], index: egglog.i64Like, source: WireVec): ...
 
 i = egglog.var("i", egglog.i64)
 w0 = egglog.var("w0", Wire)
@@ -101,7 +101,7 @@ retiming_rules = egglog.ruleset(
 
     # inductive case for BuildInputDffs
     egglog.rule(BuildInputDffs(wv0, i, ws0), ws0.length() < i).then(    # TODO: not sure whether we can subsume it
-        # egglog.subsume(BuildInputDffs(wv0, i, ws0)),
+        egglog.subsume(BuildInputDffs(wv0, i, ws0)),
         BuildInputDffs(wv0, i, ws0.push(Wire.from_dff(wv0[ws0.length()])))
     ),
 
