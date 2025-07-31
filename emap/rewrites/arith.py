@@ -1,5 +1,5 @@
 import egglog
-from ..core import Wire, WireVec
+from ..core import WireVec
 
 
 i, j = egglog.vars_("i j", egglog.i64)

@@ -162,10 +162,10 @@ class Netlist(egglog.EGraph):
                 wva = self.let(self.auto_id, WireVec(egglog.Vec(*(wires[wa] for wa in adjusted_a))))
                 wvb = self.let(self.auto_id, WireVec(egglog.Vec(*(wires[wb] for wb in adjusted_b))))
                 wvy = Netlist.make_wirevec(type_, len(y), wva, wvb)
-                for i, wy in enumerate(y):
+                for j, wy in enumerate(y):
                     wy = Netlist.bit_to_int(wy)
                     if wy not in wires:
-                        wires[wy] = self.let(str(wy), wvy[i])
+                        wires[wy] = self.let(str(wy), wvy[j])
             elif type_ == "$dff":
                 if not self.param_to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
