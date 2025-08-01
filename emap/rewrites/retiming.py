@@ -47,10 +47,10 @@ retiming_rules = egglog.ruleset(
     # inductive case for ToDffs
     egglog.rule(
         ToDffs(wv0, i, ws0), ws0.length() < i,   # not finished yet
-        egglog.eq(w0).to(wv0[i - 1])
+        egglog.eq(w0).to(Wire.from_dff(wv0[ws0.length()]))
     ).then(
         egglog.subsume(ToDffs(wv0, i, ws0)),
-        ToDffs(wv0, i, ws0.push(w0))
+        ToDffs(wv0, i, ws0.push(w0))  # push a new dff q port
     ),
 
     # inductive case for UnionOutputDffs
