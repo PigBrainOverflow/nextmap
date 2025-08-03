@@ -1,1 +1,3940 @@
-{"nodes":{"function-6-BuildInputDffs___init__":{"op":"BuildInputDffs(·, 2, ·)","children":["function-4-WireVec___init__","primitive-Vec_Wire-17"],"eclass":"BuildInputDffs-49","cost":2.0,"subsumed":false},"function-0-Wire_from_input":{"op":"Wire.from_input(\"clk[0]\")","children":[],"eclass":"Wire-0","cost":2.0,"subsumed":false},"function-1-BuildInputDffs___init__":{"op":"BuildInputDffs(·, 2, Vec)","children":["function-3-WireVec___init__"],"eclass":"BuildInputDffs-40","cost":3.0,"subsumed":true},"function-1-Wire_from_input":{"op":"Wire.from_input(\"x\")","children":[],"eclass":"Wire-6","cost":2.0,"subsumed":false},"function-2-BuildInputDffs___init__":{"op":"BuildInputDffs(·, 2, ·)","children":["function-3-WireVec___init__","primitive-Vec_Wire-5"],"eclass":"BuildInputDffs-43","cost":2.0,"subsumed":true},"function-3-Wire_from_input":{"op":"Wire.from_input(\"1\")","children":[],"eclass":"Wire-10","cost":2.0,"subsumed":false},"function-1-UnionOutputs___init__":{"op":"UnionOutputs(·, 0, ·)","children":["primitive-Vec_Wire-2","function-1-WireVec_mul"],"eclass":"UnionOutputs-68","cost":2.0,"subsumed":true},"function-4-Wire_from_input":{"op":"Wire.from_input(\"b[0]\")","children":[],"eclass":"Wire-41","cost":2.0,"subsumed":false},"function-3-BuildInputDffs___init__":{"op":"BuildInputDffs(·, 2, ·)","children":["function-4-WireVec___init__","primitive-Vec_Wire-6"],"eclass":"BuildInputDffs-46","cost":2.0,"subsumed":true},"function-5-Wire_from_input":{"op":"Wire.from_input(\"a[0]\")","children":[],"eclass":"Wire-44","cost":2.0,"subsumed":false},"function-2-UnionOutputs___init__":{"op":"UnionOutputs(·, -1, ·)","children":["primitive-Vec_Wire-2","function-1-WireVec_mul"],"eclass":"UnionOutputs-72","cost":2.0,"subsumed":false},"function-8-Wire_from_input":{"op":"Wire.from_input(\"0\")","children":[],"eclass":"Wire-51","cost":2.0,"subsumed":false},"primitive-Vec_Wire-2":{"op":"Vec","children":["function-8-WireVec___getitem__","function-1-Wire_from_dff"],"eclass":"Vec_Wire-2","cost":1.0,"subsumed":false},"function-0-WireVec___init__":{"op":"WireVec","children":["primitive-Vec_Wire-2"],"eclass":"WireVec-25","cost":1.0,"subsumed":false},"primitive-Vec_Wire-15":{"op":"Vec","children":["function-2-WireVec___getitem__","function-5-WireVec___getitem__"],"eclass":"Vec_Wire-15","cost":1.0,"subsumed":false},"function-3-WireVec___init__":{"op":"WireVec","children":["primitive-Vec_Wire-15"],"eclass":"WireVec-14","cost":1.0,"subsumed":false},"primitive-Vec_Wire-16":{"op":"Vec","children":["function-3-WireVec___getitem__","function-7-Wire_from_dff"],"eclass":"Vec_Wire-16","cost":1.0,"subsumed":false},"function-4-WireVec___init__":{"op":"WireVec","children":["primitive-Vec_Wire-16"],"eclass":"WireVec-12","cost":1.0,"subsumed":false},"primitive-Vec_Wire-17":{"op":"Vec","children":["function-5-Wire_from_dff","function-4-WireVec___getitem__"],"eclass":"Vec_Wire-17","cost":1.0,"subsumed":false},"function-5-WireVec___init__":{"op":"WireVec","children":["primitive-Vec_Wire-17"],"eclass":"WireVec-55","cost":1.0,"subsumed":false},"primitive-Vec_Wire-10":{"op":"Vec","children":["function-4-Wire_from_dff","function-8-Wire_from_input"],"eclass":"Vec_Wire-10","cost":1.0,"subsumed":false},"function-6-WireVec___init__":{"op":"WireVec","children":["primitive-Vec_Wire-10"],"eclass":"WireVec-56","cost":1.0,"subsumed":false},"primitive-Vec_Wire-5":{"op":"Vec","children":["function-4-Wire_from_dff"],"eclass":"Vec_Wire-5","cost":1.0,"subsumed":false},"function-0-WireVec___getitem__":{"op":"·[0]","children":["function-0-WireVec_mul"],"eclass":"Wire-16","cost":2.0,"subsumed":false},"function-0-UnionOutputs___init__":{"op":"UnionOutputs(·, 1, ·)","children":["primitive-Vec_Wire-2","function-1-WireVec_mul"],"eclass":"UnionOutputs-58","cost":2.0,"subsumed":true},"function-1-WireVec___getitem__":{"op":"·[1]","children":["function-0-WireVec_mul"],"eclass":"Wire-19","cost":2.0,"subsumed":false},"function-2-WireVec___getitem__":{"op":"·[0]","children":["function-3-WireVec___init__"],"eclass":"Wire-41","cost":2.0,"subsumed":false},"function-3-WireVec___getitem__":{"op":"·[0]","children":["function-4-WireVec___init__"],"eclass":"Wire-44","cost":2.0,"subsumed":false},"function-4-WireVec___getitem__":{"op":"·[1]","children":["function-4-WireVec___init__"],"eclass":"Wire-51","cost":2.0,"subsumed":false},"function-5-WireVec___getitem__":{"op":"·[1]","children":["function-3-WireVec___init__"],"eclass":"Wire-51","cost":2.0,"subsumed":false},"function-7-WireVec___getitem__":{"op":"·[1]","children":["function-1-WireVec_mul"],"eclass":"Wire-23","cost":2.0,"subsumed":false},"function-8-WireVec___getitem__":{"op":"·[0]","children":["function-1-WireVec_mul"],"eclass":"Wire-21","cost":2.0,"subsumed":false},"primitive-Vec_Wire-6":{"op":"Vec","children":["function-5-Wire_from_dff"],"eclass":"Vec_Wire-6","cost":1.0,"subsumed":false},"function-0-WireVec_mul":{"op":"WireVec.mul(2, ·, ·)","children":["function-4-WireVec___init__","function-3-WireVec___init__"],"eclass":"WireVec-17","cost":2.0,"subsumed":false},"function-1-WireVec_mul":{"op":"WireVec.mul(2, ·, ·)","children":["function-5-WireVec___init__","function-6-WireVec___init__"],"eclass":"WireVec-57","cost":2.0,"subsumed":false},"function-0-Wire_from_dff":{"op":"Wire.from_dff","children":["function-0-WireVec___getitem__"],"eclass":"Wire-21","cost":1.0,"subsumed":false},"function-1-Wire_from_dff":{"op":"Wire.from_dff","children":["function-1-WireVec___getitem__"],"eclass":"Wire-23","cost":1.0,"subsumed":false},"function-2-Wire_from_dff":{"op":"Wire.from_dff","children":["function-2-Wire_from_dff"],"eclass":"Wire-6","cost":1.0,"subsumed":false},"function-3-Wire_from_dff":{"op":"Wire.from_dff","children":["function-3-Wire_from_dff"],"eclass":"Wire-10","cost":1.0,"subsumed":false},"function-4-Wire_from_dff":{"op":"Wire.from_dff","children":["function-4-Wire_from_input"],"eclass":"Wire-42","cost":1.0,"subsumed":false},"function-5-Wire_from_dff":{"op":"Wire.from_dff","children":["function-5-Wire_from_input"],"eclass":"Wire-45","cost":1.0,"subsumed":false},"function-7-Wire_from_dff":{"op":"Wire.from_dff","children":["function-4-WireVec___getitem__"],"eclass":"Wire-51","cost":1.0,"subsumed":false},"function-0-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-3-WireVec___init__"],"eclass":"WireVecLength-27","cost":2.0,"subsumed":false},"function-1-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-4-WireVec___init__"],"eclass":"WireVecLength-28","cost":2.0,"subsumed":false},"function-2-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-0-WireVec___init__"],"eclass":"WireVecLength-29","cost":2.0,"subsumed":false},"function-3-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-0-WireVec_mul"],"eclass":"WireVecLength-30","cost":2.0,"subsumed":false},"function-4-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-5-WireVec___init__"],"eclass":"WireVecLength-59","cost":2.0,"subsumed":false},"function-5-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-6-WireVec___init__"],"eclass":"WireVecLength-60","cost":2.0,"subsumed":false},"function-6-WireVecLength___init__":{"op":"WireVecLength(·, 2)","children":["function-1-WireVec_mul"],"eclass":"WireVecLength-61","cost":2.0,"subsumed":false},"function-0-WireVecEq___init__":{"op":"WireVecEq(·, 1, ·)","children":["primitive-Vec_Wire-15","function-3-WireVec___init__"],"eclass":"WireVecEq-53","cost":2.0,"subsumed":true},"function-1-WireVecEq___init__":{"op":"WireVecEq(·, 1, ·)","children":["primitive-Vec_Wire-16","function-4-WireVec___init__"],"eclass":"WireVecEq-54","cost":2.0,"subsumed":true},"function-2-WireVecEq___init__":{"op":"WireVecEq(·, 2, ·)","children":["primitive-Vec_Wire-15","function-3-WireVec___init__"],"eclass":"WireVecEq-62","cost":2.0,"subsumed":false},"function-3-WireVecEq___init__":{"op":"WireVecEq(·, 2, ·)","children":["primitive-Vec_Wire-16","function-4-WireVec___init__"],"eclass":"WireVecEq-63","cost":2.0,"subsumed":false},"function-5-BuildInputDffs___init__":{"op":"BuildInputDffs(·, 2, ·)","children":["function-3-WireVec___init__","primitive-Vec_Wire-10"],"eclass":"BuildInputDffs-52","cost":2.0,"subsumed":false},"function-2-FromDffs___init__":{"op":"FromDffs(·, Vec)","children":["primitive-Vec_Wire-15"],"eclass":"FromDffs-35","cost":2.0,"subsumed":false},"function-3-FromDffs___init__":{"op":"FromDffs(·, Vec)","children":["primitive-Vec_Wire-16"],"eclass":"FromDffs-34","cost":2.0,"subsumed":false},"function-4-FromDffs___init__":{"op":"FromDffs(·, Vec)","children":["primitive-Vec_Wire-17"],"eclass":"FromDffs-64","cost":2.0,"subsumed":true},"function-5-FromDffs___init__":{"op":"FromDffs(·, Vec)","children":["primitive-Vec_Wire-10"],"eclass":"FromDffs-65","cost":2.0,"subsumed":true},"primitive-Vec_Wire-18":{"op":"Vec","children":["function-4-Wire_from_input"],"eclass":"Vec_Wire-18","cost":1.0,"subsumed":false},"function-6-FromDffs___init__":{"op":"FromDffs","children":["primitive-Vec_Wire-10","primitive-Vec_Wire-18"],"eclass":"FromDffs-69","cost":1.0,"subsumed":false},"primitive-Vec_Wire-19":{"op":"Vec","children":["function-5-Wire_from_input"],"eclass":"Vec_Wire-19","cost":1.0,"subsumed":false},"function-7-FromDffs___init__":{"op":"FromDffs","children":["primitive-Vec_Wire-17","primitive-Vec_Wire-19"],"eclass":"FromDffs-70","cost":1.0,"subsumed":false},"function-0-ToDffs___init__":{"op":"ToDffs(·, 2, Vec)","children":["function-0-WireVec_mul"],"eclass":"ToDffs-36","cost":3.0,"subsumed":true},"primitive-Vec_Wire-4":{"op":"Vec","children":["function-8-WireVec___getitem__"],"eclass":"Vec_Wire-4","cost":1.0,"subsumed":false},"function-1-ToDffs___init__":{"op":"ToDffs(·, 2, ·)","children":["function-0-WireVec_mul","primitive-Vec_Wire-4"],"eclass":"ToDffs-37","cost":2.0,"subsumed":true},"function-2-ToDffs___init__":{"op":"ToDffs(·, 2, ·)","children":["function-0-WireVec_mul","primitive-Vec_Wire-2"],"eclass":"ToDffs-38","cost":2.0,"subsumed":false},"function-3-ToDffs___init__":{"op":"ToDffs(·, 2, Vec)","children":["function-1-WireVec_mul"],"eclass":"ToDffs-66","cost":3.0,"subsumed":false},"function-0-BuildInputDffs___init__":{"op":"BuildInputDffs(·, 2, Vec)","children":["function-4-WireVec___init__"],"eclass":"BuildInputDffs-39","cost":3.0,"subsumed":true}},"root_eclasses":[],"class_data":{"Wire-0":{"type":"Wire"},"BuildInputDffs-49":{"type":"BuildInputDffs"},"Wire-6":{"type":"Wire"},"BuildInputDffs-40":{"type":"BuildInputDffs"},"Wire-10":{"type":"Wire"},"Vec_Wire-5":{"type":"Vec_Wire"},"Wire-41":{"type":"Wire"},"UnionOutputs-68":{"type":"UnionOutputs"},"Wire-44":{"type":"Wire"},"Vec_Wire-6":{"type":"Vec_Wire"},"Wire-51":{"type":"Wire"},"BuildInputDffs-46":{"type":"BuildInputDffs"},"WireVec-25":{"type":"WireVec"},"Wire-21":{"type":"Wire"},"Wire-23":{"type":"Wire"},"Vec_Wire-2":{"type":"Vec_Wire"},"WireVec-14":{"type":"WireVec"},"Vec_Wire-15":{"type":"Vec_Wire"},"WireVec-12":{"type":"WireVec"},"Vec_Wire-16":{"type":"Vec_Wire"},"WireVec-55":{"type":"WireVec"},"Wire-45":{"type":"Wire"},"Vec_Wire-17":{"type":"Vec_Wire"},"WireVec-56":{"type":"WireVec"},"Wire-42":{"type":"Wire"},"Vec_Wire-10":{"type":"Vec_Wire"},"Wire-16":{"type":"Wire"},"WireVec-17":{"type":"WireVec"},"BuildInputDffs-43":{"type":"BuildInputDffs"},"Wire-19":{"type":"Wire"},"UnionOutputs-58":{"type":"UnionOutputs"},"WireVec-57":{"type":"WireVec"},"UnionOutputs-72":{"type":"UnionOutputs"},"WireVecLength-27":{"type":"WireVecLength"},"WireVecLength-28":{"type":"WireVecLength"},"WireVecLength-29":{"type":"WireVecLength"},"WireVecLength-30":{"type":"WireVecLength"},"WireVecLength-59":{"type":"WireVecLength"},"WireVecLength-60":{"type":"WireVecLength"},"WireVecLength-61":{"type":"WireVecLength"},"WireVecEq-53":{"type":"WireVecEq"},"WireVecEq-54":{"type":"WireVecEq"},"WireVecEq-62":{"type":"WireVecEq"},"WireVecEq-63":{"type":"WireVecEq"},"FromDffs-35":{"type":"FromDffs"},"BuildInputDffs-52":{"type":"BuildInputDffs"},"FromDffs-34":{"type":"FromDffs"},"FromDffs-64":{"type":"FromDffs"},"FromDffs-65":{"type":"FromDffs"},"FromDffs-69":{"type":"FromDffs"},"Vec_Wire-18":{"type":"Vec_Wire"},"FromDffs-70":{"type":"FromDffs"},"Vec_Wire-19":{"type":"Vec_Wire"},"ToDffs-36":{"type":"ToDffs"},"ToDffs-37":{"type":"ToDffs"},"Vec_Wire-4":{"type":"Vec_Wire"},"ToDffs-38":{"type":"ToDffs"},"ToDffs-66":{"type":"ToDffs"},"BuildInputDffs-39":{"type":"BuildInputDffs"}}}
+{
+  "nodes": {
+    "function-35-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-21-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-1-Wire_from_input": {
+      "op": "Wire.from_input(\"clk[0]\")",
+      "children": [],
+      "eclass": "Wire-0",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-63-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 32, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-340",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-3-Wire_from_input": {
+      "op": "Wire.from_input(\"a[0]\")",
+      "children": [],
+      "eclass": "Wire-2",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-38-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 7, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-255",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-5-Wire_from_input": {
+      "op": "Wire.from_input(\"a[1]\")",
+      "children": [],
+      "eclass": "Wire-4",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-31-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-19-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-7-Wire_from_input": {
+      "op": "Wire.from_input(\"a[2]\")",
+      "children": [],
+      "eclass": "Wire-6",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-63-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-35-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-9-Wire_from_input": {
+      "op": "Wire.from_input(\"a[3]\")",
+      "children": [],
+      "eclass": "Wire-8",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-23-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-15-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-11-Wire_from_input": {
+      "op": "Wire.from_input(\"a[4]\")",
+      "children": [],
+      "eclass": "Wire-10",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-7-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-7-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-13-Wire_from_input": {
+      "op": "Wire.from_input(\"a[5]\")",
+      "children": [],
+      "eclass": "Wire-12",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-59-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-33-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-15-Wire_from_input": {
+      "op": "Wire.from_input(\"a[6]\")",
+      "children": [],
+      "eclass": "Wire-14",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-10-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-8-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-17-Wire_from_input": {
+      "op": "Wire.from_input(\"a[7]\")",
+      "children": [],
+      "eclass": "Wire-16",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-44-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 13, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-297",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-19-Wire_from_input": {
+      "op": "Wire.from_input(\"a[8]\")",
+      "children": [],
+      "eclass": "Wire-18",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-32-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 1, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-213",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-21-Wire_from_input": {
+      "op": "Wire.from_input(\"a[9]\")",
+      "children": [],
+      "eclass": "Wire-20",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-43-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 12, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-290",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-23-Wire_from_input": {
+      "op": "Wire.from_input(\"a[10]\")",
+      "children": [],
+      "eclass": "Wire-22",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-46-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-26-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-25-Wire_from_input": {
+      "op": "Wire.from_input(\"a[11]\")",
+      "children": [],
+      "eclass": "Wire-24",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-42-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-24-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-27-Wire_from_input": {
+      "op": "Wire.from_input(\"a[12]\")",
+      "children": [],
+      "eclass": "Wire-26",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-39-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-23-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-29-Wire_from_input": {
+      "op": "Wire.from_input(\"a[13]\")",
+      "children": [],
+      "eclass": "Wire-28",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-38-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-22-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-31-Wire_from_input": {
+      "op": "Wire.from_input(\"a[14]\")",
+      "children": [],
+      "eclass": "Wire-30",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-55-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-31-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-33-Wire_from_input": {
+      "op": "Wire.from_input(\"a[15]\")",
+      "children": [],
+      "eclass": "Wire-32",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-15-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-11-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-35-Wire_from_input": {
+      "op": "Wire.from_input(\"b[0]\")",
+      "children": [],
+      "eclass": "Wire-34",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-53-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 22, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-330",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-37-Wire_from_input": {
+      "op": "Wire.from_input(\"b[1]\")",
+      "children": [],
+      "eclass": "Wire-36",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-36-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 5, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-241",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-39-Wire_from_input": {
+      "op": "Wire.from_input(\"b[2]\")",
+      "children": [],
+      "eclass": "Wire-38",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-35-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 4, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-234",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-41-Wire_from_input": {
+      "op": "Wire.from_input(\"b[3]\")",
+      "children": [],
+      "eclass": "Wire-40",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-54-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-30-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-43-Wire_from_input": {
+      "op": "Wire.from_input(\"b[4]\")",
+      "children": [],
+      "eclass": "Wire-42",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-61-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 30, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-338",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-45-Wire_from_input": {
+      "op": "Wire.from_input(\"b[5]\")",
+      "children": [],
+      "eclass": "Wire-44",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-51-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-29-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-47-Wire_from_input": {
+      "op": "Wire.from_input(\"b[6]\")",
+      "children": [],
+      "eclass": "Wire-46",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-45-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 14, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-304",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-49-Wire_from_input": {
+      "op": "Wire.from_input(\"b[7]\")",
+      "children": [],
+      "eclass": "Wire-48",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-26-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-16-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-51-Wire_from_input": {
+      "op": "Wire.from_input(\"b[8]\")",
+      "children": [],
+      "eclass": "Wire-50",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-50-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 19, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-327",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-53-Wire_from_input": {
+      "op": "Wire.from_input(\"b[9]\")",
+      "children": [],
+      "eclass": "Wire-52",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-41-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 10, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-276",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-55-Wire_from_input": {
+      "op": "Wire.from_input(\"b[10]\")",
+      "children": [],
+      "eclass": "Wire-54",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-62-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-34-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-57-Wire_from_input": {
+      "op": "Wire.from_input(\"b[11]\")",
+      "children": [],
+      "eclass": "Wire-56",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-35-length_of___init__": {
+      "op": "length_of(\u00b7, 16)",
+      "children": [
+        "function-37-WireVec___init__"
+      ],
+      "eclass": "length_of-324",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-59-Wire_from_input": {
+      "op": "Wire.from_input(\"b[12]\")",
+      "children": [],
+      "eclass": "Wire-58",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-18-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-12-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-61-Wire_from_input": {
+      "op": "Wire.from_input(\"b[13]\")",
+      "children": [],
+      "eclass": "Wire-60",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-33-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 2, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-220",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-63-Wire_from_input": {
+      "op": "Wire.from_input(\"b[14]\")",
+      "children": [],
+      "eclass": "Wire-62",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-22-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-14-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-65-Wire_from_input": {
+      "op": "Wire.from_input(\"b[15]\")",
+      "children": [],
+      "eclass": "Wire-64",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-33-length_of___init__": {
+      "op": "length_of(\u00b7, 17)",
+      "children": [
+        "function-34-WireVec___init__"
+      ],
+      "eclass": "length_of-317",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-67-Wire_from_input": {
+      "op": "Wire.from_input(\"x\")",
+      "children": [],
+      "eclass": "Wire-66",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-47-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 16, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-318",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-69-Wire_from_input": {
+      "op": "Wire.from_input(\"0\")",
+      "children": [],
+      "eclass": "Wire-68",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-3-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-18-WireVec_zero_extended"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-71-Wire_from_input": {
+      "op": "Wire.from_input(\"1\")",
+      "children": [],
+      "eclass": "Wire-70",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-1-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-3-Wire_from_input"
+      ],
+      "eclass": "Wire-72",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-3-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-5-Wire_from_input"
+      ],
+      "eclass": "Wire-74",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-5-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-7-Wire_from_input"
+      ],
+      "eclass": "Wire-76",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-7-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-9-Wire_from_input"
+      ],
+      "eclass": "Wire-78",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-9-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-11-Wire_from_input"
+      ],
+      "eclass": "Wire-80",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-11-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-13-Wire_from_input"
+      ],
+      "eclass": "Wire-82",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-13-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-15-Wire_from_input"
+      ],
+      "eclass": "Wire-84",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-15-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-17-Wire_from_input"
+      ],
+      "eclass": "Wire-86",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-17-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-19-Wire_from_input"
+      ],
+      "eclass": "Wire-88",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-19-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-21-Wire_from_input"
+      ],
+      "eclass": "Wire-90",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-21-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-23-Wire_from_input"
+      ],
+      "eclass": "Wire-92",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-23-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-25-Wire_from_input"
+      ],
+      "eclass": "Wire-94",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-25-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-27-Wire_from_input"
+      ],
+      "eclass": "Wire-96",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-27-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-29-Wire_from_input"
+      ],
+      "eclass": "Wire-98",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-29-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-31-Wire_from_input"
+      ],
+      "eclass": "Wire-100",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-31-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-33-Wire_from_input"
+      ],
+      "eclass": "Wire-102",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-33-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-35-Wire_from_input"
+      ],
+      "eclass": "Wire-104",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-35-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-37-Wire_from_input"
+      ],
+      "eclass": "Wire-106",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-37-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-39-Wire_from_input"
+      ],
+      "eclass": "Wire-108",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-39-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-41-Wire_from_input"
+      ],
+      "eclass": "Wire-110",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-41-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-43-Wire_from_input"
+      ],
+      "eclass": "Wire-112",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-43-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-45-Wire_from_input"
+      ],
+      "eclass": "Wire-114",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-45-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-47-Wire_from_input"
+      ],
+      "eclass": "Wire-116",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-47-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-49-Wire_from_input"
+      ],
+      "eclass": "Wire-118",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-49-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-51-Wire_from_input"
+      ],
+      "eclass": "Wire-120",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-51-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-53-Wire_from_input"
+      ],
+      "eclass": "Wire-122",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-53-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-55-Wire_from_input"
+      ],
+      "eclass": "Wire-124",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-55-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-57-Wire_from_input"
+      ],
+      "eclass": "Wire-126",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-57-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-59-Wire_from_input"
+      ],
+      "eclass": "Wire-128",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-59-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-61-Wire_from_input"
+      ],
+      "eclass": "Wire-130",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-61-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-63-Wire_from_input"
+      ],
+      "eclass": "Wire-132",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-63-Wire_from_dff": {
+      "op": "Wire.from_dff",
+      "children": [
+        "function-65-Wire_from_input"
+      ],
+      "eclass": "Wire-134",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-0": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-0",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-1-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-0"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-1": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-1",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-3-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-1"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-2": {
+      "op": "Vec",
+      "children": [
+        "function-0-WireVec___getitem__",
+        "function-1-WireVec___getitem__",
+        "function-2-WireVec___getitem__",
+        "function-3-WireVec___getitem__",
+        "function-4-WireVec___getitem__",
+        "function-5-WireVec___getitem__",
+        "function-6-WireVec___getitem__",
+        "function-7-WireVec___getitem__",
+        "function-8-WireVec___getitem__",
+        "function-9-WireVec___getitem__",
+        "function-10-WireVec___getitem__",
+        "function-11-WireVec___getitem__",
+        "function-12-WireVec___getitem__",
+        "function-13-WireVec___getitem__",
+        "function-14-WireVec___getitem__",
+        "function-15-WireVec___getitem__",
+        "function-16-WireVec___getitem__",
+        "function-17-WireVec___getitem__",
+        "function-18-WireVec___getitem__",
+        "function-19-WireVec___getitem__",
+        "function-20-WireVec___getitem__",
+        "function-21-WireVec___getitem__",
+        "function-22-WireVec___getitem__",
+        "function-23-WireVec___getitem__",
+        "function-24-WireVec___getitem__",
+        "function-25-WireVec___getitem__",
+        "function-26-WireVec___getitem__",
+        "function-27-WireVec___getitem__",
+        "function-28-WireVec___getitem__",
+        "function-29-WireVec___getitem__",
+        "function-30-WireVec___getitem__",
+        "function-31-WireVec___getitem__"
+      ],
+      "eclass": "Vec_Wire-2",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-5-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-2"
+      ],
+      "eclass": "WireVec-205",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-3": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-3",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-6-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-3"
+      ],
+      "eclass": "WireVec-214",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-4": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-4",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-7-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-4"
+      ],
+      "eclass": "WireVec-216",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-5": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-5",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-8-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-5"
+      ],
+      "eclass": "WireVec-221",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-6": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-6",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-9-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-6"
+      ],
+      "eclass": "WireVec-223",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-7": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-7",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-10-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-7"
+      ],
+      "eclass": "WireVec-228",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-8": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-8",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-11-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-8"
+      ],
+      "eclass": "WireVec-230",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-9": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-9",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-12-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-9"
+      ],
+      "eclass": "WireVec-235",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-10": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-10",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-13-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-10"
+      ],
+      "eclass": "WireVec-237",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-11": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-11",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-14-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-11"
+      ],
+      "eclass": "WireVec-242",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-12": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-12",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-15-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-12"
+      ],
+      "eclass": "WireVec-244",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-13": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-13",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-16-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-13"
+      ],
+      "eclass": "WireVec-249",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-14": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-14",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-17-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-14"
+      ],
+      "eclass": "WireVec-251",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-15": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-15",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-18-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-15"
+      ],
+      "eclass": "WireVec-256",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-16": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-16",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-19-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-16"
+      ],
+      "eclass": "WireVec-258",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-17": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-17",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-20-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-17"
+      ],
+      "eclass": "WireVec-263",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-18": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-18",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-21-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-18"
+      ],
+      "eclass": "WireVec-265",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-19": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-19",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-22-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-19"
+      ],
+      "eclass": "WireVec-270",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-20": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-20",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-23-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-20"
+      ],
+      "eclass": "WireVec-272",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-21": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-21",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-24-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-21"
+      ],
+      "eclass": "WireVec-277",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-22": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-22",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-25-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-22"
+      ],
+      "eclass": "WireVec-279",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-23": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-23",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-26-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-23"
+      ],
+      "eclass": "WireVec-284",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-24": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-24",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-27-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-24"
+      ],
+      "eclass": "WireVec-286",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-25": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-25",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-28-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-25"
+      ],
+      "eclass": "WireVec-291",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-26": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-26",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-29-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-26"
+      ],
+      "eclass": "WireVec-293",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-27": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-27",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-30-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-27"
+      ],
+      "eclass": "WireVec-298",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-28": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-28",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-31-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-28"
+      ],
+      "eclass": "WireVec-300",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-29": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-29",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-32-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-29"
+      ],
+      "eclass": "WireVec-305",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-30": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-30",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-33-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-30"
+      ],
+      "eclass": "WireVec-307",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-31": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-31",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-34-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-31"
+      ],
+      "eclass": "WireVec-312",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-32": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff",
+        "function-69-Wire_from_input"
+      ],
+      "eclass": "Vec_Wire-32",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-35-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-32"
+      ],
+      "eclass": "WireVec-314",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-33": {
+      "op": "Vec",
+      "children": [
+        "function-33-Wire_from_dff",
+        "function-35-Wire_from_dff",
+        "function-37-Wire_from_dff",
+        "function-39-Wire_from_dff",
+        "function-41-Wire_from_dff",
+        "function-43-Wire_from_dff",
+        "function-45-Wire_from_dff",
+        "function-47-Wire_from_dff",
+        "function-49-Wire_from_dff",
+        "function-51-Wire_from_dff",
+        "function-53-Wire_from_dff",
+        "function-55-Wire_from_dff",
+        "function-57-Wire_from_dff",
+        "function-59-Wire_from_dff",
+        "function-61-Wire_from_dff",
+        "function-63-Wire_from_dff"
+      ],
+      "eclass": "Vec_Wire-33",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-36-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-33"
+      ],
+      "eclass": "WireVec-319",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "primitive-Vec_Wire-34": {
+      "op": "Vec",
+      "children": [
+        "function-1-Wire_from_dff",
+        "function-3-Wire_from_dff",
+        "function-5-Wire_from_dff",
+        "function-7-Wire_from_dff",
+        "function-9-Wire_from_dff",
+        "function-11-Wire_from_dff",
+        "function-13-Wire_from_dff",
+        "function-15-Wire_from_dff",
+        "function-17-Wire_from_dff",
+        "function-19-Wire_from_dff",
+        "function-21-Wire_from_dff",
+        "function-23-Wire_from_dff",
+        "function-25-Wire_from_dff",
+        "function-27-Wire_from_dff",
+        "function-29-Wire_from_dff",
+        "function-31-Wire_from_dff"
+      ],
+      "eclass": "Vec_Wire-34",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-37-WireVec___init__": {
+      "op": "WireVec",
+      "children": [
+        "primitive-Vec_Wire-34"
+      ],
+      "eclass": "WireVec-321",
+      "cost": 1.0,
+      "subsumed": false
+    },
+    "function-43-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-25-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-0-WireVec___getitem__": {
+      "op": "\u00b7[0]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-140",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-2-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-19-WireVec_zero_extended"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-1-WireVec___getitem__": {
+      "op": "\u00b7[1]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-143",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-62-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 31, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-339",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-2-WireVec___getitem__": {
+      "op": "\u00b7[2]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-145",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-60-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 29, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-337",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-3-WireVec___getitem__": {
+      "op": "\u00b7[3]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-147",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-6-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-6-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-4-WireVec___getitem__": {
+      "op": "\u00b7[4]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-149",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-14-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-10-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-5-WireVec___getitem__": {
+      "op": "\u00b7[5]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-151",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-46-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 15, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-311",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-6-WireVec___getitem__": {
+      "op": "\u00b7[6]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-153",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-51-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 20, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-328",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-7-WireVec___getitem__": {
+      "op": "\u00b7[7]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-155",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-59-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 28, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-336",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-8-WireVec___getitem__": {
+      "op": "\u00b7[8]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-157",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-55-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 24, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-332",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-9-WireVec___getitem__": {
+      "op": "\u00b7[9]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-159",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-52-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 21, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-329",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-10-WireVec___getitem__": {
+      "op": "\u00b7[10]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-161",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-54-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 23, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-331",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-11-WireVec___getitem__": {
+      "op": "\u00b7[11]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-163",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-34-length_of___init__": {
+      "op": "length_of(\u00b7, 16)",
+      "children": [
+        "function-36-WireVec___init__"
+      ],
+      "eclass": "length_of-323",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-12-WireVec___getitem__": {
+      "op": "\u00b7[12]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-165",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-56-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 25, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-333",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-13-WireVec___getitem__": {
+      "op": "\u00b7[13]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-167",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-37-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 6, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-248",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-14-WireVec___getitem__": {
+      "op": "\u00b7[14]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-169",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-47-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-27-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-15-WireVec___getitem__": {
+      "op": "\u00b7[15]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-171",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-27-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-17-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-16-WireVec___getitem__": {
+      "op": "\u00b7[16]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-173",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-19-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-13-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-17-WireVec___getitem__": {
+      "op": "\u00b7[17]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-175",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-48-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 17, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-325",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-18-WireVec___getitem__": {
+      "op": "\u00b7[18]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-177",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-11-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-9-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-19-WireVec___getitem__": {
+      "op": "\u00b7[19]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-179",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-42-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 11, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-283",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-20-WireVec___getitem__": {
+      "op": "\u00b7[20]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-181",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-40-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 9, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-269",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-21-WireVec___getitem__": {
+      "op": "\u00b7[21]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-183",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-50-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-28-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-22-WireVec___getitem__": {
+      "op": "\u00b7[22]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-185",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-58-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 27, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-335",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-23-WireVec___getitem__": {
+      "op": "\u00b7[23]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-187",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-67-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-37-WireVec___init__"
+      ],
+      "eclass": "WireVec-136",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-24-WireVec___getitem__": {
+      "op": "\u00b7[24]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-189",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-30-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-18-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-25-WireVec___getitem__": {
+      "op": "\u00b7[25]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-191",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-66-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-36-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-26-WireVec___getitem__": {
+      "op": "\u00b7[26]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-193",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-34-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 3, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "wv_eq-227",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-27-WireVec___getitem__": {
+      "op": "\u00b7[27]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-195",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-57-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 26, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-334",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-28-WireVec___getitem__": {
+      "op": "\u00b7[28]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-197",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-39-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 8, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-262",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-29-WireVec___getitem__": {
+      "op": "\u00b7[29]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-199",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-49-wv_eq___init__": {
+      "op": "wv_eq(\u00b7, 18, \u00b7)",
+      "children": [
+        "primitive-Vec_Wire-2",
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "wv_eq-326",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-30-WireVec___getitem__": {
+      "op": "\u00b7[30]",
+      "children": [
+        "function-5-WireVec___init__"
+      ],
+      "eclass": "Wire-201",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-58-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-32-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-31-WireVec___getitem__": {
+      "op": "\u00b7[31]",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "Wire-203",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-34-WireVec_zero_extended": {
+      "op": "WireVec.zero_extended(32, \u00b7)",
+      "children": [
+        "function-20-WireVec___init__"
+      ],
+      "eclass": "WireVec-138",
+      "cost": 2.0,
+      "subsumed": true
+    },
+    "function-1-WireVec_mul": {
+      "op": "WireVec.mul(32, \u00b7, \u00b7)",
+      "children": [
+        "function-6-WireVec_zero_extended",
+        "function-7-WireVec_zero_extended"
+      ],
+      "eclass": "WireVec-205",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-0-length_of___init__": {
+      "op": "length_of(\u00b7, 32)",
+      "children": [
+        "function-10-WireVec_zero_extended"
+      ],
+      "eclass": "length_of-207",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-1-length_of___init__": {
+      "op": "length_of(\u00b7, 32)",
+      "children": [
+        "function-11-WireVec_zero_extended"
+      ],
+      "eclass": "length_of-208",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-2-length_of___init__": {
+      "op": "length_of(\u00b7, 32)",
+      "children": [
+        "function-1-WireVec_mul"
+      ],
+      "eclass": "length_of-209",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-4-length_of___init__": {
+      "op": "length_of(\u00b7, 31)",
+      "children": [
+        "function-7-WireVec___init__"
+      ],
+      "eclass": "length_of-218",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-5-length_of___init__": {
+      "op": "length_of(\u00b7, 31)",
+      "children": [
+        "function-6-WireVec___init__"
+      ],
+      "eclass": "length_of-219",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-6-length_of___init__": {
+      "op": "length_of(\u00b7, 30)",
+      "children": [
+        "function-8-WireVec___init__"
+      ],
+      "eclass": "length_of-225",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-7-length_of___init__": {
+      "op": "length_of(\u00b7, 30)",
+      "children": [
+        "function-9-WireVec___init__"
+      ],
+      "eclass": "length_of-226",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-8-length_of___init__": {
+      "op": "length_of(\u00b7, 29)",
+      "children": [
+        "function-11-WireVec___init__"
+      ],
+      "eclass": "length_of-232",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-9-length_of___init__": {
+      "op": "length_of(\u00b7, 29)",
+      "children": [
+        "function-10-WireVec___init__"
+      ],
+      "eclass": "length_of-233",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-10-length_of___init__": {
+      "op": "length_of(\u00b7, 28)",
+      "children": [
+        "function-12-WireVec___init__"
+      ],
+      "eclass": "length_of-239",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-11-length_of___init__": {
+      "op": "length_of(\u00b7, 28)",
+      "children": [
+        "function-13-WireVec___init__"
+      ],
+      "eclass": "length_of-240",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-12-length_of___init__": {
+      "op": "length_of(\u00b7, 27)",
+      "children": [
+        "function-15-WireVec___init__"
+      ],
+      "eclass": "length_of-246",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-13-length_of___init__": {
+      "op": "length_of(\u00b7, 27)",
+      "children": [
+        "function-14-WireVec___init__"
+      ],
+      "eclass": "length_of-247",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-14-length_of___init__": {
+      "op": "length_of(\u00b7, 26)",
+      "children": [
+        "function-16-WireVec___init__"
+      ],
+      "eclass": "length_of-253",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-15-length_of___init__": {
+      "op": "length_of(\u00b7, 26)",
+      "children": [
+        "function-17-WireVec___init__"
+      ],
+      "eclass": "length_of-254",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-16-length_of___init__": {
+      "op": "length_of(\u00b7, 25)",
+      "children": [
+        "function-19-WireVec___init__"
+      ],
+      "eclass": "length_of-260",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-17-length_of___init__": {
+      "op": "length_of(\u00b7, 25)",
+      "children": [
+        "function-18-WireVec___init__"
+      ],
+      "eclass": "length_of-261",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-18-length_of___init__": {
+      "op": "length_of(\u00b7, 24)",
+      "children": [
+        "function-20-WireVec___init__"
+      ],
+      "eclass": "length_of-267",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-19-length_of___init__": {
+      "op": "length_of(\u00b7, 24)",
+      "children": [
+        "function-21-WireVec___init__"
+      ],
+      "eclass": "length_of-268",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-20-length_of___init__": {
+      "op": "length_of(\u00b7, 23)",
+      "children": [
+        "function-23-WireVec___init__"
+      ],
+      "eclass": "length_of-274",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-21-length_of___init__": {
+      "op": "length_of(\u00b7, 23)",
+      "children": [
+        "function-22-WireVec___init__"
+      ],
+      "eclass": "length_of-275",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-22-length_of___init__": {
+      "op": "length_of(\u00b7, 22)",
+      "children": [
+        "function-24-WireVec___init__"
+      ],
+      "eclass": "length_of-281",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-23-length_of___init__": {
+      "op": "length_of(\u00b7, 22)",
+      "children": [
+        "function-25-WireVec___init__"
+      ],
+      "eclass": "length_of-282",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-24-length_of___init__": {
+      "op": "length_of(\u00b7, 21)",
+      "children": [
+        "function-27-WireVec___init__"
+      ],
+      "eclass": "length_of-288",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-25-length_of___init__": {
+      "op": "length_of(\u00b7, 21)",
+      "children": [
+        "function-26-WireVec___init__"
+      ],
+      "eclass": "length_of-289",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-26-length_of___init__": {
+      "op": "length_of(\u00b7, 20)",
+      "children": [
+        "function-28-WireVec___init__"
+      ],
+      "eclass": "length_of-295",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-27-length_of___init__": {
+      "op": "length_of(\u00b7, 20)",
+      "children": [
+        "function-29-WireVec___init__"
+      ],
+      "eclass": "length_of-296",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-28-length_of___init__": {
+      "op": "length_of(\u00b7, 19)",
+      "children": [
+        "function-31-WireVec___init__"
+      ],
+      "eclass": "length_of-302",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-29-length_of___init__": {
+      "op": "length_of(\u00b7, 19)",
+      "children": [
+        "function-30-WireVec___init__"
+      ],
+      "eclass": "length_of-303",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-30-length_of___init__": {
+      "op": "length_of(\u00b7, 18)",
+      "children": [
+        "function-32-WireVec___init__"
+      ],
+      "eclass": "length_of-309",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-31-length_of___init__": {
+      "op": "length_of(\u00b7, 18)",
+      "children": [
+        "function-33-WireVec___init__"
+      ],
+      "eclass": "length_of-310",
+      "cost": 2.0,
+      "subsumed": false
+    },
+    "function-32-length_of___init__": {
+      "op": "length_of(\u00b7, 17)",
+      "children": [
+        "function-35-WireVec___init__"
+      ],
+      "eclass": "length_of-316",
+      "cost": 2.0,
+      "subsumed": false
+    }
+  },
+  "root_eclasses": [],
+  "class_data": {
+    "Wire-0": {
+      "type": "Wire"
+    },
+    "wv_eq-318": {
+      "type": "wv_eq"
+    },
+    "Wire-2": {
+      "type": "Wire"
+    },
+    "length_of-317": {
+      "type": "length_of"
+    },
+    "Wire-4": {
+      "type": "Wire"
+    },
+    "length_of-232": {
+      "type": "length_of"
+    },
+    "Wire-6": {
+      "type": "Wire"
+    },
+    "wv_eq-304": {
+      "type": "wv_eq"
+    },
+    "Wire-8": {
+      "type": "Wire"
+    },
+    "wv_eq-338": {
+      "type": "wv_eq"
+    },
+    "Wire-10": {
+      "type": "Wire"
+    },
+    "wv_eq-276": {
+      "type": "wv_eq"
+    },
+    "Wire-12": {
+      "type": "Wire"
+    },
+    "wv_eq-220": {
+      "type": "wv_eq"
+    },
+    "Wire-14": {
+      "type": "Wire"
+    },
+    "wv_eq-336": {
+      "type": "wv_eq"
+    },
+    "Wire-16": {
+      "type": "Wire"
+    },
+    "wv_eq-227": {
+      "type": "wv_eq"
+    },
+    "Wire-18": {
+      "type": "Wire"
+    },
+    "length_of-253": {
+      "type": "length_of"
+    },
+    "Wire-20": {
+      "type": "Wire"
+    },
+    "length_of-208": {
+      "type": "length_of"
+    },
+    "Wire-22": {
+      "type": "Wire"
+    },
+    "length_of-247": {
+      "type": "length_of"
+    },
+    "Wire-24": {
+      "type": "Wire"
+    },
+    "wv_eq-329": {
+      "type": "wv_eq"
+    },
+    "Wire-26": {
+      "type": "Wire"
+    },
+    "wv_eq-327": {
+      "type": "wv_eq"
+    },
+    "Wire-28": {
+      "type": "Wire"
+    },
+    "wv_eq-326": {
+      "type": "wv_eq"
+    },
+    "Wire-30": {
+      "type": "Wire"
+    },
+    "wv_eq-325": {
+      "type": "wv_eq"
+    },
+    "Wire-32": {
+      "type": "Wire"
+    },
+    "wv_eq-334": {
+      "type": "wv_eq"
+    },
+    "Wire-34": {
+      "type": "Wire"
+    },
+    "wv_eq-248": {
+      "type": "wv_eq"
+    },
+    "Wire-36": {
+      "type": "Wire"
+    },
+    "length_of-282": {
+      "type": "length_of"
+    },
+    "Wire-38": {
+      "type": "Wire"
+    },
+    "length_of-225": {
+      "type": "length_of"
+    },
+    "Wire-40": {
+      "type": "Wire"
+    },
+    "length_of-219": {
+      "type": "length_of"
+    },
+    "Wire-42": {
+      "type": "Wire"
+    },
+    "wv_eq-333": {
+      "type": "wv_eq"
+    },
+    "Wire-44": {
+      "type": "Wire"
+    },
+    "length_of-310": {
+      "type": "length_of"
+    },
+    "Wire-46": {
+      "type": "Wire"
+    },
+    "wv_eq-332": {
+      "type": "wv_eq"
+    },
+    "Wire-48": {
+      "type": "Wire"
+    },
+    "length_of-254": {
+      "type": "length_of"
+    },
+    "Wire-50": {
+      "type": "Wire"
+    },
+    "wv_eq-283": {
+      "type": "wv_eq"
+    },
+    "Wire-52": {
+      "type": "Wire"
+    },
+    "length_of-274": {
+      "type": "length_of"
+    },
+    "Wire-54": {
+      "type": "Wire"
+    },
+    "length_of-240": {
+      "type": "length_of"
+    },
+    "Wire-56": {
+      "type": "Wire"
+    },
+    "wv_eq-337": {
+      "type": "wv_eq"
+    },
+    "Wire-58": {
+      "type": "Wire"
+    },
+    "length_of-207": {
+      "type": "length_of"
+    },
+    "Wire-60": {
+      "type": "Wire"
+    },
+    "wv_eq-255": {
+      "type": "wv_eq"
+    },
+    "Wire-62": {
+      "type": "Wire"
+    },
+    "length_of-209": {
+      "type": "length_of"
+    },
+    "Wire-64": {
+      "type": "Wire"
+    },
+    "wv_eq-269": {
+      "type": "wv_eq"
+    },
+    "Wire-66": {
+      "type": "Wire"
+    },
+    "wv_eq-335": {
+      "type": "wv_eq"
+    },
+    "Wire-68": {
+      "type": "Wire"
+    },
+    "length_of-261": {
+      "type": "length_of"
+    },
+    "Wire-70": {
+      "type": "Wire"
+    },
+    "length_of-324": {
+      "type": "length_of"
+    },
+    "Wire-72": {
+      "type": "Wire"
+    },
+    "Wire-74": {
+      "type": "Wire"
+    },
+    "Wire-76": {
+      "type": "Wire"
+    },
+    "Wire-78": {
+      "type": "Wire"
+    },
+    "Wire-80": {
+      "type": "Wire"
+    },
+    "Wire-82": {
+      "type": "Wire"
+    },
+    "Wire-84": {
+      "type": "Wire"
+    },
+    "Wire-86": {
+      "type": "Wire"
+    },
+    "Wire-88": {
+      "type": "Wire"
+    },
+    "Wire-90": {
+      "type": "Wire"
+    },
+    "Wire-92": {
+      "type": "Wire"
+    },
+    "Wire-94": {
+      "type": "Wire"
+    },
+    "Wire-96": {
+      "type": "Wire"
+    },
+    "Wire-98": {
+      "type": "Wire"
+    },
+    "Wire-100": {
+      "type": "Wire"
+    },
+    "Wire-102": {
+      "type": "Wire"
+    },
+    "Wire-104": {
+      "type": "Wire"
+    },
+    "Wire-106": {
+      "type": "Wire"
+    },
+    "Wire-108": {
+      "type": "Wire"
+    },
+    "Wire-110": {
+      "type": "Wire"
+    },
+    "Wire-112": {
+      "type": "Wire"
+    },
+    "Wire-114": {
+      "type": "Wire"
+    },
+    "Wire-116": {
+      "type": "Wire"
+    },
+    "Wire-118": {
+      "type": "Wire"
+    },
+    "Wire-120": {
+      "type": "Wire"
+    },
+    "Wire-122": {
+      "type": "Wire"
+    },
+    "Wire-124": {
+      "type": "Wire"
+    },
+    "Wire-126": {
+      "type": "Wire"
+    },
+    "Wire-128": {
+      "type": "Wire"
+    },
+    "Wire-130": {
+      "type": "Wire"
+    },
+    "Wire-132": {
+      "type": "Wire"
+    },
+    "Wire-134": {
+      "type": "Wire"
+    },
+    "WireVec-136": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-0": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-138": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-1": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-205": {
+      "type": "WireVec"
+    },
+    "Wire-140": {
+      "type": "Wire"
+    },
+    "Wire-143": {
+      "type": "Wire"
+    },
+    "Wire-145": {
+      "type": "Wire"
+    },
+    "Wire-147": {
+      "type": "Wire"
+    },
+    "Wire-149": {
+      "type": "Wire"
+    },
+    "Wire-151": {
+      "type": "Wire"
+    },
+    "Wire-153": {
+      "type": "Wire"
+    },
+    "Wire-155": {
+      "type": "Wire"
+    },
+    "Wire-157": {
+      "type": "Wire"
+    },
+    "Wire-159": {
+      "type": "Wire"
+    },
+    "Wire-161": {
+      "type": "Wire"
+    },
+    "Wire-163": {
+      "type": "Wire"
+    },
+    "Wire-165": {
+      "type": "Wire"
+    },
+    "Wire-167": {
+      "type": "Wire"
+    },
+    "Wire-169": {
+      "type": "Wire"
+    },
+    "Wire-171": {
+      "type": "Wire"
+    },
+    "Wire-173": {
+      "type": "Wire"
+    },
+    "Wire-175": {
+      "type": "Wire"
+    },
+    "Wire-177": {
+      "type": "Wire"
+    },
+    "Wire-179": {
+      "type": "Wire"
+    },
+    "Wire-181": {
+      "type": "Wire"
+    },
+    "Wire-183": {
+      "type": "Wire"
+    },
+    "Wire-185": {
+      "type": "Wire"
+    },
+    "Wire-187": {
+      "type": "Wire"
+    },
+    "Wire-189": {
+      "type": "Wire"
+    },
+    "Wire-191": {
+      "type": "Wire"
+    },
+    "Wire-193": {
+      "type": "Wire"
+    },
+    "Wire-195": {
+      "type": "Wire"
+    },
+    "Wire-197": {
+      "type": "Wire"
+    },
+    "Wire-199": {
+      "type": "Wire"
+    },
+    "Wire-201": {
+      "type": "Wire"
+    },
+    "Wire-203": {
+      "type": "Wire"
+    },
+    "Vec_Wire-2": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-214": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-3": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-216": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-4": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-221": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-5": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-223": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-6": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-228": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-7": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-230": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-8": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-235": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-9": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-237": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-10": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-242": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-11": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-244": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-12": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-249": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-13": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-251": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-14": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-256": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-15": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-258": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-16": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-263": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-17": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-265": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-18": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-270": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-19": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-272": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-20": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-277": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-21": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-279": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-22": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-284": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-23": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-286": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-24": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-291": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-25": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-293": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-26": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-298": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-27": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-300": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-28": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-305": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-29": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-307": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-30": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-312": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-31": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-314": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-32": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-319": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-33": {
+      "type": "Vec_Wire"
+    },
+    "WireVec-321": {
+      "type": "WireVec"
+    },
+    "Vec_Wire-34": {
+      "type": "Vec_Wire"
+    },
+    "wv_eq-328": {
+      "type": "wv_eq"
+    },
+    "length_of-323": {
+      "type": "length_of"
+    },
+    "length_of-316": {
+      "type": "length_of"
+    },
+    "length_of-309": {
+      "type": "length_of"
+    },
+    "wv_eq-213": {
+      "type": "wv_eq"
+    },
+    "wv_eq-241": {
+      "type": "wv_eq"
+    },
+    "length_of-260": {
+      "type": "length_of"
+    },
+    "length_of-275": {
+      "type": "length_of"
+    },
+    "length_of-303": {
+      "type": "length_of"
+    },
+    "length_of-289": {
+      "type": "length_of"
+    },
+    "length_of-281": {
+      "type": "length_of"
+    },
+    "length_of-288": {
+      "type": "length_of"
+    },
+    "wv_eq-311": {
+      "type": "wv_eq"
+    },
+    "length_of-295": {
+      "type": "length_of"
+    },
+    "length_of-226": {
+      "type": "length_of"
+    },
+    "wv_eq-330": {
+      "type": "wv_eq"
+    },
+    "wv_eq-290": {
+      "type": "wv_eq"
+    },
+    "wv_eq-262": {
+      "type": "wv_eq"
+    },
+    "length_of-267": {
+      "type": "length_of"
+    },
+    "wv_eq-234": {
+      "type": "wv_eq"
+    },
+    "length_of-246": {
+      "type": "length_of"
+    },
+    "length_of-239": {
+      "type": "length_of"
+    },
+    "wv_eq-331": {
+      "type": "wv_eq"
+    },
+    "length_of-302": {
+      "type": "length_of"
+    },
+    "wv_eq-340": {
+      "type": "wv_eq"
+    },
+    "wv_eq-297": {
+      "type": "wv_eq"
+    },
+    "wv_eq-339": {
+      "type": "wv_eq"
+    },
+    "length_of-218": {
+      "type": "length_of"
+    },
+    "length_of-296": {
+      "type": "length_of"
+    },
+    "length_of-233": {
+      "type": "length_of"
+    },
+    "length_of-268": {
+      "type": "length_of"
+    }
+  }
+}

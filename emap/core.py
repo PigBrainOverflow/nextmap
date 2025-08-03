@@ -102,6 +102,54 @@ class Netlist(egglog.EGraph):
 
     def build_from_json(self, mod: dict, clk: str = "clk"):
         # NOTE: only support single global clock
+        ports: dict[str, Any] = mod["ports"]
+        cells: list[dict[str, Any]] = [cell for cell in mod["cells"].values()]
+        wires: dict[int, Wire] = {}
+        wire_from: dict[int, int | None] = {}  # maps wire index to cell index, None if the wire is a constant or input
+
+        # build constants
+        wires[-1] = self.let("x", Wire.from_input("x")) # DC wire, represented as "x" in the netlist
+        wires[0] = self.let("0", Wire.from_input("0"))  # GND wire, represented as "0" in the netlist
+        wires[1] = self.let("1", Wire.from_input("1"))  # VCC wire, represented as "1" in the netlist
+        wire_from.update({-1: None, 0: None, 1: None})  # map constants to None
+
+        # build inputs
+        for name, port in ports.items():
+            direction, bits = port["direction"], port["bits"]
+            if direction == "input":
+                if name == clk:
+                    if len(bits) != 1:
+                        raise ValueError("Clock port must have exactly one bit")
+                    self._clk = Netlist.bit_to_int(bits[0])
+                for i, bit in enumerate(bits):
+                    w, ename = Netlist.bit_to_int(bit), f"{name}[{i}]"
+                    ew = self.let(ename, Wire.from_input(ename))
+                    wires[w] = ew
+                    wire_from[w] = None  # input wires are not connected to any cell
+
+        # TODO: build blackboxes' outputs
+
+        # build dffs' q ports
+        dffs: list[dict[str, Any]] = [cell for cell in cells if cell["type"] == "$dff"]
+        for dff in dffs:
+            conns, params = dff["connections"], dff["parameters"]
+            if not self.param_to_int(params["CLK_POLARITY"]):
+                raise ValueError("$dff with negative clock polarity is not supported")
+            clk, q = conns["CLK"], conns["Q"]
+            if len(clk) != 1 or Netlist.bit_to_int(clk[0]) != self._clk:
+                raise ValueError(f"Clock {clk} does not match global clock {self._clk}")
+            for wq in q:
+                wq = Netlist.bit_to_int(wq)
+                wires[wq] = self.let(str(wq), Wire.from_dff(Wire.from_input(self.auto_id))) # this is a placeholder, will be unioned later
+
+        # build cells
+        # NOTE: the cells may not be in topological order, so dfs is used to ensure all dependencies are resolved
+        for i, cell in enumerate(cells):
+            if cell["type"] != "$dff":
+                wire_from.update((Netlist.bit_to_int(bit), i) for bit in Netlist.cell_to_outputs(cell))
+
+    def _build_from_json(self, mod: dict, clk: str = "clk"):
+        # NOTE: only support single global clock
         # NOTE: not support blackbox cells
         ports: dict[str, Any] = mod["ports"]
         cells: list[dict[str, Any]] = [cell for cell in mod["cells"].values()]
@@ -172,6 +220,10 @@ class Netlist(egglog.EGraph):
                     wy = Netlist.bit_to_int(wy)
                     if wy not in wires:
                         wires[wy] = self.let(str(wy), wvy[j])
+            elif type_ == "$mux":
+                # NOTE: it deserves considering whether it's a bitwise mux or a word-level mux
+                a, b, s, y = conns["A"], conns["B"], conns["S"], conns["Y"]
+                # TODO: implement this
             elif type_ == "$dff":
                 if not self.param_to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
