@@ -1,2 +1,2 @@
-from .core import Wire, WireVec
+from .core import Netlist, Wire, WireVec
 from . import rewrites

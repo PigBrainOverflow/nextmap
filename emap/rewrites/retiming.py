@@ -3,9 +3,9 @@ from .common import *
 
 # NOTE: run once
 const_inputs_rules = egglog.ruleset(
-    egglog.rewrite(Wire.from_input("x")).to(Wire.from_dff(Wire.from_input("x"))),
-    egglog.rewrite(Wire.from_input("0")).to(Wire.from_dff(Wire.from_input("0"))),
-    egglog.rewrite(Wire.from_input("1")).to(Wire.from_dff(Wire.from_input("1")))
+    egglog.rewrite(Wire.from_const(-1)).to(Wire.from_dff(Wire.from_const(-1))),
+    egglog.rewrite(Wire.from_const(0)).to(Wire.from_dff(Wire.from_const(0))),
+    egglog.rewrite(Wire.from_const(1)).to(Wire.from_dff(Wire.from_const(1)))
 )
 
 
@@ -90,7 +90,8 @@ class all_to_dffs(egglog.Expr):
 
 # iter rule for all_to_dffs
 all_to_dffs_iter_rule = egglog.rule(
-    all_to_dffs(wv0, ws0), wv0.length() > ws0.length(),
+    all_to_dffs(wv0, ws0),
+    width_of(wv0, i), i > ws0.length(),
     egglog.eq(w0).to(Wire.from_dff(wv0[ws0.length()]))
 ).then(
     egglog.subsume(all_to_dffs(wv0, ws0)),
