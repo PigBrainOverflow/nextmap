@@ -39,7 +39,13 @@ class WireVec(egglog.Expr):
     @classmethod
     def mul(cls, out_width: egglog.i64Like, a: WireVec, b: WireVec) -> WireVec: ...
 
+    def length(self) -> egglog.i64: ...
+
     def __getitem__(self, index: egglog.i64Like) -> Wire: ...   # this is necessary for indexing from ops
+
+    def push(self, wire: Wire) -> WireVec: ...
+
+    def pop(self) -> WireVec: ...
 
 class Netlist(egglog.EGraph):
     _outputs: dict[str, WireVec]    # TODO: use egglog relation instead?
