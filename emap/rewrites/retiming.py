@@ -2,7 +2,7 @@ from .common import *
 
 
 # NOTE: run once
-const_inputs_rules = egglog.ruleset(
+const_inputs_retiming_rules = egglog.ruleset(
     egglog.rewrite(Wire.from_const(-1)).to(Wire.from_dff(Wire.from_const(-1))),
     egglog.rewrite(Wire.from_const(0)).to(Wire.from_dff(Wire.from_const(0))),
     egglog.rewrite(Wire.from_const(1)).to(Wire.from_dff(Wire.from_const(1)))
@@ -46,7 +46,7 @@ all_from_dffs_base_rules = egglog.ruleset(
 
 class union_dffs(egglog.Expr):
     @egglog.method(unextractable=True)
-    def __init__(self, qs: WireVec, ds: WireVec, index: egglog.i64Like): ...    # index is decremented each step
+    def __init__(self, ds: WireVec, qs: WireVec, index: egglog.i64Like): ...    # index is decremented each step
 
 union_dffs_iter_rule = egglog.rule(union_dffs(wv0, wv1, i), i >= 0).then(
     egglog.subsume(union_dffs(wv0, wv1, i)),
@@ -154,17 +154,17 @@ arith_retiming_backward_end_rules = egglog.ruleset(
         all_to_dffs(wv0, ws2), ws2.length() >= ws0.length(),
         build_dffs(ws0, ws3), ws3.length() >= ws0.length(), # input dffs built
         build_dffs(ws1, ws4), ws4.length() >= ws0.length()  # input dffs built
-    ).then(union_dffs(wv0, WireVec.add(ws3, ws4), ws0.length() - 1)),
+    ).then(union_dffs(WireVec.add(ws3, ws4), wv0, ws0.length() - 1)),
     egglog.rule(
         egglog.eq(wv0).to(WireVec.sub(ws0, ws1)),
         all_to_dffs(wv0, ws2), ws2.length() >= ws0.length(),
         build_dffs(ws0, ws3), ws3.length() >= ws0.length(), # input dffs built
         build_dffs(ws1, ws4), ws4.length() >= ws0.length()  # input dffs built
-    ).then(union_dffs(wv0, WireVec.sub(ws3, ws4), ws0.length() - 1)),
+    ).then(union_dffs(WireVec.sub(ws3, ws4), wv0, ws0.length() - 1)),
     egglog.rule(
         egglog.eq(wv0).to(WireVec.mul(ws0, ws1)),
         all_to_dffs(wv0, ws2), ws2.length() >= ws0.length(),
         build_dffs(ws0, ws3), ws3.length() >= ws0.length(), # input dffs built
         build_dffs(ws1, ws4), ws4.length() >= ws0.length()  # input dffs built
-    ).then(union_dffs(wv0, WireVec.mul(ws3, ws4), ws0.length() - 1))
+    ).then(union_dffs(WireVec.mul(ws3, ws4), wv0, ws0.length() - 1))
 )
