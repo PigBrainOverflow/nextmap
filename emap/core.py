@@ -24,6 +24,30 @@ class Wire(egglog.Expr):
     @classmethod
     def mux(cls, a: Wire, b: Wire, s: Wire) -> Wire: ...
 
+    # @classmethod
+    # def logic_and(cls, a: egglog.Vec[Wire]) -> Wire: ...
+
+    # @classmethod
+    # def logic_or(cls, a: egglog.Vec[Wire]) -> Wire: ...
+
+    @classmethod
+    def logic_not(cls, a: egglog.Vec[Wire]) -> Wire: ...
+
+    @classmethod
+    def eq(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> Wire: ...
+
+    @classmethod
+    def le(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> Wire: ...
+
+    @classmethod
+    def ge(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> Wire: ...
+
+    @classmethod
+    def lt(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> Wire: ...
+
+    @classmethod
+    def gt(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> Wire: ...
+
 
 class WireVec(egglog.Expr):
     @classmethod
@@ -35,6 +59,9 @@ class WireVec(egglog.Expr):
     @classmethod
     def mul(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> WireVec: ...
 
+    @classmethod
+    def mod(cls, a: egglog.Vec[Wire], b: egglog.Vec[Wire]) -> WireVec: ...
+
     def __getitem__(self, index: egglog.i64Like) -> Wire: ...
 
 
@@ -43,8 +70,12 @@ class width_of(egglog.Expr):
     def __init__(self, wv: WireVec, width: egglog.i64Like): ...
 
 
+class as_output(egglog.Expr):
+    @egglog.method(unextractable=True)
+    def __init__(self, w: Wire, name: egglog.StringLike, index: egglog.i64Like): ...
+
+
 class Netlist(egglog.EGraph):
-    _outputs: dict[tuple[str, int], Wire]
     _clk: int | None
     _cnt: int
 
@@ -61,11 +92,9 @@ class Netlist(egglog.EGraph):
     @staticmethod
     def cell_to_outputs(cell: dict[str, Any]) -> list[str]:
         type_, conns = cell["type"], cell["connections"]
-        if type_ in {"$and", "$or", "$xor", "$mux", "$add", "$sub", "$mul"}:
-            return conns["Y"]
-        elif type_ == "$dff":
+        if type_ == "$dff":
             return conns["Q"]
-        return []
+        return conns.get("Y", [])
 
     @staticmethod
     def make_wire(type_: str, *inputs: Wire) -> Wire:
@@ -83,13 +112,32 @@ class Netlist(egglog.EGraph):
     def make_wirevec(type_: str, a: Iterable[Wire], b: Iterable[Wire]) -> WireVec:
         if type_ == "$add":
             return WireVec.add(egglog.Vec[Wire](*a), egglog.Vec[Wire](*b))
+        if type_ == "$sub":
+            return WireVec.sub(egglog.Vec[Wire](*a), egglog.Vec[Wire](*b))
         if type_ == "$mul":
             return WireVec.mul(egglog.Vec[Wire](*a), egglog.Vec[Wire](*b))
+        if type_ == "$mod":
+            return WireVec.mod(egglog.Vec[Wire](*a), egglog.Vec[Wire](*b))
+        raise ValueError(f"Unsupported cell type: {type_}")
+
+    @staticmethod
+    def make_wire_from_vec(type_: str, *inputs: list[Wire]) -> Wire:
+        if type_ == "$eq":
+            return Wire.eq(egglog.Vec[Wire](*inputs[0]), egglog.Vec[Wire](*inputs[1]))
+        if type_ == "$le":
+            return Wire.le(egglog.Vec[Wire](*inputs[0]), egglog.Vec[Wire](*inputs[1]))
+        if type_ == "$ge":
+            return Wire.ge(egglog.Vec[Wire](*inputs[0]), egglog.Vec[Wire](*inputs[1]))
+        if type_ == "$lt":
+            return Wire.lt(egglog.Vec[Wire](*inputs[0]), egglog.Vec[Wire](*inputs[1]))
+        if type_ == "$gt":
+            return Wire.gt(egglog.Vec[Wire](*inputs[0]), egglog.Vec[Wire](*inputs[1]))
+        if type_ == "$logic_not":
+            return Wire.logic_not(egglog.Vec[Wire](*inputs[0]))
         raise ValueError(f"Unsupported cell type: {type_}")
 
     def __init__(self, **egraph_kwargs):
         super().__init__(**egraph_kwargs)
-        self._outputs = {}
         self._clk = None
         self._cnt = 0
 
@@ -99,7 +147,7 @@ class Netlist(egglog.EGraph):
         self._cnt += 1
         return f"\\tmp{self._cnt}"
 
-    def build_from_json(self, mod: dict, clk: str = "clk"):
+    def build_from_json(self, mod: dict, clk: str = "clk", verbose: bool = False):
         # NOTE: only support single global clock
         ports: dict[str, Any] = mod["ports"]
         cells: list[dict[str, Any]] = [cell for cell in mod["cells"].values()]
@@ -140,7 +188,7 @@ class Netlist(egglog.EGraph):
                 raise ValueError(f"Clock {clk} does not match global clock {self._clk}")
             for wq in q:
                 wq = Netlist.bit_to_int(wq)
-                wires[wq] = self.let(str(wq), Wire.from_input(self.auto_id, 0)) # this is a placeholder, will be unioned later
+                wires[wq] = self.let(self.auto_id, Wire.from_input(self.auto_id, 0)) # this is a placeholder, will be unioned later
                 wire_from[wq] = None
 
         # build cells
@@ -152,10 +200,14 @@ class Netlist(egglog.EGraph):
         def dfs(i: int | None):
             if i is None or i in visited:
                 return
+            if verbose:
+                print(f"Visiting cell {i}: {cells[i]['type']}")
             cell = cells[i]
             type_, params, conns = cell["type"], cell["parameters"], cell["connections"]
-            if type_ in {"$and", "$or", "$xor"}:    # bitwise logic gates, apply bitblast
-                for wa, wb, wy in zip(conns["A"], conns["B"], conns["Y"]):
+            if type_ in {"$and", "$or", "$xor", "$logic_and", "$logic_or"}:    # bitwise logic gates, apply bitblast
+                a, b, y = conns["A"], conns["B"], conns["Y"]
+                assert len(a) == len(y) and len(b) == len(y), f"Cell {type_} must have same width of inputs and output"
+                for wa, wb, wy in zip(a, b, y):
                     wa, wb, wy = Netlist.bit_to_int(wa), Netlist.bit_to_int(wb), Netlist.bit_to_int(wy)
                     dfs(wire_from[wa])
                     dfs(wire_from[wb])
@@ -165,7 +217,24 @@ class Netlist(egglog.EGraph):
                 a, y = Netlist.bit_to_int(a[0]), Netlist.bit_to_int(y[0])
                 dfs(wire_from[a])
                 wires[y] = self.let(str(y), Netlist.make_wire(type_, wires[a]))
-            elif type_ in {"$add", "$mul"}:  # word-level arithmetic operations
+            elif type_ in {"$eq", "$le", "$ge", "$lt", "$gt"}:  # bitwise comparison
+                a, b, y = conns["A"], conns["B"], conns["Y"]
+                assert len(y) == 1, f"Cell {type_} must have exactly one output bit"
+                for wa, wb in zip(a, b):
+                    wa, wb = Netlist.bit_to_int(wa), Netlist.bit_to_int(wb)
+                    dfs(wire_from[wa])
+                    dfs(wire_from[wb])
+                wy = Netlist.bit_to_int(y[0])
+                wires[wy] = self.let(str(wy), Netlist.make_wire_from_vec(type_, [wires[Netlist.bit_to_int(wa)] for wa in a], [wires[Netlist.bit_to_int(wb)] for wb in b]))
+            elif type_ in {"$logic_not"}:
+                a, y = conns["A"], conns["Y"]
+                assert len(y) == 1, f"Cell {type_} must have exactly one output bit"
+                for wa in a:
+                    wa = Netlist.bit_to_int(wa)
+                    dfs(wire_from[wa])
+                wy = Netlist.bit_to_int(y[0])
+                wires[wy] = self.let(str(wy), Netlist.make_wire_from_vec(type_, [wires[Netlist.bit_to_int(wa)] for wa in a]))
+            elif type_ in {"$add", "$sub", "$mul", "$mod"}:  # word-level arithmetic operations
                 # NOTE: it's hard to handle weird input widths, signed & unsigned, etc. in a generic way
                 # NOTE: also it's hard to deal with different styles of extension, e.g., $signed(a) vs {16{a[15]}, a}
                 a_signed, b_signed = Netlist.param_to_int(params["A_SIGNED"]), Netlist.param_to_int(params["B_SIGNED"])
@@ -213,7 +282,7 @@ class Netlist(egglog.EGraph):
                 for i, bit in enumerate(bits):
                     w = Netlist.bit_to_int(bit)
                     dfs(wire_from[w])
-                    self._outputs[(name, i)] = wires[w]
+                    self.let(f"{name}[{i}]", as_output(wires[w], name, i))
 
         # dfs from dffs' d ports
         for dff in dffs:

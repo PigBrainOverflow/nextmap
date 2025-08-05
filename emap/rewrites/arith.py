@@ -7,6 +7,7 @@ arith_comm_rules = egglog.ruleset(
     egglog.rewrite(WireVec.mul(ws0, ws1)).to(WireVec.mul(ws1, ws0))
 )
 
+
 ##################
 # Zero Extension #
 ##################
@@ -68,4 +69,54 @@ sign_extended_base_rules = egglog.ruleset(
         sign_extended(ws0, ws0.length()),
         sign_extended(ws1, ws1.length())
     )
+)
+
+
+##################
+# Unsigned Arith #
+##################
+class unsigned(egglog.Expr):
+    def __init__(self, wv: WireVec, out_width: egglog.i64Like, a_width: egglog.i64Like, b_width: egglog.i64Like): ...
+
+arith_unsigned_rules = egglog.ruleset(
+    egglog.rule(
+        egglog.eq(wv0).to(WireVec.add(ws0, ws1)),
+        zero_extended(ws0, i),
+        zero_extended(ws1, j)
+    ).then(unsigned(wv0, ws0.length(), i, j)),
+    egglog.rule(
+        egglog.eq(wv0).to(WireVec.sub(ws0, ws1)),
+        zero_extended(ws0, i),
+        zero_extended(ws1, j)
+    ).then(unsigned(wv0, ws0.length(), i, j)),
+    egglog.rule(
+        egglog.eq(wv0).to(WireVec.mul(ws0, ws1)),
+        zero_extended(ws0, i),
+        zero_extended(ws1, j)
+    ).then(unsigned(wv0, ws0.length(), i, j))
+)
+
+
+################
+# Signed Arith #
+################
+class signed(egglog.Expr):
+    def __init__(self, wv: WireVec, out_width: egglog.i64Like, a_width: egglog.i64Like, b_width: egglog.i64Like): ...
+
+arith_signed_rules = egglog.ruleset(
+    egglog.rule(
+        egglog.eq(wv0).to(WireVec.add(ws0, ws1)),
+        sign_extended(ws0, i),
+        sign_extended(ws1, j)
+    ).then(signed(wv0, ws0.length(), i, j)),
+    egglog.rule(
+        egglog.eq(wv0).to(WireVec.sub(ws0, ws1)),
+        sign_extended(ws0, i),
+        sign_extended(ws1, j)
+    ).then(signed(wv0, ws0.length(), i, j)),
+    egglog.rule(
+        egglog.eq(wv0).to(WireVec.mul(ws0, ws1)),
+        sign_extended(ws0, i),
+        sign_extended(ws1, j)
+    ).then(signed(wv0, ws0.length(), i, j))
 )
