@@ -1,5 +1,5 @@
 import sqlite3
-from typing import Iterable
+from typing import Iterable, Any
 
 
 class NetlistDB(sqlite3.Connection):
@@ -72,7 +72,7 @@ class NetlistDB(sqlite3.Connection):
         self.cnt = cnt
         self.create_function("width_of", 1, NetlistDB.width_of)
 
-    def build_from_json(self, mod: dict):
+    def build_from_json(self, mod: dict[str, Any]):
         ports: dict = mod["ports"]
         cells: dict = mod["cells"]
 
@@ -88,7 +88,7 @@ class NetlistDB(sqlite3.Connection):
             if type_ in {"$and", "$or", "$xor", "$add", "$sub", "$mul", "$mod"}:
                 type_ += "s" if NetlistDB.to_int(params["A_SIGNED"]) and NetlistDB.to_int(params["B_SIGNED"]) else "u"
                 a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
+                self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
             elif type_ == "$dff":
                 if not NetlistDB.to_int(params["CLK_POLARITY"]):
                     raise ValueError("$dff with negative clock polarity is not supported")
@@ -96,16 +96,16 @@ class NetlistDB(sqlite3.Connection):
                 self.execute("INSERT OR IGNORE INTO dffs (d, clk, q) VALUES (?, ?, ?)", (d, clk, q))
             elif type_ == "$mux":
                 a, b, s, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["S"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
+                self.execute("INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", ("$mux", a, b, s, y))
             elif type_ in {"$not", "$logic_not"}:
                 a, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT INTO ay_cells (type, a, y) VALUES (?, ?, ?)", (type_, a, y))
+                self.execute("INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)", (type_, a, y))
             elif type_ in {
                 "$eq", "$ge", "$le", "$gt", "$lt",
                 "$logic_and", "$logic_or"
             }:
                 a, b, y = NetlistDB.to_str(conns["A"]), NetlistDB.to_str(conns["B"]), NetlistDB.to_str(conns["Y"])
-                self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
+                self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, y))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and NetlistDB.to_int(attrs["module_not_derived"]): # blackbox cell
@@ -125,7 +125,7 @@ class NetlistDB(sqlite3.Connection):
 
     def dump_tables(self) -> dict:
         # get all tables
-        cur = self.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%';")
+        cur = self.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';")
         db = {}
         for (table,) in cur.fetchall():
             cur.execute(f"SELECT * FROM {table}")
@@ -134,12 +134,45 @@ class NetlistDB(sqlite3.Connection):
 
         return db
 
-    # @staticmethod
-    # def sanitize_json(mod: dict):
-    #     """
-    #     Sanitize the JSON module by removing redundant cells and merging equivalent wires.
-    #     """
-    #     pass
+    def _merge_wire(self, a: str, b: str):
+        # merge a to b
+        # check aby_cells
+        if a == b:
+            return
+        cur = self.execute("SELECT rowid, a FROM aby_cells WHERE instr(',' || a || ',', ?)", (',' + a + ',',))
+        self.executemany(
+            "UPDATE OR IGNORE aby_cells SET a = ? WHERE rowid = ?",
+            ((("," + a_ + ",").replace("," + a + ",", "," + b + ",")[1:-1], rowid) for rowid, a_ in cur)
+        )
+        cur.execute("SELECT rowid, b FROM aby_cells WHERE instr(',' || b || ',', ?)", (',' + a + ',',))
+        self.executemany(
+            "UPDATE OR IGNORE aby_cells SET b = ? WHERE rowid = ?",
+            ((("," + b_ + ",").replace("," + a + ",", "," + b + ",")[1:-1], rowid) for rowid, b_ in cur)
+        )
 
-    # @staticmethod
-    # def json_to_db(mod: dict) -> 
+    def rebuild(self):
+        # TODO: handle blackbox cells correctly
+        # not efficient, but works for now
+        # NOTE: the best way is to build a table for sequences of integers
+        outputs: set[str] = set()   # outputs should be kept
+        cur = self.execute("SELECT wire FROM ports WHERE direction = 'output'")
+        for (wire,) in cur.fetchall():
+            outputs.update(wire.split(","))
+
+        modified = True
+        while modified:
+            modified = False
+            # check aby_cells
+            cur.execute("SELECT type, a, b FROM aby_cells GROUP BY type, a, b HAVING COUNT(*) > 1 LIMIT 1")
+            res = cur.fetchone()
+            if res is not None:
+                type_, a, b = res
+                cur.execute("SELECT y FROM aby_cells WHERE type = ? AND a = ? AND b = ?", (type_, a, b))
+                ys = [row[0].split(",") for row in cur]
+                cur.execute("DELETE FROM aby_cells WHERE type = ? AND a = ? AND b = ?", (type_, a, b))
+                for i in range(0, len(ys[0])):
+                    for y in ys:
+                        if y[i] not in outputs:
+                            self._merge_wire(y[i], ys[0][i])
+                cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, ",".join(ys[0])))
+                modified = True

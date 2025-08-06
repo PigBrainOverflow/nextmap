@@ -169,8 +169,8 @@ def test_systolic():
     rewrites.rewrite_comm(db, ["$adds", "$addu", "$subs", "$subu", "$muls", "$mulu"])
     for rule in dsp_rules:
         print(f"Applied {rule['name']} {rewrites.rewrite_dsp(db, rule)} times.")
-    # with open("out.json", "w") as f:
-    #     json.dump(db.dump_tables(), f, indent=2)
+    with open("out.json", "w") as f:
+        json.dump(db.dump_tables(), f, indent=2)
     # extract
     design = extracts.ilp.extract_dsps_by_count(db, "dsp48e2", count=2048, cost_model=simple_cost_model, verbose=True)  # try insufficient count, try different cost model
     # design = extracts.ilp.extract_dsps_by_cost(db, "dsp48e2", cost_model=simple_cost_model)
