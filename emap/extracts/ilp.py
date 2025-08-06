@@ -4,6 +4,30 @@ from typing import Iterable, Callable
 import gurobipy as grb
 import time
 import json
+import numpy as np
+import scipy.sparse as sp
+
+
+def _build_constr_matrix(ilp_model: grb.Model, x, y, z, groups, cells, dffs, input):
+    n_constraints = len(groups)
+    n_vars = len(x) + len(y) + len(z)
+    A = sp.lil_matrix((n_constraints, n_vars), dtype=int)
+    rhs = np.zeros(n_constraints)
+    sense = [">"] * n_constraints
+
+    group_rows = {group: i for i, group in enumerate(groups) if group not in input}
+    for i, cell in enumerate(cells):
+        for group in cell.outputs:
+            if group in group_rows:
+                A[group_rows[group], len(x) + i] = 1  # y[i]
+    for i, dff in enumerate(dffs):
+        for group in dff.q:
+            if group in group_rows:
+                A[group_rows[group], len(x) + len(y) + i] = 1  # z[i]
+    for group, row in group_rows.items():
+        A[row, int(group[5:])] = -1  # -x[group]
+
+    ilp_model.addMConstr(A=A, x=None, sense=sense, b=rhs, name="wire_constraints")
 
 
 def _group_wires(bundles: list[set]) -> dict[str, set]:
@@ -184,7 +208,7 @@ def extract_dsps_by_cost(db: NetlistDB, name: str, cost_model: Callable) -> dict
 
     return db_to_json(db, res, name)
 
-def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Callable, verbose: bool = False) -> dict:
+def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Callable, use_mat: bool = False, verbose: bool = False) -> dict:
     """
     Extract DSPs by a fixed count.
     It guarantees that the number of DSPs extracted is no more than `count`.
@@ -285,7 +309,10 @@ def extract_dsps_by_count(db: NetlistDB, name: str, count: int, cost_model: Call
 
     # wire constraints
     phase_time = time.time()
-    ilp_model.addConstrs((grb.quicksum(y[i] for i in range(len(cells)) if group in cells[i].outputs) + grb.quicksum(z[i] for i in range(len(dffs)) if group in dffs[i].q) >= x[gname_to_index(group)] for group in groups if group not in input), "wire_constraints")
+    if use_mat: # TODO: try addMConstr()
+        _build_constr_matrix(ilp_model, x, y, z, groups, cells, dffs, input)
+    else:
+        ilp_model.addConstrs((grb.quicksum(y[i] for i in range(len(cells)) if group in cells[i].outputs) + grb.quicksum(z[i] for i in range(len(dffs)) if group in dffs[i].q) >= x[gname_to_index(group)] for group in groups if group not in input), "wire_constraints")
     # for group in groups:
     #     if group not in input:  # if the wire is not an input, it can be chosen or not
     #         # if the wire is chosen, at least one of the cells or dffs must be chosen
