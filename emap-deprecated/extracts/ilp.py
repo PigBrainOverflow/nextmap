@@ -8,13 +8,6 @@ import numpy as np
 import scipy.sparse as sp
 
 
-def extract_no_techmap(db: NetlistDB, cost_model: Callable) -> dict:
-    """
-    Return a module in Yosys JSON format
-    """
-    cells, dffs = db_to_normalized(db, cost_model)
-
-
 def _build_constr_matrix(ilp_model: grb.Model, x, y, z, groups, cells, dffs, input):
     n_constraints = len(groups)
     n_vars = len(x) + len(y) + len(z)

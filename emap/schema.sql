@@ -1,55 +1,88 @@
-CREATE TABLE IF NOT EXISTS ports (
-    name VARCHAR(64) PRIMARY KEY,
-    wire VARCHAR(64) NOT NULL,
-    direction VARCHAR(16) NOT NULL
+CREATE TABLE IF NOT EXISTS wirevecs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    hash INTEGER NOT NULL
+);
+-- not sure whether we need length field, we can get it from max(idx) + 1 in wirevec_members
+CREATE INDEX IF NOT EXISTS wirevecs_hash ON wirevecs(hash); -- for quick lookup by hash
+
+CREATE TABLE IF NOT EXISTS wirevec_members (
+    wirevec INTEGER,
+    idx INTEGER,
+    wire INTEGER NOT NULL,
+    PRIMARY KEY (wirevec, idx),
+    FOREIGN KEY (wirevec) REFERENCES wirevecs(id) -- ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS wirevec_members_wire on wirevec_members(wire);   -- for quick lookup by wire
+
+CREATE TABLE IF NOT EXISTS as_outputs (
+    sink INTEGER NOT NULL,
+    name VARCHAR(16) PRIMARY KEY,
+    FOREIGN KEY (sink) REFERENCES wirevecs(id)
+);
+
+CREATE TABLE IF NOT EXISTS from_inputs (
+    source INTEGER NOT NULL,
+    name VARCHAR(16) PRIMARY KEY,
+    FOREIGN KEY (source) REFERENCES wirevecs(id)
 );
 
 CREATE TABLE IF NOT EXISTS ay_cells (
     type VARCHAR(16),
-    a VARCHAR(64),
-    y VARCHAR(64),
-    PRIMARY KEY (type, a, y)
+    a INTEGER,
+    y INTEGER,
+    PRIMARY KEY (type, a, y),
+    FOREIGN KEY (a) REFERENCES wirevecs(id),
+    FOREIGN KEY (y) REFERENCES wirevecs(id)
 );
 
 CREATE TABLE IF NOT EXISTS aby_cells (
     type VARCHAR(16),
-    a VARCHAR(64),
-    b VARCHAR(64),
-    y VARCHAR(64),
-    PRIMARY KEY (type, a, b, y)
+    a INTEGER,
+    b INTEGER,
+    y INTEGER,
+    PRIMARY KEY (type, a, b, y),
+    FOREIGN KEY (a) REFERENCES wirevecs(id),
+    FOREIGN KEY (b) REFERENCES wirevecs(id),
+    FOREIGN KEY (y) REFERENCES wirevecs(id)
 );
+-- not sure whether we need a bitwise version of it
+-- NOTE: be careful with the same inputs but different outputs' widths, they should be treated as different cells
+-- TODO: add output width field
 
 CREATE TABLE IF NOT EXISTS absy_cells (
     type VARCHAR(16),
-    a VARCHAR(64),
-    b VARCHAR(64),
-    s VARCHAR(64),
-    y VARCHAR(64),
-    PRIMARY KEY (type, a, b, s, y)
+    a INTEGER,
+    b INTEGER,
+    s INTEGER,
+    y INTEGER,
+    PRIMARY KEY (type, a, b, s, y),
+    FOREIGN KEY (a) REFERENCES wirevecs(id),
+    FOREIGN KEY (b) REFERENCES wirevecs(id),
+    FOREIGN KEY (s) REFERENCES wirevecs(id),
+    FOREIGN KEY (y) REFERENCES wirevecs(id)
 );
 
 CREATE TABLE IF NOT EXISTS dffs (
-    d VARCHAR(64),
-    clk VARCHAR(64),
-    q VARCHAR(64),
-    PRIMARY KEY (d, clk, q)
+    d INTEGER,
+    q INTEGER,
+    PRIMARY KEY (d, q),
+    FOREIGN KEY (d) REFERENCES wirevecs(id),
+    FOREIGN KEY (q) REFERENCES wirevecs(id)
 );
+-- we assume there's a global clock wire
 
 CREATE TABLE IF NOT EXISTS instances (
-    id VARCHAR(64) PRIMARY KEY,
-    module VARCHAR(64) NOT NULL
+    name VARCHAR(16) PRIMARY KEY,
+    params JSON,    -- no need to process this, just store it
+    module VARCHAR(16) NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS instance_ports (
-    instance VARCHAR(64),
-    port VARCHAR(64),
-    wire VARCHAR(64) NOT NULL,
-    PRIMARY KEY (instance, port)
-);
-
-CREATE TABLE IF NOT EXISTS instance_params (
-    instance VARCHAR(64),
-    param VARCHAR(64),
-    val VARCHAR(64) NOT NULL,
-    PRIMARY KEY (instance, param)
+    instance VARCHAR(16),
+    port VARCHAR(16),
+    signal INTEGER NOT NULL,    -- in RTLIL, a signal is everything that can be applied to a cell port
+    direction VARCHAR(16),  -- 'input', 'output', null
+    PRIMARY KEY (instance, port),
+    FOREIGN KEY (instance) REFERENCES instances(name),
+    FOREIGN KEY (signal) REFERENCES wirevecs(id)
 );
