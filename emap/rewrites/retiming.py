@@ -35,3 +35,48 @@ def apply_dff_forward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, 
     cur = db.executemany("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", newrows)
     db.commit()
     return cur.rowcount
+
+
+def ematch_dff_backward_aby_cell(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
+    """
+    Return a list of tuples (type, a, b, y) for dff cells that can be rewritten to backward aby cells.
+    """
+    cur = db.execute("""
+        SELECT cell.type, cell.a, cell.b, dff.q
+        FROM dffs AS dff JOIN aby_cells as cell ON dff.d = cell.y
+        WHERE cell.type IN ({})
+        """.format(",".join("?" * len(target_types))),
+        target_types
+    )
+    return cur
+
+def apply_dff_backward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> int:
+    """
+    Apply the dff backward aby cell matches to the database.
+    Return the number of rows rewritten.
+    """
+    newrows = []
+    for type_, a, b, q in matches:
+        cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (a,))    # get width
+        width_a = cur.fetchone()[0]
+        cur.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (b,))    # get width
+        width_b = cur.fetchone()[0]
+        # insert new dffs if not exist
+        cur.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (a,))
+        row = cur.fetchone()
+        if row is None:
+            a_q = db._add_wirevec([db.auto_id for _ in range(width_a)])
+            cur.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (a, a_q))
+        else:
+            a_q = row[0]
+        cur.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (b,))
+        row = cur.fetchone()
+        if row is None:
+            b_q = db._add_wirevec([db.auto_id for _ in range(width_b)])
+            cur.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (b, b_q))
+        else:
+            b_q = row[0]
+        newrows.append((type_, a_q, b_q, q))
+    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
+    db.commit()
+    return cur.rowcount
