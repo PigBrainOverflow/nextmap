@@ -161,7 +161,7 @@ def extract_no_techmap(db: NetlistDB, cost_model: Callable, **grb_args) -> dict:
     cells_selected = [cell for i, cell in enumerate(cells) if y[i].X > 0.5]
     dffs_selected = [dff for i, dff in enumerate(dffs) if z[i].X > 0.5]
 
-    return normalized_to_json(db, inputs, outputs, cells_selected, dffs_selected)
+    return normalized_to_json(db, {}, inputs, outputs, cells_selected, dffs_selected)
 
 
 def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: dict[str, dict[str, Any]], tech_limits: dict[str, int], **grb_args) -> dict:
