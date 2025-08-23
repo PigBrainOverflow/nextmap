@@ -9,7 +9,6 @@ class NetlistDB(sqlite3.Connection):
     _clk: int | None
     _cnt: int
     _rhash: utils.RollingHash
-    _emapcc_handle: Any | None
 
     @staticmethod
     def bit_to_int(bit: str | int) -> int:
@@ -19,10 +18,20 @@ class NetlistDB(sqlite3.Connection):
     def param_to_int(param: str | int) -> int:
         return param if isinstance(param, int) else int(param, base=2)
 
+    @staticmethod
+    def width_of(conn: sqlite3.Connection, id) -> int:
+        cur = conn.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = ?", (id,))
+        return cur.fetchone()[0] + 1
+
     @property
     def auto_id(self) -> int:
         self._cnt += 1
         return self._cnt
+
+    @property
+    def tech_tables(self) -> list[str]:
+        cur = self.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'tech_%';")
+        return [name for (name,) in cur]
 
     def __init__(self, schema_file: str, db_file: str = ":memory:", cnt: int = 0):
         super().__init__(db_file)
@@ -33,7 +42,7 @@ class NetlistDB(sqlite3.Connection):
         self._clk = None
         self._cnt = cnt
         self._rhash = utils.RollingHash()
-        self._emapcc_handle = None
+        self.create_function("width_of", 1, lambda id: self.width_of(self, id))
 
     def dump_tables(self) -> dict:
         # get all tables except sqlite internal tables

@@ -7,3 +7,8 @@ from .basic import (
 from .retiming import (
     ematch_dff_forward_aby_cell, apply_dff_forward_aby_cell
 )
+
+from .techmap import (
+    create_tech_tables,
+    rewrite_tech
+)

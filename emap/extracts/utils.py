@@ -97,8 +97,51 @@ def db_to_normalized(db: NetlistDB, cost_model: Callable) -> tuple[dict[str, lis
     return inputs, outputs, cells, dffs
 
 
-def cell_to_json(cell: dict[str, Any]) -> dict[str, Any]:
+def db_to_normalized_tech(db: NetlistDB, cost_model: Callable, tech_rules: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Return a list of tech cells in the same format as in db_to_normalized.
+    """
+    # read all wirevecs
+    wirevecs: dict[int, list[int]] = {}
+    cur = db.execute("SELECT id FROM wirevecs")
+    for (id,) in cur.fetchall():
+        cur.execute("SELECT wire FROM wirevec_members WHERE wirevec = ? ORDER BY idx", (id,))
+        wirevecs[id] = [wire for (wire,) in cur]
+
+    tech_cells: list[dict[str, Any]] = []
+    for name, rule in tech_rules.items():
+        inputs_ports = rule["inputs"]
+        outputs_ports = rule["outputs"]
+        cur = db.execute(f"SELECT {', '.join(inputs_ports + outputs_ports)} FROM tech_{name}")
+        for row in cur:
+            inputs = {port: wirevecs[row[i]] for i, port in enumerate(inputs_ports)}
+            outputs = {port: wirevecs[row[i + len(inputs_ports)]] for i, port in enumerate(outputs_ports)}
+            tech_cells.append({
+                "cost": cost_model(name, *inputs.values(), *outputs.values()),
+                "type": name,
+                "inputs": inputs,
+                "outputs": outputs
+            })
+    return tech_cells
+
+
+def cell_to_json(clk: int, tech_rules: dict[str, dict[str, Any]], cell: dict[str, Any]) -> dict[str, Any]:
     type_, inputs, outputs = cell["type"], cell["inputs"], cell["outputs"]
+    if not type_.startswith("$"):   # tech cell
+        tech_rule = tech_rules.get(type_)
+        res = {
+            # for simplicity, we omit signed/zero-extension
+            "hide_name": 1,
+            "type": type_,
+            "parameters": {},
+            "port_directions": {port: "input" for port in tech_rule["inputs"] + tech_rule["hidden_inputs"]} | {port: "output" for port in tech_rule["outputs"]},
+            "connections": {port: inputs[port] for port in tech_rule["inputs"]} | {port: outputs[port] for port in tech_rule["outputs"]}
+        }
+        for hi in tech_rule["hidden_inputs"]:
+            if hi != "clk":
+                raise ValueError(f"Unsupported hidden input {hi} in tech cell {type_}")
+            res["connections"][hi] = [clk]
+        return res
     if len(inputs) == 1:
         return {
             "hide_name": 1,
@@ -189,7 +232,7 @@ def dff_to_json(clk: int, dff: dict[str, Any]) -> dict[str, Any]:
         }
     }
 
-def normalized_to_json(db: NetlistDB, inputs: dict[str, list[int]], outputs: dict[str, list[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]]) -> dict:
+def normalized_to_json(db: NetlistDB, tech_rules: dict[str, dict[str, Any]], inputs: dict[str, list[int]], outputs: dict[str, list[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]]) -> dict:
     """
     Convert normalized representation to Yosys JSON format.
     """
@@ -202,7 +245,7 @@ def normalized_to_json(db: NetlistDB, inputs: dict[str, list[int]], outputs: dic
     # build cells
     mod["cells"] = {}
     for i, cell in enumerate(cells):
-        mod["cells"][f"cell_{i}"] = cell_to_json(cell)
+        mod["cells"][f"cell_{i}"] = cell_to_json(db._clk, tech_rules, cell)
     for i, dff in enumerate(dffs):
         mod["cells"][f"dff_{i}"] = dff_to_json(db._clk, dff)
 
