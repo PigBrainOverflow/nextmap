@@ -32,6 +32,6 @@ def apply_dff_forward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, 
         else:
             d = row[0]
         newrows.append((d, y))
-    cur.executemany("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", newrows)
+    cur = db.executemany("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", newrows)
     db.commit()
     return cur.rowcount

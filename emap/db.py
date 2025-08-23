@@ -204,6 +204,7 @@ class NetlistDB(sqlite3.Connection):
         self.commit()
         # set cnt
         self._cnt = self.execute("SELECT MAX(wire) FROM wirevec_members").fetchone()[0] or 1
+        print(f"Database built with {self._cnt} wires and global clock {self._clk}")
 
     def _merge_cells(self) -> utils.DisjointSetUnion:
         """

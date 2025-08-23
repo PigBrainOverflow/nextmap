@@ -25,7 +25,7 @@ def apply_comm(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> i
     return cur.rowcount
 
 
-def ematch_assoc_to_right(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
+def ematch_assoc_to_right(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int, int]]:
     """
     Return a list of tuples (type, a, b, y) for associative cells that can be rewritten to right associative form.
     E.g. (a + b) + c => a + (b + c)
@@ -40,7 +40,7 @@ def ematch_assoc_to_right(db: NetlistDB, target_types: list[str]) -> Iterable[tu
     )
     return cur
 
-def apply_assoc_to_right(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> int:
+def apply_assoc_to_right(db: NetlistDB, matches: Iterable[tuple[str, int, int, int, int]]) -> int:
     """
     Apply the associative matches to the database.
     Return the number of rows rewritten.
@@ -65,7 +65,7 @@ def apply_assoc_to_right(db: NetlistDB, matches: Iterable[tuple[str, int, int, i
     return cur.rowcount
 
 
-def ematch_assoc_to_left(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
+def ematch_assoc_to_left(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int, int]]:
     """
     Return a list of tuples (type, a, b, y) for associative cells that can be rewritten to left associative form.
     E.g. a + (b + c) => (a + b) + c
@@ -80,7 +80,7 @@ def ematch_assoc_to_left(db: NetlistDB, target_types: list[str]) -> Iterable[tup
     )
     return cur
 
-def apply_assoc_to_left(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> int:
+def apply_assoc_to_left(db: NetlistDB, matches: Iterable[tuple[str, int, int, int, int]]) -> int:
     """
     Apply the associative matches to the database.
     Return the number of rows rewritten.

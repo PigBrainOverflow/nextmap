@@ -11,13 +11,13 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
 find_package(pybind11 REQUIRED)
 
 # sqlite3
-find_package(SQLite3 REQUIRED)
+# find_package(SQLite3 REQUIRED)
 
 include_directories(
     "${CMAKE_CURRENT_SOURCE_DIR}/include"
-    "${SQLite3_INCLUDE_DIRS}"
+    # "${SQLite3_INCLUDE_DIRS}"
 )
 file(GLOB SRCS "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp")
 
 pybind11_add_module(emapcc "${SRCS}")
-target_link_libraries(emapcc PRIVATE SQLite::SQLite3)
+# target_link_libraries(emapcc PRIVATE SQLite::SQLite3)
