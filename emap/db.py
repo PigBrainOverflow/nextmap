@@ -226,6 +226,7 @@ class NetlistDB(sqlite3.Connection):
                 wv0 = self._get_wirevec(ys[0])
                 for y in ys[1:]:
                     wv = self._get_wirevec(y)
+                    assert len(wv0) == len(wv)
                     for w0, w in zip(wv0, wv):
                         dsu.union(w0, w)
 
@@ -242,6 +243,7 @@ class NetlistDB(sqlite3.Connection):
                 wv0 = self._get_wirevec(qs[0])
                 for q in qs[1:]:
                     wv = self._get_wirevec(q)
+                    assert len(wv0) == len(wv)
                     for w0, w in zip(wv0, wv):
                         dsu.union(w0, w)
         self.commit()

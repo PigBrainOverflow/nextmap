@@ -97,9 +97,115 @@ def db_to_normalized(db: NetlistDB, cost_model: Callable) -> tuple[dict[str, lis
     return inputs, outputs, cells, dffs
 
 
-def normalized_to_json(inputs: dict[str, list[int]], outputs: dict[str, list[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]]) -> dict:
+def cell_to_json(cell: dict[str, Any]) -> dict[str, Any]:
+    type_, inputs, outputs = cell["type"], cell["inputs"], cell["outputs"]
+    if len(inputs) == 1:
+        return {
+            "hide_name": 1,
+            "type": type_,
+            "parameters": {
+                "A_WIDTH": len(inputs["a"]),
+                "Y_WIDTH": len(outputs["y"])
+            },
+            "port_directions": {
+                "A": "input",
+                "Y": "output"
+            },
+            "connections": {
+                "A": inputs["a"],
+                "Y": outputs["y"]
+            }
+        }
+    if len(inputs) == 2:
+        res = {
+            "hide_name": 1,
+            "parameters": {
+                "A_WIDTH": len(inputs["a"]),
+                "B_WIDTH": len(inputs["b"]),
+                "Y_WIDTH": len(outputs["y"])
+            },
+            "port_directions": {
+                "A": "input",
+                "B": "input",
+                "Y": "output"
+            },
+            "connections": {
+                "A": inputs["a"],
+                "B": inputs["b"],
+                "Y": outputs["y"]
+            }
+        }
+        if type_.endswith(("s", "u")):
+            is_signed = type_.endswith("s")
+            res["type"] = type_[:-1]
+            res["parameters"]["A_SIGNED"] = int(is_signed)
+            res["parameters"]["B_SIGNED"] = int(is_signed)
+        else:
+            res["type"] = type_
+        return res
+    if len(inputs) == 3:
+        return {
+            "hide_name": 1,
+            "type": type_,
+            "parameters": {
+                "A_WIDTH": len(inputs["a"]),
+                "B_WIDTH": len(inputs["b"]),
+                "S_WIDTH": len(inputs["s"]),
+                "Y_WIDTH": len(outputs["y"])
+            },
+            "port_directions": {
+                "A": "input",
+                "B": "input",
+                "S": "input",
+                "Y": "output"
+            },
+            "connections": {
+                "A": inputs["a"],
+                "B": inputs["b"],
+                "S": inputs["s"],
+                "Y": outputs["y"]
+            }
+        }
+    raise ValueError(f"Unsupported cell type: {type_}")
+
+def dff_to_json(clk: int, dff: dict[str, Any]) -> dict[str, Any]:
+    inputs, outputs = dff["inputs"], dff["outputs"]
+    return {
+        "hide_name": 1,
+        "type": "$dff",
+        "parameters": {
+            "CLK_POLARITY": 1,
+            "WIDTH": len(inputs["d"])
+        },
+        "port_directions": {
+            "CLK": "input",
+            "D": "input",
+            "Q": "output"
+        },
+        "connections": {
+            "CLK": [clk],
+            "D": inputs["d"],
+            "Q": outputs["q"]
+        }
+    }
+
+def normalized_to_json(db: NetlistDB, inputs: dict[str, list[int]], outputs: dict[str, list[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]]) -> dict:
     """
     Convert normalized representation to Yosys JSON format.
     """
-    # TODO: implement this function
-    return {}
+    mod = {}
+
+    # build ports
+    mod["ports"] = {name: {"direction": "input", "bits": source} for name, source in inputs.items()}
+    mod["ports"].update({name: {"direction": "output", "bits": sink} for name, sink in outputs.items()})
+
+    # build cells
+    mod["cells"] = {}
+    for i, cell in enumerate(cells):
+        mod["cells"][f"cell_{i}"] = cell_to_json(cell)
+    for i, dff in enumerate(dffs):
+        mod["cells"][f"dff_{i}"] = dff_to_json(db._clk, dff)
+
+    # TODO: build blackbox instances
+
+    return mod
