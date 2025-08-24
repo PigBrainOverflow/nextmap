@@ -12,7 +12,7 @@ def prune_cells(cells: list[dict[str, Any]]):
     Modify cells in place.
     """
     try:
-        emapcc = importlib.import_module("..emapcc.build", package=__package__).emapcc
+        emapcc = importlib.import_module("..emapcc.build.emapcc", package=__package__)
         print("C++ backend emapcc found")
         removed_indices = emapcc.prune_cells([(
             cell["cost"],
@@ -26,7 +26,7 @@ def prune_cells(cells: list[dict[str, Any]]):
                 wr += 1
         cells = cells[:wr]  # truncate
         print(f"Removed {len(removed_indices)} dominated cells, {len(cells)} remain")
-    except (ImportError, AttributeError):
+    except (ImportError, AttributeError) as e:
         print("C++ backend emapcc not found")
         # fallback to Python implementation
         cell_inputs: list[set[int]] = [{w for ws in cell["inputs"].values() for w in ws} for cell in cells]
@@ -55,9 +55,15 @@ def group_wires(bundles: list[set[int]]) -> list[set[int]]:
     Return a list of groups of wires.
     """
     try:
-        emapcc = importlib.import_module("..emapcc.build", package=__package__).emapcc
+        emapcc = importlib.import_module("..emapcc.build.emapcc", package=__package__)
         print("C++ backend emapcc found")
-        raise NotImplementedError("C++ backend for group_wires() not implemented yet")
+        cnt = len(set().union(*bundles))
+        new_bundles, groups = emapcc.group_wires(bundles)
+        for bundle, new_bundle in zip(bundles, new_bundles):    # modify in place
+            bundle.clear()
+            bundle |= set(new_bundle)
+        print(f"Grouped {cnt} wires into {len(groups)} groups")
+        return groups
     except (ImportError, AttributeError):
         print("C++ backend emapcc not found")
         # fallback to Python implementation
