@@ -23,6 +23,16 @@ class NetlistDB(sqlite3.Connection):
         cur = conn.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = ?", (id,))
         return cur.fetchone()[0] + 1
 
+    @staticmethod
+    def vec_to_const(vec: list[int]) -> int | None:
+        # return None if not a constant vector
+        val = 0
+        for b in reversed(vec):
+            if b not in (0, 1):
+                return None
+            val = (val << 1) | b
+        return val
+
     @property
     def auto_id(self) -> int:
         self._cnt += 1

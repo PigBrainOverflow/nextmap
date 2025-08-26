@@ -80,3 +80,38 @@ def apply_dff_backward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int,
     cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
     db.commit()
     return cur.rowcount
+
+
+def rewrite_sdff(db: NetlistDB) -> int:
+    """
+    This is a final pass before techmapping to rewrite a $dff and a $mux to a $sdff.
+    Return the number of rows rewritten.
+    """
+    # dynamically create the table for $sdff
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS sdffs (
+            d INTEGER,
+            q INTEGER,
+            rst INTEGER,
+            rst_val INTEGER,    -- this is the actual constant value, not wirevec id
+            PRIMARY KEY(d, rst, rst_val),
+            FOREIGN KEY (d) REFERENCES wirevecs(id),
+            FOREIGN KEY (q) REFERENCES wirevecs(id),
+            FOREIGN KEY (rst) REFERENCES wirevecs(id)
+        );
+    """)
+
+    cur = db.execute("""
+        SELECT mux.a, dff.q, mux.s, mux.b
+        FROM absy_cells AS mux JOIN dffs AS dff ON mux.y = dff.d
+        WHERE mux.type = '$mux'
+    """)
+    newrows = []
+    for d, q, rst, rst_wvid in cur:
+        rst_wv = db._get_wirevec(rst_wvid)
+        rst_val = db.vec_to_const(rst_wv)
+        if rst_val is not None:
+            newrows.append((d, q, rst, rst_val))
+    cur = db.executemany("INSERT OR IGNORE INTO sdffs (d, q, rst, rst_val) VALUES (?, ?, ?, ?)", newrows)
+    db.commit()
+    return cur.rowcount

@@ -6,7 +6,8 @@ from .basic import (
 
 from .retiming import (
     ematch_dff_forward_aby_cell, apply_dff_forward_aby_cell,
-    ematch_dff_backward_aby_cell, apply_dff_backward_aby_cell
+    ematch_dff_backward_aby_cell, apply_dff_backward_aby_cell,
+    rewrite_sdff
 )
 
 from .techmap import (

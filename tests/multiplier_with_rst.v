@@ -1,13 +1,13 @@
-module multiplier_with_rst (
+module top (
     input clk,
     input rst,
-    input [15:0] a,
-    input [15:0] b,
-    output [31:0] p
+    input signed [15:0] a,
+    input signed [15:0] b,
+    output signed [31:0] p
 );
     // synchronous reset
-    reg [15:0] a_reg, b_reg;
-    reg [31:0] p_reg;
+    reg signed [15:0] a_reg, b_reg;
+    reg signed [31:0] p_reg;
     always @(posedge clk) begin
         if (rst) begin
             a_reg <= 16'b0;
