@@ -3,8 +3,8 @@ from .utils import db_to_normalized, db_to_normalized_tech, normalized_to_json
 from typing import Any, Callable
 import importlib
 import gurobipy as grb
-# import numpy as np
-# import scipy.sparse as sp
+import numpy as np
+import scipy.sparse as sp
 
 
 def prune_cells(cells: list[dict[str, Any]]):
@@ -98,6 +98,30 @@ def group_wires(bundles: list[set[int]]) -> list[set[int]]:
         print(f"Grouped {len(wires)} wires into {len(groups)} groups")
         return groups
 
+def add_wire_constrs(ilp_model: grb.Model, x: grb.tupledict, y: grb.tupledict, z: grb.tupledict, groups: list[set[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]], all_source: set[int]):
+    n_constrs, n_vars = len(groups), len(x) + len(y) + len(z)
+    A = sp.lil_matrix((n_constrs, n_vars), dtype=int)
+    rhs = np.zeros(n_constrs, dtype=int)
+    sense = [">"] * n_constrs
+
+    # add cells
+    for i, cell in enumerate(cells):
+        for gid in cell["all_outputs"]:
+            if gid not in all_source:
+                A[gid, len(x) + i] = 1  # y[i]
+
+    # add dffs
+    for i, dff in enumerate(dffs):
+        for gid in dff["all_outputs"]:
+            if gid not in all_source:
+                A[gid, len(x) + len(y) + i] = 1 # z[i]
+
+    for gid in range(len(groups)):
+        if gid not in all_source:
+            A[gid, gid] = -1
+
+    ilp_model.addMConstr(A=A, x=None, sense=sense, b=rhs, name="wire_constraints")
+
 def extract_no_techmap(db: NetlistDB, cost_model: Callable, **grb_args) -> dict:
     """
     Return a module in Yosys JSON format.
@@ -131,12 +155,13 @@ def extract_no_techmap(db: NetlistDB, cost_model: Callable, **grb_args) -> dict:
     y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y")   # choices of cells
     z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z")    # choices of dffs
     ilp_model.addConstrs((x[group] >= 1 for group in all_sink), "output_constraints")
-    ilp_model.addConstrs((
-        grb.quicksum(y[i] for i in range(len(cells)) if gid in cells[i]["all_outputs"])
-        + grb.quicksum(z[i] for i in range(len(dffs)) if gid in dffs[i]["all_outputs"])
-        >= x[gid] for gid in range(len(groups)) if gid not in all_source),
-        "wire_constraints"
-    )
+    # ilp_model.addConstrs((
+    #     grb.quicksum(y[i] for i in range(len(cells)) if gid in cells[i]["all_outputs"])
+    #     + grb.quicksum(z[i] for i in range(len(dffs)) if gid in dffs[i]["all_outputs"])
+    #     >= x[gid] for gid in range(len(groups)) if gid not in all_source),
+    #     "wire_constraints"
+    # )
+    add_wire_constrs(ilp_model, x, y, z, groups, cells, dffs, all_source)
     for i, cell in enumerate(cells):
         for gid in cell["all_inputs"]:
             ilp_model.addConstr(x[gid] >= y[i], f"cell_{i}_input_{gid}_constraint") # if the cell is chosen, all its inputs must be chosen
@@ -204,12 +229,13 @@ def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: 
     y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y")   # choices of cells
     z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z")    # choices of dffs
     ilp_model.addConstrs((x[group] >= 1 for group in all_sink), "output_constraints")
-    ilp_model.addConstrs((
-        grb.quicksum(y[i] for i in range(len(cells)) if gid in cells[i]["all_outputs"])
-        + grb.quicksum(z[i] for i in range(len(dffs)) if gid in dffs[i]["all_outputs"])
-        >= x[gid] for gid in range(len(groups)) if gid not in all_source),
-        "wire_constraints"
-    )
+    # ilp_model.addConstrs((
+    #     grb.quicksum(y[i] for i in range(len(cells)) if gid in cells[i]["all_outputs"])
+    #     + grb.quicksum(z[i] for i in range(len(dffs)) if gid in dffs[i]["all_outputs"])
+    #     >= x[gid] for gid in range(len(groups)) if gid not in all_source),
+    #     "wire_constraints"
+    # )
+    add_wire_constrs(ilp_model, x, y, z, groups, cells, dffs, all_source)
     for i, cell in enumerate(cells):
         for gid in cell["all_inputs"]:
             ilp_model.addConstr(x[gid] >= y[i], f"cell_{i}_input_{gid}_constraint") # if the cell is chosen, all its inputs must be chosen
