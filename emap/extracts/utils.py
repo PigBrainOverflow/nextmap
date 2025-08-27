@@ -147,6 +147,7 @@ def cell_to_json(clk: int, tech_rules: dict[str, dict[str, Any]], cell: dict[str
             "hide_name": 1,
             "type": type_,
             "parameters": {
+                "A_SIGNED": 0,
                 "A_WIDTH": len(inputs["a"]),
                 "Y_WIDTH": len(outputs["y"])
             },
@@ -163,6 +164,8 @@ def cell_to_json(clk: int, tech_rules: dict[str, dict[str, Any]], cell: dict[str
         res = {
             "hide_name": 1,
             "parameters": {
+                "A_SIGNED": 0,
+                "B_SIGNED": 0,
                 "A_WIDTH": len(inputs["a"]),
                 "B_WIDTH": len(inputs["b"]),
                 "Y_WIDTH": len(outputs["y"])
@@ -191,10 +194,7 @@ def cell_to_json(clk: int, tech_rules: dict[str, dict[str, Any]], cell: dict[str
             "hide_name": 1,
             "type": type_,
             "parameters": {
-                "A_WIDTH": len(inputs["a"]),
-                "B_WIDTH": len(inputs["b"]),
-                "S_WIDTH": len(inputs["s"]),
-                "Y_WIDTH": len(outputs["y"])
+                "WIDTH": len(inputs["a"])
             },
             "port_directions": {
                 "A": "input",
