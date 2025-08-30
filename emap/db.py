@@ -64,6 +64,13 @@ class NetlistDB(sqlite3.Connection):
             db[table] = [dict(zip([col[0] for col in cur.description], row)) for row in rows]
         return db
 
+    def dump_wirevecs(self) -> dict[int, list[int]]:
+        cur = self.execute("SELECT id FROM wirevecs")
+        wvs = {}
+        for (id,) in cur.fetchall():
+            wvs[id] = self._get_wirevec(id)
+        return wvs
+
     def _get_wirevec(self, id: int) -> list[int]:
         cur = self.execute("SELECT wire FROM wirevec_members WHERE wirevec = ? ORDER BY idx", (id,))
         return [w for (w,) in cur]

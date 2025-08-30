@@ -1,3 +1,7 @@
+from .common import (
+    select_aby_cell_by_type
+)
+
 from .basic import (
     ematch_comm, apply_comm,
     ematch_assoc_to_right, apply_assoc_to_right,
@@ -15,9 +19,9 @@ from .retiming import (
 )
 
 from .arith import (
-    select_aby_cell_by_type, 
     ematch_unsigned_add_to_signed, apply_unsigned_add_to_signed,
-    apply_signed_arith_input_trunc
+    apply_signed_arith_input_trunc,
+    apply_unsigned_add_bitblast
 )
 
 from .techmap import (

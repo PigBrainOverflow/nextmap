@@ -2,7 +2,7 @@
 .cache
 __pycache__
 build
-*.json
-*.md
-*.txt
-*.v
+/*.json
+/*.md
+/*.txt
+/*.v
