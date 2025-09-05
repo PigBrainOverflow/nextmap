@@ -7,8 +7,8 @@ module top (
 );
 	reg _sv2v_0;
 	parameter signed [31:0] MATRIX_SIZE = 4;
-	parameter signed [31:0] DIN_WIDTH = 8;
-	parameter signed [31:0] DOUT_WIDTH = DIN_WIDTH;
+	parameter signed [31:0] DIN_WIDTH = 32;
+	parameter signed [31:0] DOUT_WIDTH = DIN_WIDTH * 2;
 	input wire clk;
 	input wire [(MATRIX_SIZE * MATRIX_SIZE) - 1:0] acc_rst;
 	input wire signed [(MATRIX_SIZE * DIN_WIDTH) - 1:0] a;

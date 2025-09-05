@@ -6,3 +6,4 @@ build
 /*.md
 /*.txt
 /*.v
+/eval/out

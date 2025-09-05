@@ -9,7 +9,8 @@ from .basic import (
 )
 
 from .misc import (
-    ematch_word_dff, apply_word_dff_split
+    ematch_word_dff, apply_word_dff_split,
+    ematch_wide_dff, apply_wide_dff_split
 )
 
 from .retiming import (
@@ -21,7 +22,10 @@ from .retiming import (
 from .arith import (
     ematch_unsigned_add_to_signed, apply_unsigned_add_to_signed,
     apply_signed_arith_input_trunc,
-    apply_unsigned_add_bitblast
+    apply_unsigned_add_bitblast,
+    ematch_wide_mulu, apply_wide_mulu_split,
+    ematch_complex_mul, apply_complex_mul,
+    ematch_wide_muls, apply_wide_muls_split
 )
 
 from .techmap import (

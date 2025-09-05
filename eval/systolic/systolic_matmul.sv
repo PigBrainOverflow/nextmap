@@ -1,7 +1,7 @@
 module top #(
-    parameter int MATRIX_SIZE = 4,
-    parameter int DIN_WIDTH   = 8,
-    parameter int DOUT_WIDTH  = DIN_WIDTH
+    parameter int MATRIX_SIZE = 16,
+    parameter int DIN_WIDTH   = 32,
+    parameter int DOUT_WIDTH  = DIN_WIDTH*2
 ) (
     input  logic clk,
 

@@ -13,7 +13,10 @@ def create_tech_tables(db: NetlistDB, rules: dict[str, dict[str, Any]]):
 def rewrite_tech(db: NetlistDB, rules: dict[str, dict[str, Any]]) -> int:
     cnt = 0
     for name, rule in rules.items():
-        cur = db.execute("INSERT OR IGNORE INTO {} {}".format(f"tech_{name}", rule["match_sql"]))
-        db.commit()
-        cnt += cur.rowcount
+        try:
+            cur = db.execute("INSERT OR IGNORE INTO {} {}".format(f"tech_{name}", rule["match_sql"]))
+            db.commit()
+            cnt += cur.rowcount
+        except Exception as e:
+            print(f"Error techmapping {name}: {e}. Skipping.")
     return cnt
