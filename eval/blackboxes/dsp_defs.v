@@ -99,3 +99,14 @@ module signed_muladd_1_stage_27_18_48_bit_with_ab_out (
 );
     // no implementation
 endmodule
+
+module signed_mul_1_stage_27_18_48_bit_with_ab_out (
+    input clk,
+    input signed [26:0] a,
+    input signed [17:0] b,
+    output signed [26:0] a_out,
+    output signed [17:0] b_out,
+    output signed [47:0] p
+);
+    // no implementation
+endmodule
