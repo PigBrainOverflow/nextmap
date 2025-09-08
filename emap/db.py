@@ -180,6 +180,7 @@ class NetlistDB(sqlite3.Connection):
             # TODO: for simplicity, we treat bitwise logic gates as word-level operations
             if type_ in {
                 "$and", "$or", "$xor",
+                "$shl", "$shr", "$sshr",
                 "$add", "$sub", "$mul", "$mod"
             }:
                 type_ += "s" if self.param_to_int(params["A_SIGNED"]) and self.param_to_int(params["B_SIGNED"]) else "u"
@@ -207,12 +208,15 @@ class NetlistDB(sqlite3.Connection):
                 y = [self.bit_to_int(bit) for bit in conns["Y"]]
                 assert len(s) == 1 and len(a) == len(b) == len(y)
                 self._add_absy_cell(type_, a, b, s, y)
-            elif type_ in {"$not", "$logic_not"}:
+            elif type_ in {
+                "$not", "$logic_not",
+                "$reduce_and", "$reduce_or", "$reduce_bool"
+            }:
                 a = [self.bit_to_int(bit) for bit in conns["A"]]
                 y = [self.bit_to_int(bit) for bit in conns["Y"]]
                 self._add_ay_cell(type_, a, y)
             elif type_ in {
-                "$eq", "$ge", "$le", "$gt", "$lt",
+                "$eq", "$ne", "$ge", "$le", "$gt", "$lt",
                 "$logic_and", "$logic_or"
             }:
                 a = [self.bit_to_int(bit) for bit in conns["A"]]

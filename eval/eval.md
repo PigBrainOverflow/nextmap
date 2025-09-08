@@ -18,7 +18,7 @@ Results by plain cost model:
 | wide_multiplier | 16-32-bit multiplier | 2 | 0 | 49 | N.A. | 2 | 4 | 64 | LUT2: 15 |
 
 ### Systolic Array
-DSP:
+#### DSP
 
 | Matrix Size | Weight Bitwidth | Nextmap |        |    |                 | Yosys |        |    |                 |
 |-------------|-----------------|---------|--------|----|-----------------|-------|--------|----|-----------------|
@@ -36,7 +36,47 @@ DSP:
 | 16x16 | 32 | 768 | 10933 | 36351 | LUTx: 46096 | 1024 | 11520 | 31744 | LUTx: 60928 |
 | | | 770 | 10038 | 17296 | LUTx: 43232 | | | | | |
 
-MLP:
+#### MLP
+We are assuming a simple PE structure as follows.
+
+```
+                rst               
+                 │                
+            ┌────│────────────┐   
+            │    ▼            │   
+            │  ┌─┴─┐   ┌───┐  │  c
+            └─►┤dff├──►┤ + ├──┴─►─
+               │rst│ ┌►┤   │      
+               └───┘ │ └───┘      
+a    ┌───┐     ┌───┐ │            
+────►┤dff├─┬──►┤ * ├─┘            
+     │   │ │ ┌►┤   │              
+     └───┘ │ │ └───┘             a
+b    ┌───┐ └────────────────────►─
+────►┤dff├───┴──────────────────►─
+     │   │                       b
+     └───┘                        
+```
+
+And a 2x2 mesh of such PEs is connected as follows (reset ignored for simplicity).
+
+```
+        │bi0     │bi1     
+    ┌───│────────│────┐   
+    │   ▼        ▼    │   
+ ai0│ ┌─┴──┐a00┌─┴──┐ │ao0
+─────►┤PE00├──►┤PE01├►────
+    │ └─┬──┘   └─┬──┘ │   
+    │   │b00     │b01 │   
+    │   ▼        ▼    │   
+ ai1│ ┌─┴──┐a10┌─┴──┐ │ao1
+─────►┤PE10├──►┤PE11├►────
+    │ └─┬──┘   └─┬──┘ │   
+    │   ▼        ▼    │   
+    └───│────────│────┘   
+        │bo0     │bo1     
+```
+
 | Matrix Size | Weight Bitwidth | Target Architecture | Time | Result |
 |-------------|-----------------|---------------------|----------|--------|
 | 4x4 | 8 | Single MAC PE | 392 ms | Successfully mapped on 16 PEs |
@@ -45,9 +85,9 @@ MLP:
 | 4x4 | 16 | Single MAC PE | 314 ms | Successfully mapped on 16 PEs |
 | 4x4 | 16 | 2x2 MAC Mesh | 281 ms | Successfully mapped on 4 Meshes |
 | 4x4 | 16 | 4x4 MAC Mesh | 314 ms | Successfully mapped on 1 Mesh |
-| Any | 32 | Any | 560 ms | Failed to map |
 | 8x8 | 16 | 4x4 MAC Mesh | 2.5 s | Successfully mapped on 4 Meshes |
 | 16x16 | 16 | 4x4 MAC Mesh | 42.9 s | Successfully mapped on 16 Meshes |
+<!-- | Any | 32 | Any | 560 ms | Failed to map | -->
 
 ### FIR Filter
 | Taps | Coeff Bitwidth | Nextmap |        |    |                 | Yosys |        |    |                 |

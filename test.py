@@ -14,34 +14,10 @@ def simple_cost_model(type_: str, *ports) -> float:
         return len(ports[0]) * 1.0
     return 0.0  # blackboxes or tech cells
 
-TEST_NAME = "redundant_adders"
 SCHEMA_PATH = "emap/schema.sql"
+TEST_NAME = "nerv"
 netlist = emap.NetlistDB(SCHEMA_PATH)
-with open(f"{TEST_NAME}.json", "r") as f:
-    netlist.build_from_json(json.load(f)["modules"]["top"])
+with open(f"eval/out/{TEST_NAME}.json", "r") as f:
+    netlist.build_from_json(json.load(f)["modules"]["nerv"], clk="clock")
 
 netlist.rebuild()
-with open(f"{TEST_NAME}_initial.json", "w") as f:
-    json.dump(netlist.dump_tables(), f, indent=2)
-
-# cnt = 1
-# while cnt > 0:
-#     unsigned_add_matches = emap.rewrites.select_aby_cell_by_type(netlist, ["$addu"])
-#     cnt = emap.rewrites.apply_unsigned_add_bitblast(netlist, ((a, b, y) for _, a, b, y in unsigned_add_matches))
-#     if cnt > 0:
-#         print(f"Applied {cnt} rewrites")
-#     else:
-#         print("No rewrites 
-unsigned_add_matches = emap.rewrites.select_aby_cell_by_type(netlist, ["$addu"])
-cnt = emap.rewrites.apply_unsigned_add_bitblast(netlist, ((a, b, y) for _, a, b, y in unsigned_add_matches))
-netlist.rebuild()
-unsigned_add_matches = emap.rewrites.select_aby_cell_by_type(netlist, ["$addu"])
-cnt = emap.rewrites.apply_unsigned_add_bitblast(netlist, ((a, b, y) for _, a, b, y in unsigned_add_matches))
-netlist.rebuild()
-with open(f"{TEST_NAME}_after_bitblast.json", "w") as f:
-    json.dump([netlist.dump_wirevecs(), netlist.dump_tables()], f, indent=2)
-
-
-mod = emap.extracts.ilp.extract_no_techmap(netlist, simple_cost_model, OutputFlag=False)
-with open(f"{TEST_NAME}_extracted.json", "w") as f:
-    json.dump({"creator": "nextmap", "modules": {"top": mod}}, f, indent=2)
