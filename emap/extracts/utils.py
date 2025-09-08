@@ -127,6 +127,14 @@ def db_to_normalized_tech(db: NetlistDB, cost_model: Callable, tech_rules: dict[
 
 def cell_to_json(clk: int, tech_rules: dict[str, dict[str, Any]], cell: dict[str, Any]) -> dict[str, Any]:
     type_, inputs, outputs = cell["type"], cell["inputs"], cell["outputs"]
+    for input_wires in inputs.values():
+        for i, w in enumerate(input_wires):
+            if w == -1:
+                input_wires[i] = "x"
+            elif w == 0:
+                input_wires[i] = "0"
+            elif w == 1:
+                input_wires[i] = "1"
     if not type_.startswith("$"):   # tech cell
         tech_rule = tech_rules.get(type_)
         res = {
@@ -213,6 +221,14 @@ def cell_to_json(clk: int, tech_rules: dict[str, dict[str, Any]], cell: dict[str
 
 def dff_to_json(clk: int, dff: dict[str, Any]) -> dict[str, Any]:
     inputs, outputs = dff["inputs"], dff["outputs"]
+    for input_wires in inputs.values():
+        for i, w in enumerate(input_wires):
+            if w == -1:
+                input_wires[i] = "x"
+            elif w == 0:
+                input_wires[i] = "0"
+            elif w == 1:
+                input_wires[i] = "1"
     return {
         "hide_name": 1,
         "type": "$dff",

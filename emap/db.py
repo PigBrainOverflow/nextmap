@@ -252,11 +252,16 @@ class NetlistDB(sqlite3.Connection):
         for (type_, a, b), ys in wires.items():
             if len(ys) > 1:
                 # remove duplicates
-                cur.execute("DELETE FROM aby_cells WHERE type = ? AND a = ? AND b = ? AND y != ?", (type_, a, b, ys[0]))
-                wv0 = self._get_wirevec(ys[0])
-                for y in ys[1:]:
+                # NOTE: when they have different widths, we keep the widest one
+                wvs = [self._get_wirevec(y) for y in ys]
+                wv0 = max(wvs, key=len)
+                y0 = ys[wvs.index(wv0)]
+                cur.execute("DELETE FROM aby_cells WHERE type = ? AND a = ? AND b = ? AND y != ?", (type_, a, b, y0))
+                for y in ys:
+                    if y == y0:
+                        continue
                     wv = self._get_wirevec(y)
-                    assert len(wv0) == len(wv)
+                    # assert len(wv0) == len(wv)
                     for w0, w in zip(wv0, wv):
                         dsu.union(w0, w)
 
@@ -361,6 +366,52 @@ class NetlistDB(sqlite3.Connection):
                 cur.executemany(
                     "INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)",
                     ((d, leader) for d, _ in rows)
+                )
+
+                # update ay_cells
+                cur = self.execute("SELECT type, y FROM ay_cells WHERE a = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM ay_cells WHERE a = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)",
+                    ((type_, leader, y) for type_, y in rows)
+                )
+                cur = self.execute("SELECT type, a FROM ay_cells WHERE y = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM ay_cells WHERE y = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)",
+                    ((type_, a, leader) for type_, a in rows)
+                )
+
+                # update absy_cells
+                cur = self.execute("SELECT type, b, s, y FROM absy_cells WHERE a = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM absy_cells WHERE a = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, leader, b, s, y) for type_, b, s, y in rows)
+                )
+                cur = self.execute("SELECT type, a, s, y FROM absy_cells WHERE b = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM absy_cells WHERE b = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, a, leader, s, y) for type_, a, s, y in rows)
+                )
+                cur = self.execute("SELECT type, a, b, y FROM absy_cells WHERE s = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM absy_cells WHERE s = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, a, b, leader, y) for type_, a, b, y in rows)
+                )
+                cur = self.execute("SELECT type, a, b, s FROM absy_cells WHERE y = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM absy_cells WHERE y = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, a, b, s, leader) for type_, a, b, s in rows)
                 )
 
                 # update from_inputs
