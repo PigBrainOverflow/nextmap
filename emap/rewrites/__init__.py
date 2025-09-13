@@ -32,3 +32,7 @@ from .techmap import (
     create_tech_tables,
     rewrite_tech
 )
+
+from .dsp import (
+    techmap_dsp
+)

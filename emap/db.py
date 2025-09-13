@@ -209,7 +209,7 @@ class NetlistDB(sqlite3.Connection):
                 assert len(s) == 1 and len(a) == len(b) == len(y)
                 self._add_absy_cell(type_, a, b, s, y)
             elif type_ in {
-                "$not", "$logic_not",
+                "$not", "$logic_not", "$neg",
                 "$reduce_and", "$reduce_or", "$reduce_bool"
             }:
                 a = [self.bit_to_int(bit) for bit in conns["A"]]
@@ -228,7 +228,7 @@ class NetlistDB(sqlite3.Connection):
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]): # blackbox cell
                     self._add_blackbox_cell(name, type_, params, [(port, [self.bit_to_int(bit) for bit in signal]) for port, signal in conns.items()])
-                else:
+                elif type_ not in {"$scopeinfo"}:
                     raise ValueError(f"Unsupported cell type: {type_}")
 
         self.commit()

@@ -110,3 +110,14 @@ module signed_mul_1_stage_27_18_48_bit_with_ab_out (
 );
     // no implementation
 endmodule
+
+module dsp_generic #(
+    parameter IN_WIDTH = 128,   // wide enough
+    parameter OUT_WIDTH = 128
+) (
+    input clk,
+    input signed [IN_WIDTH-1:0] inputs,
+    output signed [OUT_WIDTH-1:0] outputs
+);
+    // no implementation
+endmodule
