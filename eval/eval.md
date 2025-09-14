@@ -118,3 +118,5 @@ In the NERV CPU, all multipliers are constant multipliers. Nextmap leaves them u
 |--------|----------|---------|--------|----|-----------------|-------|--------|----|-----------------|
 |        |          | DSP     | CARRY4 | FF | Other Resources | DSP   | CARRY4 | FF | Other Resources |
 | 64 | 16 | 6 | 153 | 425 | LUTx: 958 | 8 | 185 | 478 | LUTx: 1084 |
+| 128 | 16 | 9 | 174 | 503 | LUTx: 1204, MUXFx: 35 | 12 | 222 | 571 | LUTx: 1395, MUXFx: 37 |
+| 1024 | 32 |
