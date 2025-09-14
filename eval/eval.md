@@ -114,9 +114,9 @@ In the NERV CPU, all multipliers are constant multipliers. Nextmap leaves them u
 | 0 | 895 | 4183 | LUTx: 15132, MUXFx: 6919 | 0 | 904 | 4163 | LUTx: 14028, MUXFx: 7229 |
 
 ### FFT
-| Points | Bitwidth | Nextmap |        |    |                 | Yosys |        |    |                 |
-|--------|----------|---------|--------|----|-----------------|-------|--------|----|-----------------|
-|        |          | DSP     | CARRY4 | FF | Other Resources | DSP   | CARRY4 | FF | Other Resources |
-| 64 | 16 | 6 | 153 | 425 | LUTx: 958 | 8 | 185 | 478 | LUTx: 1084 |
-| 128 | 16 | 9 | 174 | 503 | LUTx: 1204, MUXFx: 35 | 12 | 222 | 571 | LUTx: 1395, MUXFx: 37 |
-| 1024 | 32 |
+| Points | Bitwidth | Nextmap |        |    |                 | Yosys |        |    |                 | Vivado |        |    |                 |
+|--------|----------|---------|--------|----|-----------------|-------|--------|----|-----------------|-------|--------|----|-----------------|
+|        |          | DSP     | CARRY4 | FF | Other Resources | DSP   | CARRY4 | FF | Other Resources | DSP   | CARRY4 | FF | Other Resources |
+| 64 | 16 | 6 | 153 | 425 | LUTx: 958 | 8 | 185 | 478 | LUTx: 1084 | 8 | 180 | 553 | LUTx: 1165 |
+| 128 | 16 | 9 | 174 | 503 | LUTx: 1204, MUXFx: 35 | 12 | 222 | 571 | LUTx: 1395, MUXFx: 37 | 12 | 200 | 663 | LUTx: 1467, MUXFx: 29 |
+| 1024 | 32 | 37 | 982 | 1482 | LUTx: 10410, MUXFx: 1227 | 65 | 1042 | 1482 | LUTx: 10343, MUXFx: 2838 | 64 | 728 | 1921 | LUTx: 8765, MUXFx: 806 |
