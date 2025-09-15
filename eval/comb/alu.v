@@ -16,7 +16,7 @@
 // 4'b1111: PASSA (result = a)
 // others : result = 0
 
-module comb_alu #(
+module alu #(
     parameter WIDTH = 32
 ) (
     input  wire [WIDTH-1:0] a,
