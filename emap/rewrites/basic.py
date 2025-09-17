@@ -4,7 +4,6 @@ from ..core import *
 class UnionWire(egglog.Expr):   # intermediate relation
     def __init__(self, i: egglog.i64Like, vec0: egglog.Vec[Wire], vec1: egglog.Vec[Wire]): ...
 
-wv0, wv1 = egglog.vars_("wv0 wv1", WireVec)
 vec0, vec1 = egglog.vars_("vec0 vec1", egglog.Vec[Wire])
 i = egglog.var("i", egglog.i64)
 
@@ -39,7 +38,6 @@ wirevec_canonicalize_rules = egglog.ruleset(
         i >= vec1.length()
     ).then(egglog.delete(UnionWire(i, vec0, vec1)))
 )
-
 
 wirevec_concat_rules = egglog.ruleset(
     egglog.rewrite(WireVec(vec0).concat(WireVec(vec1)), subsume=True).to(WireVec(vec0.append(vec1)))
