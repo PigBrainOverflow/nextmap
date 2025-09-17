@@ -1,5 +1,5 @@
 .vscode
 .cache
 __pycache__
-*.md
 /eval/out
+nextmap

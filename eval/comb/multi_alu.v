@@ -1,19 +1,3 @@
-// Parameterizable width (default 32).
-// Opcodes:
-// 4'b0000: ADD
-// 4'b0001: SUB
-// 4'b0010: AND
-// 4'b0011: OR
-// 4'b0100: XOR
-// 4'b0101: SLL (logical left)
-// 4'b0110: SRL (logical right)
-// 4'b0111: SRA (arithmetic right)
-// 4'b1000: SLT (signed less-than -> 1 or 0)
-// 4'b1001: SLTU (unsigned less-than -> 1 or 0)
-// 4'b1010: MUL (lower WIDTH bits of product)
-// 4'b1111: PASSA (result = a)
-// others : result = 0
-
 module alu #(
     parameter WIDTH = 32
 ) (
@@ -86,4 +70,37 @@ module alu #(
     assign carry_out = carry_reg;
     assign overflow  = overflow_reg;
 
+endmodule
+
+module multi_alu #(
+    parameter WIDTH = 32,
+    parameter NUM_ALUS = 16
+) (
+    input  wire [NUM_ALUS*WIDTH-1:0] a_vec,
+    input  wire [NUM_ALUS*WIDTH-1:0] b_vec,
+    input  wire [NUM_ALUS*4-1:0]     opcode_vec,
+    output wire [NUM_ALUS*WIDTH-1:0] result_vec,
+    output wire [NUM_ALUS-1:0]       zero_vec,
+    output wire [NUM_ALUS-1:0]       negative_vec,
+    output wire [NUM_ALUS-1:0]       carry_out_vec,
+    output wire [NUM_ALUS-1:0]       overflow_vec
+);
+
+    genvar i;
+    generate
+        for (i = 0; i < NUM_ALUS; i = i + 1) begin : gen_alu
+            alu #(
+                .WIDTH(WIDTH)
+            ) alu_inst (
+                .a          (a_vec[ (i+1)*WIDTH-1 : i*WIDTH ]),
+                .b          (b_vec[ (i+1)*WIDTH-1 : i*WIDTH ]),
+                .opcode     (opcode_vec[ (i+1)*4-1 : i*4 ]),
+                .result     (result_vec[ (i+1)*WIDTH-1 : i*WIDTH ]),
+                .zero       (zero_vec[i]),
+                .negative   (negative_vec[i]),
+                .carry_out  (carry_out_vec[i]),
+                .overflow   (overflow_vec[i])
+            );
+        end
+    endgenerate
 endmodule

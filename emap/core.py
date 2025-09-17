@@ -208,6 +208,9 @@ class Netlist(egglog.EGraph):
                 awv = self.let(str(self.auto_id), WireSet(egglog.Set[Wire](*(self.bit_to_wire(bit) for bit in abits))))
                 ywv = self.let(str(self.auto_id), WireVec(egglog.Vec[Wire](*(self.bit_to_wire(bit) for bit in ybits))))
                 self.build_cell(type_, awv, ywv)
+            elif type_ == "$scopeinfo":
+                # ignore scope info
+                continue
             else:
                 raise ValueError(f"Unknown cell type: {type_}")
 
