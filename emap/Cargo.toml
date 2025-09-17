@@ -1,0 +1,12 @@
+[package]
+name = "emap"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+core-relations = {git = "https://github.com/egraphs-good/egglog-backend.git"}
+numeric-id = {git = "https://github.com/egraphs-good/egglog-backend.git"}
+
+serde = {version = "*", features = ["derive"]}
+serde_json = "*"
+bimap = "*"
