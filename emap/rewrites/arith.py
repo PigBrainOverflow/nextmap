@@ -157,8 +157,8 @@ def apply_wide_mulu_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
 def ematch_complex_mul(db: NetlistDB) -> Iterable[tuple[int, int, int, int, int, int]]:
     """
     Return a list of tuples (a, b, c, d, y1, y2) that matches the pattern:
-        y1 = (a - b) * (c - d) + (a + b) * (c + d)
-        y2 = (a - b) * (c + d) + (a + b) * (c - d)
+        y1 = a*c - b*d
+        y2 = a*d + b*c
     """
     cur = db.execute("""
         SELECT mul1.a, mul2.a, mul2.b, mul1.b, add1.y, sub1.y
