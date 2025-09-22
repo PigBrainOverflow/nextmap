@@ -14,7 +14,7 @@ import json
 import time
 
 SCHEMA_PATH = "emap/schema.sql"
-TEST_NAME = "systolic_matmul_8x8_w32"
+TEST_NAME = "systolic_matmul_16x16_w32"
 
 def simple_cost_model(type_: str, *ports) -> float:
     if type_ == "$dff":
@@ -33,6 +33,8 @@ netlist.rebuild()
 
 matches = emap.rewrites.ematch_wide_muls(netlist)
 cnt = emap.rewrites.apply_wide_muls_split(netlist, matches)
+print(f"Applied {cnt} rewrites")
+cnt = emap.rewrites.apply_wide_muls_split_v2(netlist, matches)
 print(f"Applied {cnt} rewrites")
 netlist.rebuild()
 matches = emap.rewrites.ematch_wide_dff(netlist)
@@ -67,7 +69,7 @@ print(f"Techmapping time: {time.time() - start:.2f} seconds")
 
 start = time.time()
 print("Starting ILP extraction")
-mod = emap.extracts.ilp.extract_techmap_with_limit(netlist, simple_cost_model, dsp_rules, {"dsp48e2": 768})
+mod = emap.extracts.ilp.extract_techmap_with_limit(netlist, simple_cost_model, dsp_rules, {"dsp48e2": 704})
 print(f"ILP extraction time: {time.time() - start:.2f} seconds")
 with open(f"eval/out/{TEST_NAME}_extracted.json", "w") as f:
     json.dump({"creator": "nextmap", "modules": {"top": mod}}, f, indent=2)

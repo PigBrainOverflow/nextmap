@@ -25,7 +25,7 @@ from .arith import (
     apply_unsigned_add_bitblast,
     ematch_wide_mulu, apply_wide_mulu_split,
     ematch_complex_mul, apply_complex_mul,
-    ematch_wide_muls, apply_wide_muls_split
+    ematch_wide_muls, apply_wide_muls_split, apply_wide_muls_split_v2
 )
 
 from .techmap import (

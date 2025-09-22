@@ -81,7 +81,7 @@ And a 2x2 mesh of such PEs is connected as follows (reset ignored for simplicity
 ```
 
 | Matrix Size | Weight Bitwidth | Target Architecture | Time | Result |
-|-------------|-----------------|---------------------|----------|--------|
+|-------------|-----------------|---------------------|------|--------|
 | 4x4 | 8 | Single MAC PE | 392 ms | Successfully mapped on 16 PEs |
 | 4x4 | 8 | 2x2 MAC Mesh | 234 ms | Successfully mapped on 4 Meshes |
 | 4x4 | 8 | 4x4 MAC Mesh | 306 ms | Successfully mapped on 1 Mesh |
@@ -90,7 +90,18 @@ And a 2x2 mesh of such PEs is connected as follows (reset ignored for simplicity
 | 4x4 | 16 | 4x4 MAC Mesh | 314 ms | Successfully mapped on 1 Mesh |
 | 8x8 | 16 | 4x4 MAC Mesh | 2.5 s | Successfully mapped on 4 Meshes |
 | 16x16 | 16 | 4x4 MAC Mesh | 42.9 s | Successfully mapped on 16 Meshes |
-<!-- | Any | 32 | Any | 560 ms | Failed to map | -->
+| Any | 32 | Any | 560 ms | Failed to map |
+
+| Name | Target Architecture | Time | Result |
+|------|---------------------|------|--------|
+| systolic_4x4_w8 | Single MAC PE | 392 ms | Successfully mapped on 16 PEs |
+| systolic_4x4_w8 | 2x2 MAC Mesh | 234 ms | Successfully mapped on 4 Meshes |
+| systolic_4x4_w8 | 4x4 MAC Mesh | 306 ms | Successfully mapped on 1 Mesh |
+| systolic_4x4_w16 | Single MAC PE | 314 ms | Successfully mapped on 16 PEs |
+| systolic_4x4_w16 | 2x2 MAC Mesh | 281 ms | Successfully mapped on 4 Meshes |
+| systolic_4x4_w16 | 4x4 MAC Mesh | 314 ms | Successfully mapped on 1 Mesh |
+| systolic_8x8_w16 | 4x4 MAC Mesh | 2.5 s | Successfully mapped on 4 Meshes |
+| systolic_16x16_w16 | 4x4 MAC Mesh | 42.9 s | Successfully mapped on 16 Meshes |
 
 ### FIR Filter
 | Taps | Coeff Bitwidth | Nextmap |        |    |                 | Yosys |        |    |                 |

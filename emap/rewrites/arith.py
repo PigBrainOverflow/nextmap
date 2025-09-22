@@ -348,3 +348,84 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         cnt += cur.rowcount > 0
     db.commit()
     return cnt
+
+
+def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, int]], a_width: int = 32, b_width: int = 32, y_width: int = 64) -> int:
+    """
+    p0 = a_lo * b_lo
+    p1 = a_lo * b_hi
+    p2 = a_hi * b_lo
+    p3 = a_hi * b_hi
+    y = p0 + (p1 << 16) + (p2 << 16) + (p3 << 32)
+    """
+    assert a_width == 32 and b_width == 32 and y_width == 64, "Currently only support 32-bit wide muls"
+    cnt = 0
+    for a, b, y in matches:
+        awv, bwv, ywv = db._get_wirevec(a), db._get_wirevec(b), db._get_wirevec(y)
+        alo, ahi = awv[:16], awv[16:]
+        blo, bhi = bwv[:16], bwv[16:]
+        # p0 = a_lo * b_lo
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = ? AND b = ?", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(blo)))
+        row = cur.fetchone()
+        if row is None:
+            p0 = [db.auto_id for _ in range(32)]
+            p0 = db._create_or_lookup_wirevec(p0)
+            db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$muls', ?, ?, ?)", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(blo), p0))
+        else:
+            p0 = row[0]
+        # p1 = a_lo * b_hi
+        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = ? AND b = ?", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(bhi)))
+        row = cur.fetchone()
+        if row is None:
+            p1 = [db.auto_id for _ in range(32)]
+            p1 = db._create_or_lookup_wirevec(p1)
+            db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$muls', ?, ?, ?)", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(bhi), p1))
+        else:
+            p1 = row[0]
+        # p2 = a_hi * b_lo
+        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = ? AND b = ?", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(blo)))
+        row = cur.fetchone()
+        if row is None:
+            p2 = [db.auto_id for _ in range(32)]
+            p2 = db._create_or_lookup_wirevec(p2)
+            db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$muls', ?, ?, ?)", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(blo), p2))
+        else:
+            p2 = row[0]
+        # p3 = a_hi * b_hi
+        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = ? AND b = ?", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(bhi)))
+        row = cur.fetchone()
+        if row is None:
+            p3 = [db.auto_id for _ in range(32)]
+            p3 = db._create_or_lookup_wirevec(p3)
+            db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$muls', ?, ?, ?)", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(bhi), p3))
+        else:
+            p3 = row[0]
+        # p1 << 16
+        p1_shift = db._create_or_lookup_wirevec([0 for _ in range(16)] + db._get_wirevec(p1))
+        # p2 << 16
+        p2_shift = db._create_or_lookup_wirevec([0 for _ in range(16)] + db._get_wirevec(p2))
+        # p3 << 32
+        p3_shift = db._create_or_lookup_wirevec([0 for _ in range(32)] + db._get_wirevec(p3))
+        # p0 + (p1 << 16)
+        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = ? AND b = ?", (p0, p1_shift))
+        row = cur.fetchone()
+        if row is None:
+            part1 = [db.auto_id for _ in range(64)]
+            part1 = db._create_or_lookup_wirevec(part1)
+            db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', ?, ?, ?)", (p0, p1_shift, part1))
+        else:
+            part1 = row[0]
+        # p0 + (p1 << 16) + (p2 << 16)
+        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = ? AND b = ?", (part1, p2_shift))
+        row = cur.fetchone()
+        if row is None:
+            part2 = [db.auto_id for _ in range(64)]
+            part2 = db._create_or_lookup_wirevec(part2)
+            db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', ?, ?, ?)", (part1, p2_shift, part2))
+        else:
+            part2 = row[0]
+        # y = p0 + (p1 << 16) + (p2 << 16) + (p3 << 32)
+        cur.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES ('$adds', ?, ?, ?)", (part2, p3_shift, y))
+        cnt += cur.rowcount > 0
+    db.commit()
+    return cnt
