@@ -154,6 +154,7 @@ class NetlistDB(sqlite3.Connection):
         # NOTE: only support single global clock
         ports: dict[str, Any] = mod["ports"]
         cells: dict[str, Any] = mod["cells"]
+        memories: dict[str, Any] = mod.get("memories", {})
 
         # build inputs & outputs
         for name, port in ports.items():
@@ -168,6 +169,10 @@ class NetlistDB(sqlite3.Connection):
                 self._add_output(name, bits)
             else:
                 raise ValueError(f"Unsupported port direction: {direction}")
+
+        # build memories
+        for name, mem in memories.items():
+            self.execute("INSERT INTO memories (name, width, size)", (name, mem["width"], mem["size"]))
 
         # build cells
         print(f"Found {len(cells)} cells")
@@ -224,6 +229,22 @@ class NetlistDB(sqlite3.Connection):
                 y = [self.bit_to_int(bit) for bit in conns["Y"]]
                 # assert len(a) == len(b)
                 self._add_aby_cell(type_, a, b, y)
+            elif type_ == "$memrd":
+                raddr = [self.bit_to_int(bit) for bit in conns["ADDR"]]
+                rclk = [self.bit_to_int(bit) for bit in conns["CLK"]]
+                rdata = [self.bit_to_int(bit) for bit in conns["DATA"]]
+                re = [self.bit_to_int(bit) for bit in conns["EN"]]
+                assert len(rclk) == 1 and rclk[0] == -1 # no clk
+                assert len(re) == 1 and re[0] == 1 # no re
+                self.execute("INSERT INTO memrds (memory, raddr, rdata) VALUES (?, ?, ?)", (params["MEMID"], self._create_or_lookup_wirevec(raddr), self._create_or_lookup_wirevec(rdata)))
+            elif type_ == "$memwr_v2":
+                waddr = [self.bit_to_int(bit) for bit in conns["ADDR"]]
+                wclk = [self.bit_to_int(bit) for bit in conns["CLK"]]
+                wdata = [self.bit_to_int(bit) for bit in conns["DATA"]]
+                we = [self.bit_to_int(bit) for bit in conns["EN"]]
+                assert len(wclk) == 1 and wclk[0] == self._clk
+                assert len(we) == 1 and we[0] == 1 # no we
+                self.execute("INSERT INTO memwrs (memory, waddr, wdata) VALUES (?, ?, ?)", (params["MEMID"], self._create_or_lookup_wirevec(waddr), self._create_or_lookup_wirevec(wdata)))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]): # blackbox cell

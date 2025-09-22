@@ -86,3 +86,27 @@ CREATE TABLE IF NOT EXISTS instance_ports (
     FOREIGN KEY (instance) REFERENCES instances(name),
     FOREIGN KEY (signal) REFERENCES wirevecs(id)
 );
+
+-- memory support
+CREATE TABLE IF NOT EXISTS memories (
+    name VARCHAR(16) PRIMARY KEY,
+    width INTEGER NOT NULL, -- number of bits per word
+    size INTEGER NOT NULL   -- number of words
+);
+
+CREATE TABLE IF NOT EXISTS memrds (
+    memory VARCHAR(16),
+    raddr INTEGER,
+    rdata INTEGER NOT NULL,
+    PRIMARY KEY (memory, raddr),
+    FOREIGN KEY (memory) REFERENCES memories(name),
+);
+
+CREATE TABLE IF NOT EXISTS memwrs (
+    memory VARCHAR(16),
+    waddr INTEGER,
+    wdata INTEGER NOT NULL,
+    we INTEGER NOT NULL, -- write enable
+    PRIMARY KEY (memory, waddr, wdata, we),
+    FOREIGN KEY (memory) REFERENCES memories(name)
+);
