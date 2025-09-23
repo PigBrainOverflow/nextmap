@@ -172,7 +172,7 @@ class NetlistDB(sqlite3.Connection):
 
         # build memories
         for name, mem in memories.items():
-            self.execute("INSERT INTO memories (name, width, size)", (name, mem["width"], mem["size"]))
+            self.execute("INSERT INTO memories (name, width, size) VALUES (?, ?, ?)", (name, mem["width"], mem["size"]))
 
         # build cells
         print(f"Found {len(cells)} cells")
@@ -235,16 +235,15 @@ class NetlistDB(sqlite3.Connection):
                 rdata = [self.bit_to_int(bit) for bit in conns["DATA"]]
                 re = [self.bit_to_int(bit) for bit in conns["EN"]]
                 assert len(rclk) == 1 and rclk[0] == -1 # no clk
-                assert len(re) == 1 and re[0] == 1 # no re
-                self.execute("INSERT INTO memrds (memory, raddr, rdata) VALUES (?, ?, ?)", (params["MEMID"], self._create_or_lookup_wirevec(raddr), self._create_or_lookup_wirevec(rdata)))
+                assert len(re) == 1 and re[0] == -1 # no re
+                self.execute("INSERT INTO memrds (memory, raddr, rdata) VALUES (?, ?, ?)", (params["MEMID"][1:], self._create_or_lookup_wirevec(raddr), self._create_or_lookup_wirevec(rdata)))
             elif type_ == "$memwr_v2":
                 waddr = [self.bit_to_int(bit) for bit in conns["ADDR"]]
                 wclk = [self.bit_to_int(bit) for bit in conns["CLK"]]
                 wdata = [self.bit_to_int(bit) for bit in conns["DATA"]]
                 we = [self.bit_to_int(bit) for bit in conns["EN"]]
                 assert len(wclk) == 1 and wclk[0] == self._clk
-                assert len(we) == 1 and we[0] == 1 # no we
-                self.execute("INSERT INTO memwrs (memory, waddr, wdata) VALUES (?, ?, ?)", (params["MEMID"], self._create_or_lookup_wirevec(waddr), self._create_or_lookup_wirevec(wdata)))
+                self.execute("INSERT INTO memwrs (memory, waddr, wdata, we) VALUES (?, ?, ?, ?)", (params["MEMID"][1:], self._create_or_lookup_wirevec(waddr), self._create_or_lookup_wirevec(wdata), self._create_or_lookup_wirevec(we)))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]): # blackbox cell

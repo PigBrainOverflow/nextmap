@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS memrds (
     raddr INTEGER,
     rdata INTEGER NOT NULL,
     PRIMARY KEY (memory, raddr),
-    FOREIGN KEY (memory) REFERENCES memories(name),
+    FOREIGN KEY (memory) REFERENCES memories(name)
 );
 
 CREATE TABLE IF NOT EXISTS memwrs (
