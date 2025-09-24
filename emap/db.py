@@ -89,6 +89,11 @@ class NetlistDB(sqlite3.Connection):
         ports: dict[str, Any] = mod["ports"]
         cells: dict[str, Any] = mod["cells"]
 
+        # build consts
+        # self._add_input("VCC", [1]) # VCC is always 1
+        # self._add_input("GND", [0]) # GND is always 0
+        # self._add_input("DC", [-1]) # DC is always x
+
         # build inputs & outputs
         for name, port in ports.items():
             direction, bits = port["direction"], [self.bit_to_int(bit) for bit in port["bits"]]
@@ -228,6 +233,7 @@ class NetlistDB(sqlite3.Connection):
         return dsu
 
     def _merge_wires(self, wires_to_merge: utils.DisjointSetUnion):
+        # propagate wire updates to wirevecs
         for w in wires_to_merge.parents:
             cur = self.execute("SELECT wirevec, idx FROM wirevec_members WHERE wire = ?", (w,))
             for wv, idx in cur.fetchall():
@@ -240,7 +246,8 @@ class NetlistDB(sqlite3.Connection):
                 cur.execute("UPDATE wirevecs SET hash = ? WHERE id = ?", (self._rhash.update(old_h, idx, w, new_w), wv))
         self.commit()
 
-    def _merge_wirevecs(self):
+    def _merge_wirevecs(self) -> utils.DisjointSetUnion:
+        # deduplicate wirevecs
         dsu = utils.DisjointSetUnion()
         cur = self.execute("SELECT id, hash FROM wirevecs")
         wirevecs: dict[int, list[int]] = {}
@@ -267,113 +274,115 @@ class NetlistDB(sqlite3.Connection):
         self.commit()
         return dsu
 
-    def _update_cells(self, dsu: utils.DisjointSetUnion):
-        for wv in dsu.parents:
-            leader = dsu.find(wv)
-            if leader != wv:
-                # update aby_cells
-                cur = self.execute("SELECT type, b, y FROM aby_cells WHERE a = ?", (wv,))
-                rows = cur.fetchall()
-                cur.execute("DELETE FROM aby_cells WHERE a = ?", (wv,))
-                cur.executemany(
-                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
-                    ((type_, leader, b, y) for type_, b, y in rows)
-                )
-                cur = self.execute("SELECT type, a, y FROM aby_cells WHERE b = ?", (wv,))
-                rows = cur.fetchall()
-                cur.execute("DELETE FROM aby_cells WHERE b = ?", (wv,))
-                cur.executemany(
-                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
-                    ((type_, a, leader, y) for type_, a, y in rows)
-                )
-                cur = self.execute("SELECT type, a, b FROM aby_cells WHERE y = ?", (wv,))
-                rows = cur.fetchall()
-                cur.execute("DELETE FROM aby_cells WHERE y = ?", (wv,))
-                cur.executemany(
-                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
-                    ((type_, a, b, leader) for type_, a, b in rows)
-                )
-
-                # update dffs
-                cur = self.execute("SELECT d, q FROM dffs WHERE d = ?", (wv,))
-                rows = cur.fetchall()
-                cur.execute("DELETE FROM dffs WHERE d = ?", (wv,))
-                cur.executemany(
-                    "INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)",
-                    ((leader, q) for _, q in rows)
-                )
-                cur = self.execute("SELECT d, q FROM dffs WHERE q = ?", (wv,))
-                rows = cur.fetchall()
-                cur.execute("DELETE FROM dffs WHERE q = ?", (wv,))
-                cur.executemany(
-                    "INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)",
-                    ((d, leader) for d, _ in rows)
-                )
-
+    def _update_cells(self, wdsu: utils.DisjointSetUnion, wvdsu: utils.DisjointSetUnion):
+        # propagate wire updates to cells
+        for w in wdsu.parents:
+            leader = wdsu.find(w)
+            if leader != w:
                 # update ay_cells
-                cur = self.execute("SELECT type, y FROM ay_cells WHERE a = ?", (wv,))
+                cur = self.execute("SELECT type, y FROM ay_cells WHERE a = ?", (w,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM ay_cells WHERE a = ?", (wv,))
+                cur.execute("DELETE FROM ay_cells WHERE a = ?", (w,))
                 cur.executemany(
                     "INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)",
                     ((type_, leader, y) for type_, y in rows)
                 )
-                cur = self.execute("SELECT type, a FROM ay_cells WHERE y = ?", (wv,))
+                cur = self.execute("SELECT type, a FROM ay_cells WHERE y = ?", (w,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM ay_cells WHERE y = ?", (wv,))
+                cur.execute("DELETE FROM ay_cells WHERE y = ?", (w,))
                 cur.executemany(
                     "INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)",
                     ((type_, a, leader) for type_, a in rows)
                 )
 
-                # update absy_cells
-                cur = self.execute("SELECT type, b, s, y FROM absy_cells WHERE a = ?", (wv,))
+                # update aby_cells
+                cur = self.execute("SELECT type, b, y FROM aby_cells WHERE a = ?", (w,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM absy_cells WHERE a = ?", (wv,))
+                cur.execute("DELETE FROM aby_cells WHERE a = ?", (w,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
-                    ((type_, leader, b, s, y) for type_, b, s, y in rows)
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
+                    ((type_, leader, b, y) for type_, b, y in rows)
                 )
-                cur = self.execute("SELECT type, a, s, y FROM absy_cells WHERE b = ?", (wv,))
+                cur = self.execute("SELECT type, a, y FROM aby_cells WHERE b = ?", (w,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM absy_cells WHERE b = ?", (wv,))
+                cur.execute("DELETE FROM aby_cells WHERE b = ?", (w,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
-                    ((type_, a, leader, s, y) for type_, a, s, y in rows)
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
+                    ((type_, a, leader, y) for type_, a, y in rows)
                 )
-                cur = self.execute("SELECT type, a, b, y FROM absy_cells WHERE s = ?", (wv,))
+                cur = self.execute("SELECT type, a, b FROM aby_cells WHERE y = ?", (w,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM absy_cells WHERE s = ?", (wv,))
+                cur.execute("DELETE FROM aby_cells WHERE y = ?", (w,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
-                    ((type_, a, b, leader, y) for type_, a, b, y in rows)
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
+                    ((type_, a, b, leader) for type_, a, b in rows)
                 )
-                cur = self.execute("SELECT type, a, b, s FROM absy_cells WHERE y = ?", (wv,))
+
+                # update muxes
+                cur = self.execute("SELECT b, s, y FROM muxes WHERE a = ?", (w,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM absy_cells WHERE y = ?", (wv,))
+                cur.execute("DELETE FROM muxes WHERE a = ?", (w,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
-                    ((type_, a, b, s, leader) for type_, a, b, s in rows)
+                    "INSERT OR IGNORE INTO muxes (a, b, s, y) VALUES (?, ?, ?, ?)",
+                    ((leader, b, s, y) for b, s, y in rows)
+                )
+                cur = self.execute("SELECT a, s, y FROM muxes WHERE b = ?", (w,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM muxes WHERE b = ?", (w,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO muxes (a, b, s, y) VALUES (?, ?, ?, ?)",
+                    ((a, leader, s, y) for a, s, y in rows)
+                )
+                cur = self.execute("SELECT a, b, s FROM muxes WHERE y = ?", (w,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM muxes WHERE y = ?", (w,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO muxes (a, b, s, y) VALUES (?, ?, ?, ?)",
+                    ((a, b, s, leader) for a, b, s in rows)
+                )
+
+        # propagate wirevec updates to wires
+        for wv in wvdsu.parents:
+            leader = wvdsu.find(wv)
+            if leader != wv:
+                # update arith_aby_cells
+                cur = self.execute("SELECT type, b, y_width, y FROM aby_cells WHERE a = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM aby_cells WHERE a = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, leader, b, y_width, y) for type_, b, y_width, y in rows)
+                )
+                cur = self.execute("SELECT type, a, y_width, y FROM aby_cells WHERE b = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM aby_cells WHERE b = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, a, leader, y_width, y) for type_, a, y_width, y in rows)
+                )
+                cur = self.execute("SELECT type, a, b, y_width FROM aby_cells WHERE y = ?", (wv,))
+                rows = cur.fetchall()
+                cur.execute("DELETE FROM aby_cells WHERE y = ?", (wv,))
+                cur.executemany(
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
+                    ((type_, a, b, y_width, leader) for type_, a, b, y_width in rows)
                 )
 
                 # update from_inputs
                 self.execute("UPDATE from_inputs SET source = ? WHERE source = ?", (leader, wv))
                 # update as_outputs
                 self.execute("UPDATE as_outputs SET sink = ? WHERE sink = ?", (leader, wv))
-                # TODO: update instance_ports
         self.commit()
 
     def rebuild_once(self) -> bool:
-        # union
         # merge_cells -> merge_wires -> merge_wirevecs -> update_cells
         # all phases are batched processing
-        # TODO: Parallelize
         wires_to_merge = self._merge_cells()
         if not wires_to_merge.parents:
             return False
         self._merge_wires(wires_to_merge)
         wirevecs_to_merge = self._merge_wirevecs()
-        self._update_cells(wirevecs_to_merge)
+        self._update_cells(wires_to_merge, wirevecs_to_merge)
         return True
 
     def rebuild(self) -> int:
