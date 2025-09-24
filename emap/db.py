@@ -153,8 +153,6 @@ class NetlistDB(sqlite3.Connection):
                 raise ValueError(f"Unsupported cell type: {type_}")
 
         self.commit()
-        # set cnt
-        self._cnt = self.execute("SELECT MAX(wire) FROM wirevec_members").fetchone()[0] or 1
 
     # Rebuild-related methods
     def _merge_cells(self, dsu: utils.DisjointSetUnion):
@@ -270,7 +268,9 @@ class NetlistDB(sqlite3.Connection):
 
     def _update_cells(self, wdsu: utils.DisjointSetUnion, wvdsu: utils.DisjointSetUnion):
         # propagate wire updates to cells
-        for w in wdsu.parents:
+        for i, w in enumerate(wdsu.parents):
+            if i % 1000 == 0:
+                print(f"Updating cells for wire {i}/{len(wdsu.parents)}")
             leader = wdsu.find(w)
             if leader != w:
                 # update ay_cells
@@ -336,7 +336,9 @@ class NetlistDB(sqlite3.Connection):
                 )
 
         # propagate wirevec updates to wires
-        for wv in wvdsu.parents:
+        for i, wv in enumerate(wvdsu.parents):
+            if i % 1000 == 0:
+                print(f"Updating arith_aby_cells for wirevec {i}/{len(wvdsu.parents)}")
             leader = wvdsu.find(wv)
             if leader != wv:
                 # update arith_aby_cells
@@ -371,12 +373,13 @@ class NetlistDB(sqlite3.Connection):
     def rebuild_once(self, wdsu: utils.DisjointSetUnion) -> bool:
         # merge_cells -> merge_wires -> merge_wirevecs -> update_cells
         # all phases are batched processing
+        print("Rebuilding...")
         self._merge_cells(wdsu)
         if not wdsu.parents:
             return False
         self._merge_wires(wdsu)
-        wirevecs_to_merge = self._merge_wirevecs()
-        self._update_cells(wdsu, wirevecs_to_merge)
+        wvdsu = self._merge_wirevecs()
+        self._update_cells(wdsu, wvdsu)
         return True
 
     def rebuild(self, wdsu: utils.DisjointSetUnion) -> int:
