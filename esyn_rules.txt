@@ -1,0 +1,61 @@
+fn make_rules() -> Vec<Rewrite<Prop, ConstantFold>> {
+    vec![
+        rewrite!("th1"; "(-> ?x ?y)"      =>       "(+ (! ?x) ?y)"          ),
+
+        rewrite!("th2"; "(! (! ?x))"      =>       "?x"                     ),
+
+        rewrite!("th3"; "(+ ?x (+ ?y ?z))"=> "(+ (+ ?x ?y) ?z)"       ),
+
+        rewrite!("th4"; "(* ?x (+ ?y ?z))"=> "(+ (* ?x ?y) (* ?x ?z))"),
+
+        rewrite!("th5"; "(+ ?x (* ?y ?z))"=> "(* (+ ?x ?y) (+ ?x ?z))"),
+
+        rewrite!("th6"; "(+ ?x ?y)"       =>        "(+ ?y ?x)"              ),
+
+        rewrite!("th7"; "(* ?x ?y)"       =>        "(* ?y ?x)"              ),
+
+        rewrite!("th9"; "(-> ?x ?y)"      =>    "(-> (! ?y) (! ?x))"     ),
+
+        rewrite!("th10"; "(+ ?x (* ?x ?y))" => "?x"),
+        // Theorem 11: X + !X · Y = X + Y
+        rewrite!("th11"; "(+ ?x (* (! ?x) ?y))" => "(+ ?x ?y)"),
+        // Theorem 12: X · Y + !X · Z + Y · Z = X · Y + !X · Z
+        rewrite!("th12"; "(+ (* ?x ?y) (+ (* (! ?x) ?z) (* ?y ?z)))" => "(+ (* ?x ?y) (* (! ?x) ?z))"),
+        // Theorem 13: X(X + Y) = X
+        rewrite!("th13"; "(* ?x (+ ?x ?y))" => "?x"),
+        // Theorem 14: X(!X + Y) = X · Y
+        rewrite!("th14"; "(* ?x (+ (! ?x) ?y))" => "(* ?x ?y)"),
+        // Theorem 15: (X + Y)(X + !Y) = X
+        rewrite!("th15"; "(* (+ ?x ?y) (+ ?x (! ?y)))" => "?x"),
+        // Theorem 16: (X + Y)(!X + Z) = X · Z + !X · Y
+        rewrite!("th16"; "(* (+ ?x ?y) (+ (! ?x) ?z))" => "(+ (* ?x ?z) (* (! ?x) ?y))"),
+        // Theorem 17: (X + Y)(!X + Z)(Y + Z) = (X + Y)(!X + Z)
+        rewrite!("th17"; "(* (+ ?x ?y) (* (+ (! ?x) ?z) (+ ?y ?z)))" => "(* (+ ?x ?y) (+ (! ?x) ?z))"),
+
+        //-----------------------------------Not verified-----------------------------------
+        // // Theorem 18: X · X = X
+        // rewrite!("th18"; "(* ?x ?x)" => "?x"),
+        // // Theorem 19: X + X = X
+        // rewrite!("th19"; "(+ ?x ?x)" => "?x"),
+        // // Theorem 20: X · (Y · Z) = (X · Y) · Z
+        // rewrite!("th20"; "(* ?x (* ?y ?z))" => "(* (* ?x ?y) ?z)"),
+        // // Theorem 21: X + (Y + Z) = (X + Y) + Z
+        // rewrite!("th21"; "(+ ?x (+ ?y ?z))" => "(+ (+ ?x ?y) ?z)"),
+        // // Theorem 22: X · (X + Y) = X
+        // rewrite!("th22"; "(* ?x (+ ?x ?y))" => "?x"),
+        // // Theorem 23: X · Y + X · !Y = X
+        // rewrite!("th23"; "(+ (* ?x ?y) (* ?x (! ?y)))" => "?x"),
+        // //Theorem 24: (X + Y) · (X + Z) = X + Y · Z
+        // rewrite!("th24"; "(* (+ ?x ?y) (+ ?x ?z))" => "(+ ?x (* ?y ?z))"),
+        //Theorem 25: X + Y · (!Y + Z) = X + Z
+        //rewrite!("th25"; "(+ ?x (* ?y (+ (! ?y) ?z)))" => "(+ ?x ?z)"),
+        //Theorem 26: X · Y + X · Y · Z = X · Y
+        //rewrite!("th26"; "(+ (* ?x ?y) (* ?x (* ?y ?z)))" => "(* ?x ?y)"),
+
+        //-----------------------------------rewrite to constant-----------------------------------
+        //rewrite!("th"; "(+ ?x (! ?x))"   =>    "true"                   ) ,
+        //rewrite!("th"; "(+ ?x true)"     =>         "true"                ) ,
+        //rewrite!("th"; "(* ?x (! ?x))" => "false"),
+        //rewrite!("th"; "(* ?x true)"     =>         "?x"                  ),
+    ]
+}

@@ -157,12 +157,7 @@ class NetlistDB(sqlite3.Connection):
         self._cnt = self.execute("SELECT MAX(wire) FROM wirevec_members").fetchone()[0] or 1
 
     # Rebuild-related methods
-    def _merge_cells(self) -> utils.DisjointSetUnion:
-        """
-        Return the wires that need to be merged.
-        """
-        dsu = utils.DisjointSetUnion()
-
+    def _merge_cells(self, dsu: utils.DisjointSetUnion):
         # deduplicate ay_cells
         cur = self.execute("SELECT type, a, y FROM ay_cells")
         ay_cells_pk: dict[tuple[str, int], list[int]] = {}
@@ -230,7 +225,6 @@ class NetlistDB(sqlite3.Connection):
                     for (w0, w) in zip(wvs[0], wv):
                         dsu.union(w0, w)
         self.commit()
-        return dsu
 
     def _merge_wires(self, wires_to_merge: utils.DisjointSetUnion):
         # propagate wire updates to wirevecs
@@ -270,7 +264,7 @@ class NetlistDB(sqlite3.Connection):
                             dsu.union(wvids[0], wvids[wvid])
 
         cur.executemany("DELETE FROM wirevecs WHERE id = ?", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))
-        cur.executemany("DELETE FROM wirevec_members WHERE wirevec = ?", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))   # TODO: it seems that SQLite does not support ON DELETE CASCADE, delete manually
+        cur.executemany("DELETE FROM wirevec_members WHERE wirevec = ?", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))   # NOTE: it seems that SQLite does not support ON DELETE CASCADE, delete manually
         self.commit()
         return dsu
 
@@ -346,25 +340,25 @@ class NetlistDB(sqlite3.Connection):
             leader = wvdsu.find(wv)
             if leader != wv:
                 # update arith_aby_cells
-                cur = self.execute("SELECT type, b, y_width, y FROM aby_cells WHERE a = ?", (wv,))
+                cur = self.execute("SELECT type, b, y_width, y FROM arith_aby_cells WHERE a = ?", (wv,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM aby_cells WHERE a = ?", (wv,))
+                cur.execute("DELETE FROM arith_aby_cells WHERE a = ?", (wv,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO arith_aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, leader, b, y_width, y) for type_, b, y_width, y in rows)
                 )
-                cur = self.execute("SELECT type, a, y_width, y FROM aby_cells WHERE b = ?", (wv,))
+                cur = self.execute("SELECT type, a, y_width, y FROM arith_aby_cells WHERE b = ?", (wv,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM aby_cells WHERE b = ?", (wv,))
+                cur.execute("DELETE FROM arith_aby_cells WHERE b = ?", (wv,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO arith_aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, a, leader, y_width, y) for type_, a, y_width, y in rows)
                 )
-                cur = self.execute("SELECT type, a, b, y_width FROM aby_cells WHERE y = ?", (wv,))
+                cur = self.execute("SELECT type, a, b, y_width FROM arith_aby_cells WHERE y = ?", (wv,))
                 rows = cur.fetchall()
-                cur.execute("DELETE FROM aby_cells WHERE y = ?", (wv,))
+                cur.execute("DELETE FROM arith_aby_cells WHERE y = ?", (wv,))
                 cur.executemany(
-                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
+                    "INSERT OR IGNORE INTO arith_aby_cells (type, a, b, y_width, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, a, b, y_width, leader) for type_, a, b, y_width in rows)
                 )
 
@@ -374,19 +368,20 @@ class NetlistDB(sqlite3.Connection):
                 self.execute("UPDATE as_outputs SET sink = ? WHERE sink = ?", (leader, wv))
         self.commit()
 
-    def rebuild_once(self) -> bool:
+    def rebuild_once(self, wdsu: utils.DisjointSetUnion) -> bool:
         # merge_cells -> merge_wires -> merge_wirevecs -> update_cells
         # all phases are batched processing
-        wires_to_merge = self._merge_cells()
-        if not wires_to_merge.parents:
+        self._merge_cells(wdsu)
+        if not wdsu.parents:
             return False
-        self._merge_wires(wires_to_merge)
+        self._merge_wires(wdsu)
         wirevecs_to_merge = self._merge_wirevecs()
-        self._update_cells(wires_to_merge, wirevecs_to_merge)
+        self._update_cells(wdsu, wirevecs_to_merge)
         return True
 
-    def rebuild(self) -> int:
+    def rebuild(self, wdsu: utils.DisjointSetUnion) -> int:
         cnt = 0
-        while self.rebuild_once():
+        while self.rebuild_once(wdsu):
             cnt += 1
+            wdsu.parents.clear()    # clear the worklist
         return cnt
