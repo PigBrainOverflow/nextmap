@@ -3,7 +3,7 @@ import json
 
 TEST_NAME = "adder_simplified"
 TOP_MODULE = "test_data_beta_runner/original_circuit"
-MAX_ITER = 10
+MAX_ITER = 3
 
 netlist = emap.NetlistDB(schema_file="emap/schema.sql", cnt=100000)
 with open(f"eval/{TEST_NAME}.json") as f:
@@ -11,9 +11,11 @@ with open(f"eval/{TEST_NAME}.json") as f:
 
 wdsu = emap.DisjointSetUnion()
 netlist.rebuild(wdsu)
+print(f"Current ay_cell count: {netlist.ay_cell_cnt}")
+print(f"Current aby_cell count: {netlist.aby_cell_cnt}")
 
-with open(f"netlist_before.json", "w") as f:
-    json.dump(netlist.dump_tables(), f, indent=2)
+# with open(f"netlist_before.json", "w") as f:
+#     json.dump(netlist.dump_tables(), f, indent=2)
 
 for i in range(MAX_ITER):
     matches0 = emap.rewrites.ematch_not_idemp(netlist)
@@ -22,7 +24,7 @@ for i in range(MAX_ITER):
     matches3 = emap.rewrites.ematch_aby_assoc_left(netlist)
     matches4 = emap.rewrites.ematch_andor_distrib(netlist)
     matches5 = emap.rewrites.ematch_orand_distrib(netlist)
-    matches6 = emap.rewrites.ematch_absorp(netlist)
+    # matches6 = emap.rewrites.ematch_absorp(netlist)
     # matches7 = emap.rewrites.ematch_th11(netlist)
     # matches8 = emap.rewrites.ematch_th13(netlist)
     # matches9 = emap.rewrites.ematch_th14(netlist)
@@ -36,7 +38,7 @@ for i in range(MAX_ITER):
     cnt += emap.rewrites.apply_aby_assoc_left(netlist, matches3)
     cnt += emap.rewrites.apply_andor_distrib(netlist, matches4)
     cnt += emap.rewrites.apply_orand_distrib(netlist, matches5)
-    cnt += emap.rewrites.apply_absorp(matches6, wdsu)
+    # cnt += emap.rewrites.apply_absorp(matches6, wdsu)
     # cnt += emap.rewrites.apply_th11(netlist, matches7)
     # cnt += emap.rewrites.apply_th13(matches8, wdsu)
     # cnt += emap.rewrites.apply_th14(netlist, matches9)
@@ -45,13 +47,20 @@ for i in range(MAX_ITER):
 
     if cnt > 0:
         print(f"Applied {cnt} rewrites")
+        print(f"Current ay_cell count: {netlist.ay_cell_cnt}")
+        print(f"Current aby_cell count: {netlist.aby_cell_cnt}")
         netlist.rebuild(wdsu)
         # assert len(wdsu.parents) == 0
-        with open(f"netlist_iter_{i}.json", "w") as f:
-            json.dump(netlist.dump_tables(), f, indent=2)
+        # with open(f"netlist_iter_{i}.json", "w") as f:
+        #     json.dump(netlist.dump_tables(), f, indent=2)
     else:
         print("No more rewrites can be applied. Stopping.")
+        print(f"Current ay_cell count: {netlist.ay_cell_cnt}")
+        print(f"Current aby_cell count: {netlist.aby_cell_cnt}")
         break
 
-with open(f"netlist_after.json", "w") as f:
-    json.dump(netlist.dump_tables(), f, indent=2)
+# with open(f"netlist_after.json", "w") as f:
+#     json.dump(netlist.dump_tables(), f, indent=2)
+
+with open(f"saturated_{TEST_NAME}.json", "w") as f:
+    json.dump({"creator": "nextmap", "modules": {"top": netlist.write_json()}}, f, indent=2)

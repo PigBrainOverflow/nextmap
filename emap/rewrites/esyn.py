@@ -56,7 +56,7 @@ def apply_aby_assoc_left(netlist: NetlistDB, matches: list[tuple[str, int, int, 
     return cur.rowcount
 
 
-# TODO: I don't know why no assoc_right is not needed
+# TODO: I don't know why no assoc_right is needed
 
 
 def ematch_aby_comm(netlist: NetlistDB, types: list[str] = ["$and", "$or"]) -> list[tuple[str, int, int, int]]:

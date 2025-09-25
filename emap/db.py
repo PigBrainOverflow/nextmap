@@ -18,6 +18,14 @@ class NetlistDB(sqlite3.Connection):
         return -1 if bit == "x" else int(bit)
 
     @staticmethod
+    def int_to_bit(val: int) -> int | str:
+        if val == -1:
+            return "x"
+        if val in {0, 1}:
+            return str(val)
+        return val
+
+    @staticmethod
     def param_to_int(param: str | int) -> int:
         return param if isinstance(param, int) else int(param, base=2)
 
@@ -81,6 +89,16 @@ class NetlistDB(sqlite3.Connection):
             rows = cur.fetchall()
             db[table] = [dict(zip([col[0] for col in cur.description], row)) for row in rows]
         return db
+
+    @property
+    def ay_cell_cnt(self) -> int:
+        cur = self.execute("SELECT COUNT(*) FROM ay_cells")
+        return cur.fetchone()[0]
+
+    @property
+    def aby_cell_cnt(self) -> int:
+        cur = self.execute("SELECT COUNT(*) FROM aby_cells")
+        return cur.fetchone()[0]
 
     def build_from_json(self, mod: dict[str, Any]):
         # NOTE: This is a simplified version of emap build
@@ -388,3 +406,68 @@ class NetlistDB(sqlite3.Connection):
             cnt += 1
             wdsu.parents.clear()    # clear the worklist
         return cnt
+
+
+    def write_json(self) -> dict[str, Any]:
+        # dump the database to json format
+
+        # build ports
+        ports: dict[str, dict[str, Any]] = {}
+        cur = self.execute("SELECT name, source FROM from_inputs")
+        for name, source in cur.fetchall():
+            ports[name] = {"direction": "input", "bits": self._get_wirevec(source)}
+        cur = self.execute("SELECT name, sink FROM as_outputs")
+        for name, sink in cur.fetchall():
+            ports[name] = {"direction": "output", "bits": self._get_wirevec(sink)}
+
+        # build cells
+        cells: dict[str, dict[str, Any]] = {}
+        cnt = 0
+        cur = self.execute("SELECT type, a, y FROM ay_cells")
+        for type_, a, y in cur.fetchall():
+            cells[f"cell{cnt}"] = {
+                "type": type_,
+                "parameters": {
+                    "A_SIGNED": 0,
+                    "A_WIDTH": 1,
+                    "Y_WIDTH": 1
+                },
+                "port_directions": {
+                    "A": "input",
+                    "Y": "output"
+                },
+                "connections": {
+                    "A": [self.int_to_bit(a)],
+                    "Y": [self.int_to_bit(y)]
+                }
+            }
+            cnt += 1
+        cur = self.execute("SELECT type, a, b, y FROM aby_cells")
+        for type_, a, b, y in cur.fetchall():
+            cells[f"cell{cnt}"] = {
+                "type": type_,
+                "parameters": {
+                    "A_SIGNED": 0,
+                    "A_WIDTH": 1,
+                    "B_SIGNED": 0,
+                    "B_WIDTH": 1,
+                    "Y_WIDTH": 1
+                },
+                "port_directions": {
+                    "A": "input",
+                    "B": "input",
+                    "Y": "output"
+                },
+                "connections": {
+                    "A": [self.int_to_bit(a)],
+                    "B": [self.int_to_bit(b)],
+                    "Y": [self.int_to_bit(y)]
+                }
+            }
+            cnt += 1
+        # TODO: support other cell types
+
+        return {
+            "ports": ports,
+            "cells": cells
+        }
