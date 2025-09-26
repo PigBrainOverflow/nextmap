@@ -31,7 +31,7 @@ def db_to_normalized(db: NetlistDB, cost_model: Callable) -> tuple[dict[str, lis
     wirevecs: dict[int, list[int]] = {}
     cur = db.execute("SELECT id FROM wirevecs")
     for (id,) in cur.fetchall():
-        cur.execute("SELECT wire FROM wirevec_members WHERE wirevec = ? ORDER BY idx", (id,))
+        cur.execute("SELECT wire FROM wirevec_members WHERE wirevec = %s ORDER BY idx", (id,))
         wirevecs[id] = [wire for (wire,) in cur]
 
     # normalize inputs
@@ -105,7 +105,7 @@ def db_to_normalized_tech(db: NetlistDB, cost_model: Callable, tech_rules: dict[
     wirevecs: dict[int, list[int]] = {}
     cur = db.execute("SELECT id FROM wirevecs")
     for (id,) in cur.fetchall():
-        cur.execute("SELECT wire FROM wirevec_members WHERE wirevec = ? ORDER BY idx", (id,))
+        cur.execute("SELECT wire FROM wirevec_members WHERE wirevec = %s ORDER BY idx", (id,))
         wirevecs[id] = [wire for (wire,) in cur]
 
     tech_cells: list[dict[str, Any]] = []

@@ -10,7 +10,7 @@ def ematch_dff_forward_aby_cell(db: NetlistDB, target_types: list[str]) -> Itera
         SELECT cell.type, dff1.d, dff2.d, cell.y
         FROM dffs AS dff1 JOIN dffs AS dff2 JOIN aby_cells as cell ON dff1.q = cell.a AND dff2.q = cell.b
         WHERE cell.type IN ({})
-        """.format(",".join("?" * len(target_types))),
+        """.format(",".join("%s" * len(target_types))),
         target_types
     )
     return cur
@@ -22,17 +22,17 @@ def apply_dff_forward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, 
     """
     newrows = []
     for type_, a, b, y in matches:
-        cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (y,))    # get width
+        cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = %s", (y,))    # get width
         width_y = cur.fetchone()[0]
-        cur.execute("SELECT y from aby_cells WHERE type = ? AND a = ? AND b = ? LIMIT 1", (type_, a, b))
+        cur.execute("SELECT y from aby_cells WHERE type = %s AND a = %s AND b = %s LIMIT 1", (type_, a, b))
         row = cur.fetchone()
         if row is None:
             d = db._add_wirevec([db.auto_id for _ in range(width_y)])
-            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, d))
+            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", (type_, a, b, d))
         else:
             d = row[0]
         newrows.append((d, y))
-    cur = db.executemany("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", newrows)
+    cur = db.executemany("INSERT OR IGNORE INTO dffs (d, q) VALUES (%s, %s)", newrows)
     db.commit()
     return cur.rowcount
 
@@ -45,7 +45,7 @@ def ematch_dff_backward_aby_cell(db: NetlistDB, target_types: list[str]) -> Iter
         SELECT cell.type, cell.a, cell.b, dff.q
         FROM dffs AS dff JOIN aby_cells as cell ON dff.d = cell.y
         WHERE cell.type IN ({})
-        """.format(",".join("?" * len(target_types))),
+        """.format(",".join("%s" * len(target_types))),
         target_types
     )
     return cur
@@ -57,27 +57,27 @@ def apply_dff_backward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int,
     """
     newrows = []
     for type_, a, b, q in matches:
-        cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (a,))    # get width
+        cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = %s", (a,))    # get width
         width_a = cur.fetchone()[0]
-        cur.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (b,))    # get width
+        cur.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = %s", (b,))    # get width
         width_b = cur.fetchone()[0]
         # insert new dffs if not exist
-        cur.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (a,))
+        cur.execute("SELECT q FROM dffs WHERE d = %s LIMIT 1", (a,))
         row = cur.fetchone()
         if row is None:
             a_q = db._add_wirevec([db.auto_id for _ in range(width_a)])
-            cur.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (a, a_q))
+            cur.execute("INSERT INTO dffs (d, q) VALUES (%s, %s)", (a, a_q))
         else:
             a_q = row[0]
-        cur.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (b,))
+        cur.execute("SELECT q FROM dffs WHERE d = %s LIMIT 1", (b,))
         row = cur.fetchone()
         if row is None:
             b_q = db._add_wirevec([db.auto_id for _ in range(width_b)])
-            cur.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (b, b_q))
+            cur.execute("INSERT INTO dffs (d, q) VALUES (%s, %s)", (b, b_q))
         else:
             b_q = row[0]
         newrows.append((type_, a_q, b_q, q))
-    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
+    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", newrows)
     db.commit()
     return cur.rowcount
 
@@ -112,6 +112,6 @@ def rewrite_sdff(db: NetlistDB) -> int:
         rst_val = db.vec_to_const(rst_wv)
         if rst_val is not None:
             newrows.append((d, q, rst, rst_val))
-    cur = db.executemany("INSERT OR IGNORE INTO sdffs (d, q, rst, rst_val) VALUES (?, ?, ?, ?)", newrows)
+    cur = db.executemany("INSERT OR IGNORE INTO sdffs (d, q, rst, rst_val) VALUES (%s, %s, %s, %s)", newrows)
     db.commit()
     return cur.rowcount

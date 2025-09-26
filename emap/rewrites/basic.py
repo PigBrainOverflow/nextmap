@@ -7,7 +7,7 @@ def ematch_comm(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, i
     Return a list of tuples (type, a, b, y) for commutative cells.
     """
     cur = db.execute(
-        "SELECT type, a, b, y FROM aby_cells WHERE type IN ({})".format(",".join("?" * len(target_types))),
+        "SELECT type, a, b, y FROM aby_cells WHERE type IN ({})".format(",".join("%s" * len(target_types))),
         target_types
     )
     return cur
@@ -18,7 +18,7 @@ def apply_comm(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> i
     """
     matches = list(matches) # for debug
     cur = db.executemany(
-        "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
+        "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)",
         ((type_, b, a, y) for type_, a, b, y in matches)
     )
     db.commit()
@@ -35,7 +35,7 @@ def ematch_assoc_to_right(db: NetlistDB, target_types: list[str]) -> Iterable[tu
         SELECT cell1.type, cell1.a, cell1.b, cell2.b, cell2.y
         FROM aby_cells AS cell1 JOIN aby_cells AS cell2 ON cell1.y = cell2.a
         WHERE cell1.type = cell2.type AND cell1.type IN ({})
-        """.format(",".join("?" * len(target_types))),
+        """.format(",".join("%s" * len(target_types))),
         target_types
     )
     return cur
@@ -47,20 +47,20 @@ def apply_assoc_to_right(db: NetlistDB, matches: Iterable[tuple[str, int, int, i
     """
     newrows = []
     for type_, a, b, c, y in matches:
-        cur = db.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = ?", (y,))
+        cur = db.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = %s", (y,))
         width_b_add_c = cur.fetchone()[0] + 1
         cur.execute(
-            "SELECT y FROM aby_cells WHERE type = ? AND a = ? AND b = ? AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = y) = ? LIMIT 1",
+            "SELECT y FROM aby_cells WHERE type = %s AND a = %s AND b = %s AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = y) = %s LIMIT 1",
             (type_, b, c, width_b_add_c)
         )
         row = cur.fetchone()
         if row is None:
             b_add_c = db._add_wirevec([db.auto_id for _ in range(width_b_add_c)])
-            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, b, c, b_add_c))
+            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", (type_, b, c, b_add_c))
         else:
             b_add_c = row[0]
         newrows.append((type_, a, b_add_c, y))
-    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
+    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", newrows)
     db.commit()
     return cur.rowcount
 
@@ -75,7 +75,7 @@ def ematch_assoc_to_left(db: NetlistDB, target_types: list[str]) -> Iterable[tup
         SELECT cell1.type, cell1.a, cell1.b, cell2.b, cell2.y
         FROM aby_cells AS cell1 JOIN aby_cells AS cell2 ON cell1.y = cell2.a
         WHERE cell1.type = cell2.type AND cell1.type IN ({})
-        """.format(",".join("?" * len(target_types))),
+        """.format(",".join("%s" * len(target_types))),
         target_types
     )
     return cur
@@ -87,19 +87,19 @@ def apply_assoc_to_left(db: NetlistDB, matches: Iterable[tuple[str, int, int, in
     """
     newrows = []
     for type_, a, b, c, y in matches:
-        cur = db.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = ?", (y,))
+        cur = db.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = %s", (y,))
         width_a_add_b = cur.fetchone()[0] + 1
         cur.execute(
-            "SELECT y FROM aby_cells WHERE type = ? AND a = ? AND b = ? AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = y) = ? LIMIT 1",
+            "SELECT y FROM aby_cells WHERE type = %s AND a = %s AND b = %s AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = y) = %s LIMIT 1",
             (type_, a, b, width_a_add_b)
         )
         row = cur.fetchone()
         if row is None:
             a_add_b = db._add_wirevec([db.auto_id for _ in range(width_a_add_b)])
-            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, a_add_b))
+            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", (type_, a, b, a_add_b))
         else:
             a_add_b = row[0]
         newrows.append((type_, a_add_b, c, y))
-    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
+    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", newrows)
     db.commit()
     return cur.rowcount
