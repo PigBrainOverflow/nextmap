@@ -1,10 +1,11 @@
 from ..db import NetlistDB
 from .utils import db_to_normalized, db_to_normalized_tech, normalized_to_json
+from .solver_interface import create_solver, quicksum, GRB
 from typing import Any, Callable
 import importlib
-import gurobipy as grb
 import numpy as np
 import scipy.sparse as sp
+import os
 
 
 def prune_cells(cells: list[dict[str, Any]]):
@@ -98,7 +99,7 @@ def group_wires(bundles: list[set[int]]) -> list[set[int]]:
         print(f"Grouped {len(wires)} wires into {len(groups)} groups")
         return groups
 
-def add_wire_constrs(ilp_model: grb.Model, x: grb.tupledict, y: grb.tupledict, z: grb.tupledict, groups: list[set[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]], all_source: set[int]):
+def add_wire_constrs(ilp_model, x, y, z, groups: list[set[int]], cells: list[dict[str, Any]], dffs: list[dict[str, Any]], all_source: set[int]):
     n_constrs, n_vars = len(groups), len(x) + len(y) + len(z)
     A = sp.lil_matrix((n_constrs, n_vars), dtype=int)
     rhs = np.zeros(n_constrs, dtype=int)
@@ -122,9 +123,15 @@ def add_wire_constrs(ilp_model: grb.Model, x: grb.tupledict, y: grb.tupledict, z
 
     ilp_model.addMConstr(A=A, x=None, sense=sense, b=rhs, name="wire_constraints")
 
-def extract_no_techmap(db: NetlistDB, cost_model: Callable, **grb_args) -> dict:
+def extract_no_techmap(db: NetlistDB, cost_model: Callable, solver_type: str = "auto", **solver_args) -> dict:
     """
     Return a module in Yosys JSON format.
+
+    Args:
+        db: NetlistDB instance
+        cost_model: Cost function for cells
+        solver_type: "gurobi", "cbc", or "auto" (default)
+        **solver_args: Additional solver parameters
     """
     inputs, outputs, cells, dffs = db_to_normalized(db, cost_model)
 
@@ -148,43 +155,34 @@ def extract_no_techmap(db: NetlistDB, cost_model: Callable, **grb_args) -> dict:
     groups = group_wires(bundles)
 
     # build ILP
-    ilp_model = grb.Model()
-    for k, v in grb_args.items():
+    ilp_model = create_solver(solver_type)
+    for k, v in solver_args.items():
         ilp_model.setParam(k, v)
-    x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x")  # choices of wires
-    y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y")   # choices of cells
-    z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z")    # choices of dffs
+    x = ilp_model.addVars(len(groups), vtype=GRB.BINARY, name="x")  # choices of wires
+    y = ilp_model.addVars(len(cells), vtype=GRB.BINARY, name="y")   # choices of cells
+    z = ilp_model.addVars(len(dffs), vtype=GRB.BINARY, name="z")    # choices of dffs
     ilp_model.addConstrs((x[group] >= 1 for group in all_sink), "output_constraints")
-    # ilp_model.addConstrs((
-    #     grb.quicksum(y[i] for i in range(len(cells)) if gid in cells[i]["all_outputs"])
-    #     + grb.quicksum(z[i] for i in range(len(dffs)) if gid in dffs[i]["all_outputs"])
-    #     >= x[gid] for gid in range(len(groups)) if gid not in all_source),
-    #     "wire_constraints"
-    # )
+
     add_wire_constrs(ilp_model, x, y, z, groups, cells, dffs, all_source)
+
     for i, cell in enumerate(cells):
         for gid in cell["all_inputs"]:
             ilp_model.addConstr(x[gid] >= y[i], f"cell_{i}_input_{gid}_constraint") # if the cell is chosen, all its inputs must be chosen
     for i, dff in enumerate(dffs):
         for gid in dff["all_inputs"]:
             ilp_model.addConstr(x[gid] >= z[i], f"dff_{i}_input_{gid}_constraint")  # if the dff is chosen, all its inputs must be chosen
-    ilp_model.setObjective(
-        grb.quicksum(y[i] * cells[i]["cost"] for i in range(len(cells)))
-        + grb.quicksum(z[i] * dffs[i]["cost"] for i in range(len(dffs))),
-        grb.GRB.MINIMIZE
-    )   # minimize the total cost
 
-    # print(all_source, all_sink)
-    # for cell in cells:
-    #     print(cell["all_inputs"], cell["all_outputs"])
-    # for dff in dffs:
-    #     print(dff["all_inputs"], dff["all_outputs"])
-    # ilp_model.write("egraph_extraction.lp")
+    # Set objective using our solver interface
+    obj_expr = quicksum([y[i] * cells[i]["cost"] for i in range(len(cells))], solver=ilp_model)
+    if dffs:
+        obj_expr += quicksum([z[i] * dffs[i]["cost"] for i in range(len(dffs))], solver=ilp_model)
+    ilp_model.setObjective(obj_expr, GRB.MINIMIZE)
+
     ilp_model.optimize()
 
-    if ilp_model.status == grb.GRB.INFEASIBLE:
+    if ilp_model.status == GRB.INFEASIBLE:
         raise ValueError("ILP model is infeasible, no solution found.")
-    if ilp_model.status == grb.GRB.UNBOUNDED:
+    if ilp_model.status == GRB.UNBOUNDED:
         raise ValueError("ILP model is unbounded, no solution found.")
     print(f"ILP model solved with objective value: {ilp_model.objVal}")
 
@@ -195,9 +193,17 @@ def extract_no_techmap(db: NetlistDB, cost_model: Callable, **grb_args) -> dict:
     return normalized_to_json(db, {}, inputs, outputs, cells_selected, dffs_selected)
 
 
-def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: dict[str, dict[str, Any]], tech_limits: dict[str, int], **grb_args) -> dict:
+def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: dict[str, dict[str, Any]], tech_limits: dict[str, int], solver_type: str = "auto", **solver_args) -> dict:
     """
     Return a module in Yosys JSON format.
+
+    Args:
+        db: NetlistDB instance
+        cost_model: Cost function for cells
+        tech_rules: Technology mapping rules
+        tech_limits: Limits for technology cells
+        solver_type: "gurobi", "cbc", or "auto" (default)
+        **solver_args: Additional solver parameters
     """
     inputs, outputs, cells, dffs = db_to_normalized(db, cost_model)
     cells += db_to_normalized_tech(db, cost_model, tech_rules)
@@ -222,26 +228,23 @@ def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: 
     groups = group_wires(bundles)
 
     # build ILP
-    ilp_model = grb.Model()
-    for k, v in grb_args.items():
+    ilp_model = create_solver(solver_type)
+    for k, v in solver_args.items():
         ilp_model.setParam(k, v)
-    x = ilp_model.addVars(len(groups), vtype=grb.GRB.BINARY, name="x")  # choices of wires
-    y = ilp_model.addVars(len(cells), vtype=grb.GRB.BINARY, name="y")   # choices of cells
-    z = ilp_model.addVars(len(dffs), vtype=grb.GRB.BINARY, name="z")    # choices of dffs
+    x = ilp_model.addVars(len(groups), vtype=GRB.BINARY, name="x")  # choices of wires
+    y = ilp_model.addVars(len(cells), vtype=GRB.BINARY, name="y")   # choices of cells
+    z = ilp_model.addVars(len(dffs), vtype=GRB.BINARY, name="z")    # choices of dffs
     ilp_model.addConstrs((x[group] >= 1 for group in all_sink), "output_constraints")
-    # ilp_model.addConstrs((
-    #     grb.quicksum(y[i] for i in range(len(cells)) if gid in cells[i]["all_outputs"])
-    #     + grb.quicksum(z[i] for i in range(len(dffs)) if gid in dffs[i]["all_outputs"])
-    #     >= x[gid] for gid in range(len(groups)) if gid not in all_source),
-    #     "wire_constraints"
-    # )
+
     add_wire_constrs(ilp_model, x, y, z, groups, cells, dffs, all_source)
+
     for i, cell in enumerate(cells):
         for gid in cell["all_inputs"]:
             ilp_model.addConstr(x[gid] >= y[i], f"cell_{i}_input_{gid}_constraint") # if the cell is chosen, all its inputs must be chosen
     for i, dff in enumerate(dffs):
         for gid in dff["all_inputs"]:
             ilp_model.addConstr(x[gid] >= z[i], f"dff_{i}_input_{gid}_constraint")  # if the dff is chosen, all its inputs must be chosen
+
     # tech cell usage limits
     for tech_name, limit in tech_limits.items():
         cs: list[int] = [0] * len(cells)    # coefficients of each cell
@@ -249,22 +252,21 @@ def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: 
             type_ = cell["type"]
             if not type_.startswith("$"):
                 cs[i] = tech_rules[type_]["requirements"].get(tech_name, 0)
-        ilp_model.addConstr(
-            grb.quicksum(cs[i] * y[i] for i in range(len(cells))) <= limit,
-            f"tech_limit_{tech_name}"
-        )
 
-    ilp_model.setObjective(
-        grb.quicksum(y[i] * cells[i]["cost"] for i in range(len(cells)))
-        + grb.quicksum(z[i] * dffs[i]["cost"] for i in range(len(dffs))),
-        grb.GRB.MINIMIZE
-    )   # minimize the total cost
+        limit_expr = quicksum([cs[i] * y[i] for i in range(len(cells)) if cs[i] > 0], solver=ilp_model)
+        ilp_model.addConstr(limit_expr <= limit, f"tech_limit_{tech_name}")
+
+    # Set objective using our solver interface
+    obj_expr = quicksum([y[i] * cells[i]["cost"] for i in range(len(cells))], solver=ilp_model)
+    if dffs:
+        obj_expr += quicksum([z[i] * dffs[i]["cost"] for i in range(len(dffs))], solver=ilp_model)
+    ilp_model.setObjective(obj_expr, GRB.MINIMIZE)
 
     ilp_model.optimize()
 
-    if ilp_model.status == grb.GRB.INFEASIBLE:
+    if ilp_model.status == GRB.INFEASIBLE:
         raise ValueError("ILP model is infeasible, no solution found.")
-    if ilp_model.status == grb.GRB.UNBOUNDED:
+    if ilp_model.status == GRB.UNBOUNDED:
         raise ValueError("ILP model is unbounded, no solution found.")
     print(f"ILP model solved with objective value: {ilp_model.objVal}")
 
