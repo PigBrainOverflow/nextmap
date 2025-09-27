@@ -11,13 +11,8 @@ import subprocess
 import time
 from pathlib import Path
 
-# Add the project root to the path
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
-
-# Activate venv for CBC support
-venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-if venv_path not in sys.path and os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
+# Add the current directory to the path (assuming we're in nextmap root)
+sys.path.insert(0, os.path.abspath('.'))
 
 import emap
 

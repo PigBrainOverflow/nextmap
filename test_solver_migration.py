@@ -7,7 +7,7 @@ import sys
 import os
 
 # Add the project root to the path so we can import modules
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
+sys.path.insert(0, os.path.abspath('.'))
 
 try:
     from emap.extracts.solver_interface import create_solver, GRB, quicksum

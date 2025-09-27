@@ -8,12 +8,7 @@ import os
 import json
 
 # Add the project root to the path so we can import modules
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
-
-# Activate venv for CBC support
-venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-if venv_path not in sys.path and os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
+sys.path.insert(0, os.path.abspath('.'))
 
 import emap
 
@@ -120,7 +115,7 @@ def test_fir_with_cbc():
         # Extract using CBC with DSP limit
         print("Extracting with CBC solver (DSP limit: 16)...")
         mod = emap.extracts.ilp.extract_techmap_with_limit(
-            netlist, simple_cost_model, dsp_rules, {"dsp48e2": 16}, solver_type="cbc")
+            netlist, simple_cost_model, dsp_rules, {"dsp48e2": 16}, solver_type='cbc')
         print("Technology mapping extraction completed successfully!")
 
         # Save result
@@ -182,7 +177,8 @@ if __name__ == "__main__":
     print("Testing CBC migration with FIR filter example...")
 
     # Change to project directory
-    os.chdir('/home/jbalkind/projects/nextmap')
+    # Assume we're already in the nextmap root directory
+    # os.chdir not needed
 
     test_fir_with_cbc()
 

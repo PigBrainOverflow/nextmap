@@ -9,13 +9,8 @@ import json
 import time
 from pathlib import Path
 
-# Add the project root to the path
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
-
-# Activate venv for CBC support
-venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-if venv_path not in sys.path and os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
+# Add the current directory to the path (assuming we're in nextmap root)
+sys.path.insert(0, os.path.abspath('.'))
 
 import emap
 
@@ -29,9 +24,9 @@ def simple_cost_model(type_: str, *ports) -> float:
         return min(len(ports[0]) + len(ports[1]), len(ports[2])) * 1.0
     return len(ports[0]) * 1.0
 
-def test_extract_no_techmap(netlist_file: str, test_name: str):
+def test_extract_no_techmap(netlist_file: str, test_name: str, solver_type: str = "cbc"):
     """Test basic extraction without techmap (like demo.ipynb)"""
-    print(f"\\n=== {test_name}: extract_no_techmap ===")
+    print(f"\\n=== {test_name}: extract_no_techmap ({solver_type}) ===")
 
     try:
         with open(netlist_file, 'r') as f:
@@ -52,7 +47,7 @@ def test_extract_no_techmap(netlist_file: str, test_name: str):
 
         # Run extraction with CBC
         start_time = time.time()
-        result = emap.extracts.ilp.extract_no_techmap(netlist, simple_cost_model, solver_type="cbc")
+        result = emap.extracts.ilp.extract_no_techmap(netlist, simple_cost_model, solver_type=solver_type)
         end_time = time.time()
 
         num_cells = len(result.get('cells', {}))
@@ -64,9 +59,9 @@ def test_extract_no_techmap(netlist_file: str, test_name: str):
         print(f"FAILED: {e}")
         return False, 0
 
-def test_extract_techmap_with_limit(netlist_file: str, test_name: str, resource_limits: dict):
+def test_extract_techmap_with_limit(netlist_file: str, test_name: str, resource_limits: dict, solver_type: str = "cbc"):
     """Test techmap extraction with limits (like eval notebooks)"""
-    print(f"\\n=== {test_name}: extract_techmap_with_limit ===")
+    print(f"\\n=== {test_name}: extract_techmap_with_limit ({solver_type}) ===")
 
     # Simplified DSP rules for testing
     dsp_rules = {
@@ -118,7 +113,7 @@ def test_extract_techmap_with_limit(netlist_file: str, test_name: str, resource_
             simple_cost_model,
             dsp_rules,
             resource_limits,
-            solver_type="cbc"
+            solver_type=solver_type
         )
         end_time = time.time()
 
@@ -136,7 +131,8 @@ def main():
     print("=== COMPREHENSIVE CBC TESTING ===")
     print("Simulating evaluation notebook scenarios with CBC solver")
 
-    os.chdir('/home/jbalkind/projects/nextmap')
+    # Assume we're already in the nextmap root directory
+    # os.chdir not needed
 
     test_cases = [
         {
@@ -161,21 +157,30 @@ def main():
         'techmap_with_limit': []
     }
 
-    for test_case in test_cases:
-        if os.path.exists(test_case['file']):
-            # Test basic extraction
-            success, cells = test_extract_no_techmap(test_case['file'], test_case['name'])
-            results['no_techmap'].append((test_case['name'], success, cells))
+    # Test with both solvers
+    solvers_to_test = ["cbc", "gurobi"]
 
-            # Test techmap extraction
-            success, cells = test_extract_techmap_with_limit(
-                test_case['file'],
-                test_case['name'],
-                test_case['limits']
-            )
-            results['techmap_with_limit'].append((test_case['name'], success, cells))
-        else:
-            print(f"\\nSkipping {test_case['name']}: file {test_case['file']} not found")
+    for solver_type in solvers_to_test:
+        print(f"\\n{'='*60}")
+        print(f"TESTING WITH {solver_type.upper()} SOLVER")
+        print(f"{'='*60}")
+
+        for test_case in test_cases:
+            if os.path.exists(test_case['file']):
+                # Test basic extraction
+                success, cells = test_extract_no_techmap(test_case['file'], test_case['name'], solver_type)
+                results['no_techmap'].append((test_case['name'], success, cells, solver_type))
+
+                # Test techmap extraction
+                success, cells = test_extract_techmap_with_limit(
+                    test_case['file'],
+                    test_case['name'],
+                    test_case['limits'],
+                    solver_type
+                )
+                results['techmap_with_limit'].append((test_case['name'], success, cells, solver_type))
+            else:
+                print(f"\\nSkipping {test_case['name']}: file {test_case['file']} not found")
 
     # Summary
     print("\\n" + "="*60)
@@ -183,14 +188,32 @@ def main():
     print("="*60)
 
     print("\\nBasic extraction (extract_no_techmap):")
-    for name, success, cells in results['no_techmap']:
+    for name, success, cells, solver_type in results['no_techmap']:
         status = "✓" if success else "✗"
-        print(f"  {status} {name}: {cells} cells")
+        print(f"  {status} {name} [{solver_type}]: {cells} cells")
 
     print("\\nTechmap extraction (extract_techmap_with_limit):")
-    for name, success, cells in results['techmap_with_limit']:
+    for name, success, cells, solver_type in results['techmap_with_limit']:
         status = "✓" if success else "✗"
-        print(f"  {status} {name}: {cells} cells")
+        print(f"  {status} {name} [{solver_type}]: {cells} cells")
+
+    # Compare solver performance
+    print("\\nSolver comparison:")
+    test_names = list(set(name for name, _, _, _ in results['no_techmap']))
+    for test_name in test_names:
+        # Basic extraction comparison
+        basic_results = {solver: (success, cells) for name, success, cells, solver in results['no_techmap'] if name == test_name}
+        if len(basic_results) == 2:
+            cbc_success, cbc_cells = basic_results.get('cbc', (False, 0))
+            gurobi_success, gurobi_cells = basic_results.get('gurobi', (False, 0))
+            print(f"  {test_name} (basic): CBC={cbc_cells} cells, Gurobi={gurobi_cells} cells")
+
+        # Techmap extraction comparison
+        techmap_results = {solver: (success, cells) for name, success, cells, solver in results['techmap_with_limit'] if name == test_name}
+        if len(techmap_results) == 2:
+            cbc_success, cbc_cells = techmap_results.get('cbc', (False, 0))
+            gurobi_success, gurobi_cells = techmap_results.get('gurobi', (False, 0))
+            print(f"  {test_name} (techmap): CBC={cbc_cells} cells, Gurobi={gurobi_cells} cells")
 
     # Overall success rate
     total_tests = len(results['no_techmap']) + len(results['techmap_with_limit'])

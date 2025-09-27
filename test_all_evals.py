@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test CBC solver on all evaluation notebooks
+Test both CBC and Gurobi solvers on all evaluation notebooks
 """
 
 import sys
@@ -9,13 +9,8 @@ import json
 import time
 from pathlib import Path
 
-# Add the project root to the path
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
-
-# Activate venv for CBC support
-venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-if venv_path not in sys.path and os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
+# Add the current directory to the path (assuming we're in nextmap root)
+sys.path.insert(0, os.path.abspath('.'))
 
 import emap
 
@@ -30,9 +25,9 @@ def standard_cost_model(type_: str, *ports) -> float:
     else:
         return len(ports[0]) * 1.0
 
-def run_cbc_extraction(netlist_file: str, description: str = ""):
-    """Run CBC extraction on a netlist file"""
-    print(f"\n=== Testing {netlist_file} {description} ===")
+def run_extraction(netlist_file: str, description: str = "", solver_type: str = "cbc"):
+    """Run extraction on a netlist file with specified solver"""
+    print(f"\n=== Testing {netlist_file} {description} (solver: {solver_type}) ===")
 
     try:
         # Load netlist
@@ -63,11 +58,11 @@ def run_cbc_extraction(netlist_file: str, description: str = ""):
 
         # Run CBC extraction
         start_time = time.time()
-        result = emap.extracts.ilp.extract_no_techmap(netlist, standard_cost_model, solver_type="cbc")
+        result = emap.extracts.ilp.extract_no_techmap(netlist, standard_cost_model, solver_type=solver_type)
         end_time = time.time()
 
         num_cells = len(result.get('cells', {}))
-        print(f"CBC result: {num_cells} cells in {end_time - start_time:.2f}s")
+        print(f"{solver_type.upper()} result: {num_cells} cells in {end_time - start_time:.2f}s")
 
         if num_cells > 0:
             cell_types = {}
@@ -95,10 +90,11 @@ def run_cbc_extraction(netlist_file: str, description: str = ""):
         }
 
 def main():
-    """Test CBC on various evaluation files"""
-    print("Testing CBC solver on evaluation notebooks...")
+    """Test both solvers on various evaluation files"""
+    print("Testing solvers on evaluation notebooks...")
 
-    os.chdir('/home/jbalkind/projects/nextmap')
+    # Assume we're already in the nextmap root directory
+    # os.chdir not needed
 
     # Test files based on common evaluation patterns
     test_files = []
@@ -135,10 +131,19 @@ def main():
 
     results = []
 
-    for test_file in test_files:
-        result = run_cbc_extraction(test_file, f"({test_file})")
-        if result:
-            results.append(result)
+    # Test with both solvers
+    solvers_to_test = ["cbc", "gurobi"]
+
+    for solver_type in solvers_to_test:
+        print(f"\n{'='*60}")
+        print(f"TESTING WITH {solver_type.upper()} SOLVER")
+        print(f"{'='*60}")
+
+        for test_file in test_files:
+            result = run_extraction(test_file, f"({test_file})", solver_type=solver_type)
+            if result:
+                result['solver'] = solver_type
+                results.append(result)
 
     # Summary
     print("\n" + "="*60)
@@ -148,25 +153,49 @@ def main():
     successful = [r for r in results if r['success']]
     failed = [r for r in results if not r['success']]
 
+    print(f"Total tests: {len(results)}")
     print(f"Successful: {len(successful)}")
     print(f"Failed: {len(failed)}")
+
+    # Summary by solver
+    for solver in ['cbc', 'gurobi']:
+        solver_results = [r for r in results if r.get('solver') == solver]
+        solver_successful = [r for r in solver_results if r['success']]
+        print(f"\n{solver.upper()} solver: {len(solver_successful)}/{len(solver_results)} successful")
 
     if successful:
         print("\nSuccessful extractions:")
         for result in successful:
-            print(f"  {result['file']}: {result['cells']} cells ({result['time']:.2f}s)")
+            solver_info = f" [{result.get('solver', 'unknown')}]" if 'solver' in result else ""
+            print(f"  {result['file']}{solver_info}: {result['cells']} cells ({result['time']:.2f}s)")
 
     if failed:
         print("\nFailed extractions:")
         for result in failed:
-            print(f"  {result['file']}: {result['error']}")
+            solver_info = f" [{result.get('solver', 'unknown')}]" if 'solver' in result else ""
+            print(f"  {result['file']}{solver_info}: {result['error']}")
 
     # Check for any zero-cell results (potential issues)
     zero_cell_results = [r for r in successful if r['cells'] == 0]
     if zero_cell_results:
         print(f"\nWarning: {len(zero_cell_results)} tests produced 0 cells:")
         for result in zero_cell_results:
-            print(f"  {result['file']}")
+            solver_info = f" [{result.get('solver', 'unknown')}]" if 'solver' in result else ""
+            print(f"  {result['file']}{solver_info}")
+
+    # Compare results between solvers for same files
+    print("\nSolver comparison:")
+    files_tested = set(r['file'] for r in successful)
+    for file in files_tested:
+        file_results = [r for r in successful if r['file'] == file]
+        if len(file_results) > 1:
+            results_by_solver = {r['solver']: r for r in file_results}
+            if 'cbc' in results_by_solver and 'gurobi' in results_by_solver:
+                cbc_cells = results_by_solver['cbc']['cells']
+                gurobi_cells = results_by_solver['gurobi']['cells']
+                cbc_time = results_by_solver['cbc']['time']
+                gurobi_time = results_by_solver['gurobi']['time']
+                print(f"  {file}: CBC={cbc_cells} cells ({cbc_time:.2f}s), Gurobi={gurobi_cells} cells ({gurobi_time:.2f}s)")
 
 if __name__ == "__main__":
     main()

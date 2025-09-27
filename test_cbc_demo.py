@@ -7,13 +7,8 @@ import sys
 import os
 import json
 
-# Add the project root to the path so we can import modules
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
-
-# Activate venv for CBC support
-venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-if venv_path not in sys.path and os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
+# Add the current directory to the path (assuming we're in nextmap root)
+sys.path.insert(0, os.path.abspath('.'))
 
 import emap
 
@@ -70,7 +65,7 @@ def test_retiming_example():
 
         # Extract using CBC
         print("Extracting with CBC solver...")
-        mod = emap.extracts.ilp.extract_no_techmap(netlist, simple_cost_model, solver_type="cbc")
+        mod = emap.extracts.ilp.extract_no_techmap(netlist, simple_cost_model, solver_type='auto')
         print("Extraction completed successfully!")
 
         # Save result
@@ -198,7 +193,7 @@ def test_techmap_example():
             return 0.0  # blackboxes or tech cells
 
         mod = emap.extracts.ilp.extract_techmap_with_limit(
-            netlist, techmap_cost_model, dsp_rules, {"dsp48e2": 2}, solver_type="cbc")
+            netlist, techmap_cost_model, dsp_rules, {"dsp48e2": 2}, solver_type='auto')
         print("Technology mapping extraction completed successfully!")
 
         # Save result
@@ -235,8 +230,8 @@ def count_dffs_in_json(filename):
 if __name__ == "__main__":
     print("Testing CBC migration with demo examples...")
 
-    # Change to project directory
-    os.chdir('/home/jbalkind/projects/nextmap')
+    # Assume we're already in the nextmap root directory
+    # os.chdir not needed
 
     test_retiming_example()
     test_techmap_example()

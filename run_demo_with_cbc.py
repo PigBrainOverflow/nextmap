@@ -7,13 +7,8 @@ import sys
 import os
 import json
 
-# Add the project root to the path so we can import modules
-sys.path.insert(0, '/home/jbalkind/projects/nextmap')
-
-# Activate venv for CBC support
-venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-if venv_path not in sys.path and os.path.exists(venv_path):
-    sys.path.insert(0, venv_path)
+# Add the current directory to the path (assuming we're in nextmap root)
+sys.path.insert(0, os.path.abspath('.'))
 
 import emap
 
@@ -206,7 +201,8 @@ if __name__ == "__main__":
     print("Running demo.ipynb examples with CBC solver...")
 
     # Change to project directory
-    os.chdir('/home/jbalkind/projects/nextmap')
+    # Assume we're already in the nextmap root directory
+    # os.chdir not needed
 
     run_retiming_demo()
     run_techmap_demo()

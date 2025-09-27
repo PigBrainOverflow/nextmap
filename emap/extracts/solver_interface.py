@@ -393,11 +393,6 @@ class CBCInterface(SolverInterface):
     def __init__(self, name: str = "cbc_model"):
         super().__init__(name)
         try:
-            # Try to use the venv PuLP if available
-            venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-            if venv_path not in sys.path and os.path.exists(venv_path):
-                sys.path.insert(0, venv_path)
-
             import pulp
 
             self.pulp = pulp
