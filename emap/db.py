@@ -52,13 +52,12 @@ class NetlistDB:
 
     def __init__(self, schema_file: str, db_config: dict[str, str] = None, cnt: int = 0):
         if db_config is None:
-            # Default to in-memory-like behavior with a temporary database
+            # Default to Unix socket connection with trust authentication
+            import getpass
             db_config = {
-                'host': 'localhost',
                 'database': 'nextmap_temp',
-                'user': 'postgres',
-                'password': '',
-                'port': '5432'
+                'user': getpass.getuser()  # Use current system username
+                # No host/port specified = Unix socket connection
             }
 
         self._db_config = db_config
@@ -85,7 +84,9 @@ class NetlistDB:
         """Execute a query multiple times with different parameters"""
         cur = self._connection.cursor()
         cur.executemany(query, params_list)
+        rowcount = cur.rowcount
         cur.close()
+        return type('cursor', (), {'rowcount': rowcount})()
 
     def commit(self):
         """Commit the current transaction"""
@@ -153,13 +154,13 @@ class NetlistDB:
 
     def _add_input(self, name: str, source: list[int]):
         ws = self._create_or_lookup_wirevec(source)
-        cur = self.execute("INSERT INTO from_inputs (source, name) VALUES (%s, %s)", (ws, name))
+        cur = self.execute("INSERT INTO from_inputs (source, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (ws, name))
         cur.close()
         self.commit()
 
     def _add_output(self, name: str, sink: list[int]):
         ws = self._create_or_lookup_wirevec(sink)
-        cur = self.execute("INSERT INTO as_outputs (sink, name) VALUES (%s, %s)", (ws, name))
+        cur = self.execute("INSERT INTO as_outputs (sink, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (ws, name))
         cur.close()
         self.commit()
 

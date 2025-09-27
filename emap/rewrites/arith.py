@@ -168,8 +168,8 @@ def ematch_complex_mul(db: NetlistDB) -> Iterable[tuple[int, int, int, int, int,
             AND mul1.a = mul3.a AND mul1.b = mul4.b AND mul2.a = mul4.a AND mul2.b = mul3.b
         WHERE add1.type = '$adds' AND mul1.type = '$muls' AND mul2.type = '$muls'
             AND sub1.type = '$subs' AND mul3.type = '$muls' AND mul4.type = '$muls'
-            AND width_of(mul1.a) = width_of(mul2.a) AND width_of(mul1.b) = width_of(mul2.b)
-            AND width_of(mul1.y) = width_of(mul2.y)
+            AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.a) = (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul2.a) AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.b) = (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul2.b)
+            AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.y) = (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul2.y)
     """)
     return cur
 
@@ -179,7 +179,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
     """
     cnt = 0
     for a, b, c, d, y1, y2 in matches:
-        a_width, y1_width, c_width, y2_width = NetlistDB.width_of(db, a), NetlistDB.width_of(db, y1), NetlistDB.width_of(db, c), NetlistDB.width_of(db, y2)
+        a_width, y1_width, c_width, y2_width = db.width_of(a), db.width_of(y1), db.width_of(c), db.width_of(y2)
         cur = db.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (a, b))
         row = cur.fetchone()
         if row is None:

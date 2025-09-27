@@ -19,6 +19,34 @@ if venv_path not in sys.path and os.path.exists(venv_path):
 
 import emap
 
+def cleanup_database():
+    """Clean up the database before running tests"""
+    try:
+        import psycopg2
+        import getpass
+
+        # Connect and drop/recreate the database
+        conn = psycopg2.connect(database='postgres', user=getpass.getuser())
+        conn.autocommit = True
+        cur = conn.cursor()
+
+        # Terminate any active connections to the target database
+        cur.execute("""
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = 'nextmap_temp' AND pid <> pg_backend_pid()
+        """)
+
+        # Drop and recreate the database
+        cur.execute("DROP DATABASE IF EXISTS nextmap_temp")
+        cur.execute("CREATE DATABASE nextmap_temp")
+
+        cur.close()
+        conn.close()
+
+    except Exception as e:
+        print(f"Warning: Could not clean up database: {e}")
+
 def simple_cost_model(type_: str, *ports) -> float:
     """Standard cost model used in evaluations"""
     if type_ == "$dff":
@@ -32,6 +60,9 @@ def simple_cost_model(type_: str, *ports) -> float:
 def test_extract_no_techmap(netlist_file: str, test_name: str):
     """Test basic extraction without techmap (like demo.ipynb)"""
     print(f"\\n=== {test_name}: extract_no_techmap ===")
+
+    # Clean up database before test
+    cleanup_database()
 
     try:
         with open(netlist_file, 'r') as f:
@@ -68,6 +99,9 @@ def test_extract_techmap_with_limit(netlist_file: str, test_name: str, resource_
     """Test techmap extraction with limits (like eval notebooks)"""
     print(f"\\n=== {test_name}: extract_techmap_with_limit ===")
 
+    # Clean up database before test
+    cleanup_database()
+
     # Simplified DSP rules for testing
     dsp_rules = {
         "simple_mul_dff": {
@@ -80,7 +114,8 @@ def test_extract_techmap_with_limit(netlist_file: str, test_name: str, resource_
                 FROM dffs AS dff1 JOIN aby_cells AS mul1
                 ON dff1.d = mul1.y
                 WHERE mul1.type = '$muls'
-                    AND width_of(mul1.a) <= 27 AND width_of(mul1.b) <= 18
+                    AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.a) <= 27
+                    AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.b) <= 18
             '''
         }
     }

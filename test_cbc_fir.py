@@ -17,6 +17,35 @@ if venv_path not in sys.path and os.path.exists(venv_path):
 
 import emap
 
+def cleanup_database():
+    """Clean up the database before running tests"""
+    try:
+        import psycopg2
+        import getpass
+
+        # Connect and drop/recreate the database
+        conn = psycopg2.connect(database='postgres', user=getpass.getuser())
+        conn.autocommit = True
+        cur = conn.cursor()
+
+        # Terminate any active connections to the target database
+        cur.execute("""
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = 'nextmap_temp' AND pid <> pg_backend_pid()
+        """)
+
+        # Drop and recreate the database
+        cur.execute("DROP DATABASE IF EXISTS nextmap_temp")
+        cur.execute("CREATE DATABASE nextmap_temp")
+
+        cur.close()
+        conn.close()
+        print("Database cleaned up successfully")
+
+    except Exception as e:
+        print(f"Warning: Could not clean up database: {e}")
+
 def simple_cost_model(type_: str, *ports) -> float:
     if type_ == "$dff":
         return len(ports[0]) * 1.0
@@ -40,7 +69,9 @@ dsp_rules = {
             FROM dffs AS dff1 JOIN aby_cells AS mul1
             ON dff1.d = mul1.y
             WHERE mul1.type = '$muls'
-                AND width_of(mul1.a) <= 26 AND width_of(mul1.b) <= 17 AND width_of(dff1.q) <= 48
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.a) <= 26
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.b) <= 17
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = dff1.q) <= 48
         """
     },
     "signed_muladd_1_stage_26_17_48_bit": {
@@ -52,10 +83,14 @@ dsp_rules = {
         "outputs": ["p"],
         "match_sql": """
             SELECT mul1.a, mul1.b, add1.b, dff1.q
-            FROM dffs AS dff1 JOIN aby_cells AS mul1 JOIN aby_cells AS add1
-            ON dff1.d = add1.y AND mul1.y = add1.a
+            FROM dffs AS dff1
+            JOIN aby_cells AS add1 ON dff1.d = add1.y
+            JOIN aby_cells AS mul1 ON mul1.y = add1.a
             WHERE mul1.type = '$muls' AND add1.type = '$adds'
-                AND width_of(mul1.a) <= 26 AND width_of(mul1.b) <= 17 AND width_of(add1.b) <= 48 AND width_of(dff1.q) <= 48
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.a) <= 26
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = mul1.b) <= 17
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = add1.b) <= 48
+                AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = dff1.q) <= 48
         """
     }
 }
@@ -63,6 +98,9 @@ dsp_rules = {
 def test_fir_with_cbc():
     """Test FIR filter design with CBC solver."""
     print("=== Testing FIR Filter with CBC ===")
+
+    # Clean up database before test
+    cleanup_database()
 
     # Check if we have the test file
     if not os.path.exists("eval/fir/fir_n16_w8.v"):
