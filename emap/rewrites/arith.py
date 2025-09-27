@@ -66,7 +66,7 @@ def _construct_unsigned_adder(db: NetlistDB, a: list[int], b: list[int], y: list
         db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$xor', %s, %s, %s)", (awv, bwv, a_xor_b))
     else:
         a_xor_b = row[0]
-    cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$xor', %s, %s, %s) ON CONFLICT DO NOTHING", (a_xor_b, db._create_or_lookup_wirevec([cin]), ywv))
+    cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$xor', %s, %s, %s) ON CONFLICT DO NOTHING", (a_xor_b, db._create_or_lookup_wirevec([cin]), ywv))
     modified |= cur.rowcount > 0
 
     # build cout = (a[index] & b[index]) | (cin & (a[index] ^ b[index]))
@@ -86,7 +86,7 @@ def _construct_unsigned_adder(db: NetlistDB, a: list[int], b: list[int], y: list
         db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$and', %s, %s, %s)", (db._create_or_lookup_wirevec([cin]), a_xor_b, cin_and_a_xor_b))
     else:
         cin_and_a_xor_b = row[0]
-    cur.execute("SELECT y FROM aby_cells WHERE type = '$or' AND a = %s AND b = %s", (a_and_b, cin_and_a_xor_b))
+    cur = db.execute("SELECT y FROM aby_cells WHERE type = '$or' AND a = %s AND b = %s", (a_and_b, cin_and_a_xor_b))
     row = cur.fetchone()
     if row is None:
         modified = True
@@ -141,14 +141,14 @@ def apply_wide_mulu_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         ablo = [db.auto_id for _ in range(len(ywv) - a_width)] + ylo
         ablo = db._create_or_lookup_wirevec(ablo)
         cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$mulu', %s, %s, %s)", (a, db._create_or_lookup_wirevec(blo), ablo))
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$mulu' AND a = %s AND b = %s", (a, db._create_or_lookup_wirevec(bhi)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$mulu' AND a = %s AND b = %s", (a, db._create_or_lookup_wirevec(bhi)))
         row = cur.fetchone()
         if row is None:
             abhi = db._create_or_lookup_wirevec([db.auto_id for _ in range(len(ywv) - a_width)])
             db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$mulu', %s, %s, %s)", (a, db._create_or_lookup_wirevec(bhi), abhi))
         else:
             abhi = row[0]
-        cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$addu', %s, %s, %s)", (abhi, ablo, db._create_or_lookup_wirevec(yhi)))
+        cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$addu', %s, %s, %s)", (abhi, ablo, db._create_or_lookup_wirevec(yhi)))
         cnt += cur.rowcount > 0
     db.commit()
     return cnt
@@ -189,7 +189,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
         else:
             a_sub_b = row[0]
 
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (a_sub_b, d))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (a_sub_b, d))
         row = cur.fetchone()
         if row is None:
             factor = [db.auto_id for _ in range(y1_width)]
@@ -198,7 +198,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
         else:
             factor = row[0]
 
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (c, d))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (c, d))
         row = cur.fetchone()
         if row is None:
             c_sub_d = [db.auto_id for _ in range(c_width)]
@@ -207,7 +207,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
         else:
             c_sub_d = row[0]
 
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (c_sub_d, a))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (c_sub_d, a))
         row = cur.fetchone()
         if row is None:
             factor1 = [db.auto_id for _ in range(y1_width)]
@@ -216,7 +216,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
         else:
             factor1 = row[0]
 
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (c, d))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (c, d))
         row = cur.fetchone()
         if row is None:
             c_add_d = [db.auto_id for _ in range(c_width)]
@@ -225,7 +225,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
         else:
             c_add_d = row[0]
 
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (c_add_d, b))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (c_add_d, b))
         row = cur.fetchone()
         if row is None:
             factor2 = [db.auto_id for _ in range(y2_width)]
@@ -235,7 +235,7 @@ def apply_complex_mul(db: NetlistDB, matches: Iterable[tuple[int, int, int, int,
             factor2 = row[0]
 
         cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", ("$adds", factor, factor1, y1))
-        cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", ("$adds", factor, factor2, y2))
+        cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s)", ("$adds", factor, factor2, y2))
         cnt += cur.rowcount > 0
 
     db.commit()
@@ -277,7 +277,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             p0 = row[0]
         # p2 = a_hi * b_hi
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(bhi)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(bhi)))
         row = cur.fetchone()
         if row is None:
             p2 = [db.auto_id for _ in range(32)]
@@ -286,7 +286,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             p2 = row[0]
         # a_lo + a_hi
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(ahi)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(ahi)))
         row = cur.fetchone()
         if row is None:
             a_lo_plus_a_hi = [db.auto_id for _ in range(17)]
@@ -295,7 +295,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             a_lo_plus_a_hi = row[0]
         # b_lo + b_hi
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(blo), db._create_or_lookup_wirevec(bhi)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(blo), db._create_or_lookup_wirevec(bhi)))
         row = cur.fetchone()
         if row is None:
             b_lo_plus_b_hi = [db.auto_id for _ in range(17)]
@@ -304,7 +304,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             b_lo_plus_b_hi = row[0]
         # p1 = (a_lo + a_hi) * (b_lo + b_hi)
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (a_lo_plus_a_hi, b_lo_plus_b_hi))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (a_lo_plus_a_hi, b_lo_plus_b_hi))
         row = cur.fetchone()
         if row is None:
             p1 = [db.auto_id for _ in range(34)]
@@ -313,7 +313,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             p1 = row[0]
         # p1 - p0
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (p1, p0))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (p1, p0))
         row = cur.fetchone()
         if row is None:
             p1_sub_p0 = [db.auto_id for _ in range(34)]
@@ -322,7 +322,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             p1_sub_p0 = row[0]
         # p1 - p0 - p2
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (p1_sub_p0, p2))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$subs' AND a = %s AND b = %s", (p1_sub_p0, p2))
         row = cur.fetchone()
         if row is None:
             mid = [db.auto_id for _ in range(34)]
@@ -335,7 +335,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         # p2 << 32
         p2_shift = db._create_or_lookup_wirevec([0 for _ in range(32)] + db._get_wirevec(p2))
         # p0 + ((p1 - p0 - p2) << 16)
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (p0, mid_shift))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (p0, mid_shift))
         row = cur.fetchone()
         if row is None:
             low_part = [db.auto_id for _ in range(64)]
@@ -344,7 +344,7 @@ def apply_wide_muls_split(db: NetlistDB, matches: Iterable[tuple[int, int, int]]
         else:
             low_part = row[0]
         # y = p0 + ((p1 - p0 - p2) << 16) + (p2 << 32)
-        cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', %s, %s, %s)", (low_part, p2_shift, y))
+        cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', %s, %s, %s)", (low_part, p2_shift, y))
         cnt += cur.rowcount > 0
     db.commit()
     return cnt
@@ -374,7 +374,7 @@ def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, in
         else:
             p0 = row[0]
         # p1 = a_lo * b_hi
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(bhi)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(alo), db._create_or_lookup_wirevec(bhi)))
         row = cur.fetchone()
         if row is None:
             p1 = [db.auto_id for _ in range(32)]
@@ -383,7 +383,7 @@ def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, in
         else:
             p1 = row[0]
         # p2 = a_hi * b_lo
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(blo)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(blo)))
         row = cur.fetchone()
         if row is None:
             p2 = [db.auto_id for _ in range(32)]
@@ -392,7 +392,7 @@ def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, in
         else:
             p2 = row[0]
         # p3 = a_hi * b_hi
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(bhi)))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$muls' AND a = %s AND b = %s", (db._create_or_lookup_wirevec(ahi), db._create_or_lookup_wirevec(bhi)))
         row = cur.fetchone()
         if row is None:
             p3 = [db.auto_id for _ in range(32)]
@@ -407,7 +407,7 @@ def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, in
         # p3 << 32
         p3_shift = db._create_or_lookup_wirevec([0 for _ in range(32)] + db._get_wirevec(p3))
         # p0 + (p1 << 16)
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (p0, p1_shift))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (p0, p1_shift))
         row = cur.fetchone()
         if row is None:
             part1 = [db.auto_id for _ in range(64)]
@@ -416,7 +416,7 @@ def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, in
         else:
             part1 = row[0]
         # p0 + (p1 << 16) + (p2 << 16)
-        cur.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (part1, p2_shift))
+        cur = db.execute("SELECT y FROM aby_cells WHERE type = '$adds' AND a = %s AND b = %s", (part1, p2_shift))
         row = cur.fetchone()
         if row is None:
             part2 = [db.auto_id for _ in range(64)]
@@ -425,7 +425,7 @@ def apply_wide_muls_split_v2(db: NetlistDB, matches: Iterable[tuple[int, int, in
         else:
             part2 = row[0]
         # y = p0 + (p1 << 16) + (p2 << 16) + (p3 << 32)
-        cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', %s, %s, %s)", (part2, p3_shift, y))
+        cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', %s, %s, %s)", (part2, p3_shift, y))
         cnt += cur.rowcount > 0
     db.commit()
     return cnt
