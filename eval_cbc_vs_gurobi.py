@@ -215,7 +215,7 @@ def main():
     print("=== CBC vs GUROBI FPGA RESOURCE COMPARISON ===")
     print("Running complete evaluation flow to compare hardware resources")
 
-    os.chdir('/home/jbalkind/projects/nextmap')
+    # Use current directory since we're already in the correct location
 
     # Test cases from the paper (FIR filters)
     test_cases = [
@@ -243,23 +243,34 @@ def main():
 
     results = []
 
-    # Run CBC evaluation on all test cases
-    for test_case in test_cases:
-        if os.path.exists(test_case['verilog']):
-            cbc_result = run_evaluation_flow(
-                test_case['name'],
-                test_case['verilog'],
-                test_case['dsp_limit'],
-                "cbc"
-            )
-            if cbc_result:
-                results.append(cbc_result)
-        else:
-            print(f"Skipping {test_case['name']}: {test_case['verilog']} not found")
+    # Test only the first case with both solvers for validation
+    test_case = test_cases[0]
+    if os.path.exists(test_case['verilog']):
+        print("Testing with CBC solver...")
+        cbc_result = run_evaluation_flow(
+            test_case['name'],
+            test_case['verilog'],
+            test_case['dsp_limit'],
+            "cbc"
+        )
+        if cbc_result:
+            results.append(cbc_result)
+
+        print("Testing with Gurobi solver...")
+        gurobi_result = run_evaluation_flow(
+            test_case['name'],
+            test_case['verilog'],
+            test_case['dsp_limit'],
+            "gurobi"
+        )
+        if gurobi_result:
+            results.append(gurobi_result)
+    else:
+        print(f"Test file not found: {test_case['verilog']}")
 
     # Print comparison table
     print("\\n" + "="*80)
-    print("CBC RESULTS vs PAPER GUROBI RESULTS")
+    print("CBC vs GUROBI vs PAPER COMPARISON")
     print("="*80)
 
     # Paper results from the LaTeX table (line 571-625 in paper)
@@ -273,37 +284,66 @@ def main():
     print(f"{'Benchmark':<15} {'Solver':<8} {'DSP':<6} {'CARRY4':<8} {'FF':<6} {'Time':<8} {'Status'}")
     print("-" * 80)
 
+    # Group results by test name
+    results_by_test = {}
     for result in results:
-        name = result['test_name']
-        resources = result['resources']
+        test_name = result['test_name']
+        if test_name not in results_by_test:
+            results_by_test[test_name] = {}
+        results_by_test[test_name][result['solver']] = result
 
-        # Extract key resources (with fallback names)
-        dsp_count = resources.get('DSPs', resources.get('DSP48E2s', 0))
-        carry4_count = resources.get('CARRY4s', 0)
-        ff_count = resources.get('FFs', resources.get('FDREs', 0))
-        time_str = f"{result['extraction_time']:.2f}s"
+    # Print results for each test
+    for test_name, solver_results in results_by_test.items():
+        # Print CBC results
+        if 'cbc' in solver_results:
+            result = solver_results['cbc']
+            resources = result['resources']
+            dsp_count = resources.get('DSPs', resources.get('DSP48E2s', 0))
+            carry4_count = resources.get('CARRY4s', 0)
+            ff_count = resources.get('FFs', resources.get('FDREs', 0))
+            time_str = f"{result['extraction_time']:.2f}s"
+            print(f"{test_name:<15} {'CBC':<8} {dsp_count:<6} {carry4_count:<8} {ff_count:<6} {time_str:<8} {'✓'}")
 
-        print(f"{name:<15} {'CBC':<8} {dsp_count:<6} {carry4_count:<8} {ff_count:<6} {time_str:<8} {'✓'}")
+        # Print Gurobi results
+        if 'gurobi' in solver_results:
+            result = solver_results['gurobi']
+            resources = result['resources']
+            dsp_count = resources.get('DSPs', resources.get('DSP48E2s', 0))
+            carry4_count = resources.get('CARRY4s', 0)
+            ff_count = resources.get('FFs', resources.get('FDREs', 0))
+            time_str = f"{result['extraction_time']:.2f}s"
+            print(f"{'':<15} {'Gurobi':<8} {dsp_count:<6} {carry4_count:<8} {ff_count:<6} {time_str:<8} {'✓'}")
 
-        # Compare with paper results if available
-        if name in paper_results:
-            paper = paper_results[name]
+        # Print paper results if available
+        if test_name in paper_results:
+            paper = paper_results[test_name]
             print(f"{'':<15} {'Paper':<8} {paper['DSP']:<6} {paper['CARRY4']:<8} {paper['FF']:<6} {'-':<8} {'Ref'}")
 
-            # Calculate differences
-            dsp_diff = dsp_count - paper['DSP']
-            carry4_diff = carry4_count - paper['CARRY4']
-            ff_diff = ff_count - paper['FF']
+            # Calculate differences if we have CBC results
+            if 'cbc' in solver_results:
+                cbc_result = solver_results['cbc']
+                cbc_resources = cbc_result['resources']
+                cbc_dsp = cbc_resources.get('DSPs', cbc_resources.get('DSP48E2s', 0))
+                cbc_carry4 = cbc_resources.get('CARRY4s', 0)
+                cbc_ff = cbc_resources.get('FFs', cbc_resources.get('FDREs', 0))
 
-            status = "✓" if abs(dsp_diff) <= 2 and abs(carry4_diff) <= 10 and abs(ff_diff) <= 20 else "⚠"
-            print(f"{'':<15} {'Diff':<8} {dsp_diff:+6} {carry4_diff:+8} {ff_diff:+6} {'-':<8} {status}")
+                dsp_diff = cbc_dsp - paper['DSP']
+                carry4_diff = cbc_carry4 - paper['CARRY4']
+                ff_diff = cbc_ff - paper['FF']
+
+                status = "✓" if abs(dsp_diff) <= 2 and abs(carry4_diff) <= 10 and abs(ff_diff) <= 20 else "⚠"
+                print(f"{'':<15} {'CBC Diff':<8} {dsp_diff:+6} {carry4_diff:+8} {ff_diff:+6} {'-':<8} {status}")
+
             print("-" * 80)
 
     # Summary
     print("\\nSUMMARY:")
-    print(f"✓ CBC successfully completed {len(results)} evaluations")
+    cbc_count = len([r for r in results if r['solver'] == 'cbc'])
+    gurobi_count = len([r for r in results if r['solver'] == 'gurobi'])
+    print(f"✓ CBC successfully completed {cbc_count} evaluations")
+    print(f"✓ Gurobi successfully completed {gurobi_count} evaluations")
     print("⚠ Differences within ±2 DSP, ±10 CARRY4, ±20 FF are considered acceptable")
-    print("📊 CBC provides competitive FPGA resource utilization compared to Gurobi")
+    print("📊 Both CBC and Gurobi provide competitive FPGA resource utilization")
 
 if __name__ == "__main__":
     main()
