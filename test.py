@@ -9,8 +9,6 @@ with open(f"eval/out/{TEST_NAME}.json", "r") as f:
     netlist.build_from_json(json.load(f)["modules"]["top"])
 netlist.rebuild()
 
-print(f"Loaded {TEST_NAME} netlist successfully with solver_type='auto'")
-
 # cnt = 1
 # while cnt > 0:
 #     dff_forward_aby_cell_matches = emap.rewrites.ematch_dff_forward_aby_cell(netlist, ["$mulu"])
