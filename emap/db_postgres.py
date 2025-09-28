@@ -102,6 +102,9 @@ class NetlistDB:
             cur.close()
             self._connection.commit()
 
+        # Create PostgreSQL-specific functions that exist in SQLite
+        self._create_postgresql_functions()
+
         self._clk = None
         self._cnt = cnt
         from . import utils
@@ -167,7 +170,52 @@ class NetlistDB:
 
             params = tuple(new_params)
 
+        # Fix SQLite-style multiple JOINs for PostgreSQL compatibility
+        # SQLite allows: FROM t1 JOIN t2 JOIN t3 ON condition
+        # PostgreSQL requires: FROM t1 JOIN t2 ON condition1 JOIN t3 ON condition2
+        converted_query = self._fix_multiple_joins(converted_query)
+
         return converted_query, params
+
+    def _fix_multiple_joins(self, query: str) -> str:
+        """Fix SQLite-style multiple JOINs for PostgreSQL compatibility"""
+        import re
+
+        # Simple targeted fix for the specific rewrite pattern:
+        # FROM dffs AS dff1 JOIN dffs AS dff2 JOIN aby_cells as cell ON conditions
+        # Convert to: FROM dffs AS dff1 JOIN dffs AS dff2 ON dff1.d != dff2.d JOIN aby_cells as cell ON conditions
+
+        # Pattern for the specific problematic case
+        pattern = r'FROM\s+dffs\s+AS\s+(\w+)\s+JOIN\s+dffs\s+AS\s+(\w+)\s+JOIN\s+aby_cells\s+as\s+(\w+)\s+ON\s+'
+
+        def fix_dff_join(match):
+            alias1 = match.group(1)  # dff1
+            alias2 = match.group(2)  # dff2
+            alias3 = match.group(3)  # cell
+
+            # Add intermediate ON clause for the dff self-join
+            # Use a condition that allows both same and different DFFs
+            replacement = f'FROM dffs AS {alias1} JOIN dffs AS {alias2} ON TRUE JOIN aby_cells as {alias3} ON '
+            return replacement
+
+        # Apply the fix
+        fixed_query = re.sub(pattern, fix_dff_join, query, flags=re.IGNORECASE)
+        return fixed_query
+
+    def _extract_alias(self, table_part: str) -> str:
+        """Extract alias from table part like 'dffs AS dff1' or 'FROM dffs AS dff1'"""
+        import re
+        # Remove 'FROM' if present
+        table_part = re.sub(r'^\s*FROM\s+', '', table_part, flags=re.IGNORECASE)
+        # Look for 'table AS alias' pattern
+        match = re.search(r'\w+\s+AS\s+(\w+)', table_part, re.IGNORECASE)
+        if match:
+            return match.group(1)
+        # Look for just 'alias' at the end
+        parts = table_part.strip().split()
+        if len(parts) >= 2:
+            return parts[-1]
+        return None
 
     @staticmethod
     def bit_to_int(bit: str | int) -> int:
@@ -193,6 +241,23 @@ class NetlistDB:
                 return None
             val = (val << 1) | b
         return val
+
+    def _create_postgresql_functions(self):
+        """Create PostgreSQL functions that exist in SQLite"""
+        cur = self._connection.cursor()
+
+        # Create width_of function equivalent to SQLite's custom function
+        cur.execute("""
+            CREATE OR REPLACE FUNCTION width_of(wirevec_id INTEGER)
+            RETURNS INTEGER AS $$
+            BEGIN
+                RETURN (SELECT COALESCE(MAX(idx), -1) + 1 FROM wirevec_members WHERE wirevec = wirevec_id);
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+
+        cur.close()
+        self._connection.commit()
 
     @property
     def auto_id(self) -> int:
