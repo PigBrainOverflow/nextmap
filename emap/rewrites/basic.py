@@ -56,8 +56,7 @@ def apply_assoc_to_right(db: NetlistDB, matches: Iterable[tuple[str, int, int, i
         row = cur.fetchone()
         if row is None:
             b_add_c = db._add_wirevec([db.auto_id for _ in range(width_b_add_c)])
-            cur2 = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, b, c, b_add_c))
-            cur2.close()
+            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, b, c, b_add_c))
         else:
             b_add_c = row[0]
         newrows.append((type_, a, b_add_c, y))
@@ -97,8 +96,7 @@ def apply_assoc_to_left(db: NetlistDB, matches: Iterable[tuple[str, int, int, in
         row = cur.fetchone()
         if row is None:
             a_add_b = db._add_wirevec([db.auto_id for _ in range(width_a_add_b)])
-            cur2 = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, a_add_b))
-            cur2.close()
+            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, a_add_b))
         else:
             a_add_b = row[0]
         newrows.append((type_, a_add_b, c, y))

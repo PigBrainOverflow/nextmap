@@ -1,8 +1,8 @@
 from typing import Iterable
-from ..db import NetlistDB
+from ..types import NetlistDBProtocol
 
 
-def ematch_dff_forward_aby_cell(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
+def ematch_dff_forward_aby_cell(db: NetlistDBProtocol, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
     """
     Return a list of tuples (type, a, b, y) for dff cells that can be rewritten to forward aby cells.
     """
@@ -15,7 +15,7 @@ def ematch_dff_forward_aby_cell(db: NetlistDB, target_types: list[str]) -> Itera
     )
     return cur
 
-def apply_dff_forward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> int:
+def apply_dff_forward_aby_cell(db: NetlistDBProtocol, matches: Iterable[tuple[str, int, int, int]]) -> int:
     """
     Apply the dff forward aby cell matches to the database.
     Return the number of rows rewritten.
@@ -24,13 +24,16 @@ def apply_dff_forward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, 
     for type_, a, b, y in matches:
         cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (y,))    # get width
         width_y = cur.fetchone()[0]
-        cur2 = db.execute("SELECT y from aby_cells WHERE type = ? AND a = ? AND b = ? LIMIT 1", (type_, a, b))
-        row = cur2.fetchone()
-        cur2.close()
+        cur.close()
+
+        cur = db.execute("SELECT y from aby_cells WHERE type = ? AND a = ? AND b = ? LIMIT 1", (type_, a, b))
+        row = cur.fetchone()
+        cur.close()
+
         if row is None:
             d = db._add_wirevec([db.auto_id for _ in range(width_y)])
-            cur2 = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, d))
-            cur2.close()
+            cur = db.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, a, b, d))
+            cur.close()
         else:
             d = row[0]
         newrows.append((d, y))
@@ -39,7 +42,7 @@ def apply_dff_forward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, 
     return cur.rowcount
 
 
-def ematch_dff_backward_aby_cell(db: NetlistDB, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
+def ematch_dff_backward_aby_cell(db: NetlistDBProtocol, target_types: list[str]) -> Iterable[tuple[str, int, int, int]]:
     """
     Return a list of tuples (type, a, b, y) for dff cells that can be rewritten to backward aby cells.
     """
@@ -52,7 +55,7 @@ def ematch_dff_backward_aby_cell(db: NetlistDB, target_types: list[str]) -> Iter
     )
     return cur
 
-def apply_dff_backward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int, int, int]]) -> int:
+def apply_dff_backward_aby_cell(db: NetlistDBProtocol, matches: Iterable[tuple[str, int, int, int]]) -> int:
     """
     Apply the dff backward aby cell matches to the database.
     Return the number of rows rewritten.
@@ -61,26 +64,30 @@ def apply_dff_backward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int,
     for type_, a, b, q in matches:
         cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (a,))    # get width
         width_a = cur.fetchone()[0]
-        cur2 = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (b,))
-        width_b = cur2.fetchone()[0]
-        cur2.close()
+        cur.close()
+
+        cur = db.execute("SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = ?", (b,))    # get width
+        width_b = cur.fetchone()[0]
+        cur.close()
+
         # insert new dffs if not exist
-        cur2 = db.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (a,))
-        row = cur2.fetchone()
-        cur2.close()
+        cur = db.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (a,))
+        row = cur.fetchone()
+        cur.close()
         if row is None:
             a_q = db._add_wirevec([db.auto_id for _ in range(width_a)])
-            cur2 = db.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (a, a_q))
-            cur2.close()
+            cur = db.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (a, a_q))
+            cur.close()
         else:
             a_q = row[0]
-        cur2 = db.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (b,))
-        row = cur2.fetchone()
-        cur2.close()
+
+        cur = db.execute("SELECT q FROM dffs WHERE d = ? LIMIT 1", (b,))
+        row = cur.fetchone()
+        cur.close()
         if row is None:
             b_q = db._add_wirevec([db.auto_id for _ in range(width_b)])
-            cur2 = db.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (b, b_q))
-            cur2.close()
+            cur = db.execute("INSERT INTO dffs (d, q) VALUES (?, ?)", (b, b_q))
+            cur.close()
         else:
             b_q = row[0]
         newrows.append((type_, a_q, b_q, q))
@@ -89,7 +96,7 @@ def apply_dff_backward_aby_cell(db: NetlistDB, matches: Iterable[tuple[str, int,
     return cur.rowcount
 
 
-def rewrite_sdff(db: NetlistDB) -> int:
+def rewrite_sdff(db: NetlistDBProtocol) -> int:
     """
     This is a final pass before techmapping to rewrite a $dff and a $mux to a $sdff.
     Return the number of rows rewritten.

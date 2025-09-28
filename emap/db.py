@@ -1,13 +1,11 @@
-import psycopg2
-import psycopg2.extras
+import sqlite3
 import json
 from typing import Any
 from . import utils
 
 
-class NetlistDB:
-    _connection: psycopg2.extensions.connection
-    _db_config: dict[str, str]
+class NetlistDB(sqlite3.Connection):
+    _db_file: str
     _clk: int | None
     _cnt: int
     _rhash: utils.RollingHash
@@ -20,12 +18,10 @@ class NetlistDB:
     def param_to_int(param: str | int) -> int:
         return param if isinstance(param, int) else int(param, base=2)
 
-    def width_of(self, id) -> int:
-        cur = self._connection.cursor()
-        cur.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = %s", (id,))
-        result = cur.fetchone()
-        cur.close()
-        return result[0] + 1
+    @staticmethod
+    def width_of(conn: sqlite3.Connection, id) -> int:
+        cur = conn.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = ?", (id,))
+        return cur.fetchone()[0] + 1
 
     @staticmethod
     def vec_to_const(vec: list[int]) -> int | None:
@@ -44,132 +40,28 @@ class NetlistDB:
 
     @property
     def tech_tables(self) -> list[str]:
-        cur = self._connection.cursor()
-        cur.execute("SELECT tablename FROM pg_tables WHERE tablename LIKE 'tech_%';")
-        result = [name for (name,) in cur.fetchall()]
-        cur.close()
-        return result
+        cur = self.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'tech_%';")
+        return [name for (name,) in cur]
 
-    def __init__(self, schema_file: str, db_config: dict[str, str] = None, cnt: int = 0):
-        if db_config is None:
-            # Default to Unix socket connection with trust authentication
-            import getpass
-            db_config = {
-                'database': 'nextmap_temp',
-                'user': getpass.getuser()  # Use current system username
-                # No host/port specified = Unix socket connection
-            }
-
-        self._db_config = db_config
-        self._connection = psycopg2.connect(**db_config)
-        self._connection.autocommit = False
-
+    def __init__(self, schema_file: str, db_file: str = ":memory:", cnt: int = 0):
+        super().__init__(db_file)
         with open(schema_file, "r") as f:
-            cur = self._connection.cursor()
-            cur.execute(f.read())
-            cur.close()
-            self._connection.commit()
-
-        # Create width_of function for PostgreSQL
-        cur = self._connection.cursor()
-        cur.execute("""
-            CREATE OR REPLACE FUNCTION width_of(wirevec_id INTEGER)
-            RETURNS INTEGER AS $$
-            BEGIN
-                RETURN (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = wirevec_id);
-            END;
-            $$ LANGUAGE plpgsql;
-        """)
-        cur.close()
-        self._connection.commit()
-
+            self.executescript(f.read())
+        # self.execute("PRAGMA foreign_keys = ON")    # enable foreign key enforcement
+        self._db_file = db_file
         self._clk = None
         self._cnt = cnt
         self._rhash = utils.RollingHash()
-
-    def _convert_sqlite_to_postgres(self, query: str, params: tuple) -> tuple[str, tuple]:
-        """Convert SQLite query syntax to PostgreSQL"""
-        import re
-
-        # Replace ? placeholders with %s
-        converted_query = query.replace('?', '%s')
-
-        # Replace INSERT OR IGNORE with INSERT ... ON CONFLICT DO NOTHING
-        converted_query = converted_query.replace('INSERT OR IGNORE INTO', 'INSERT INTO')
-        if 'INSERT INTO' in converted_query and 'ON CONFLICT DO NOTHING' not in converted_query:
-            # Add ON CONFLICT DO NOTHING before any potential RETURNING clause
-            if 'RETURNING' in converted_query:
-                converted_query = converted_query.replace(' RETURNING', ' ON CONFLICT DO NOTHING RETURNING')
-            else:
-                converted_query += ' ON CONFLICT DO NOTHING'
-
-        # Fix JOIN syntax for PostgreSQL
-        # Convert "JOIN table2 JOIN table3 ON condition" to proper PostgreSQL syntax
-        # This is a common pattern in the retiming queries
-        join_pattern = r'(\w+) AS (\w+) JOIN (\w+) AS (\w+) JOIN (\w+) as (\w+) ON (.+?)\s+(WHERE|$)'
-        def fix_join_syntax(match):
-            table1, alias1, table2, alias2, table3, alias3, condition, where_clause = match.groups()
-            # Convert to proper explicit joins
-            return f'{table1} AS {alias1} CROSS JOIN {table2} AS {alias2} JOIN {table3} as {alias3} ON ({condition}) {where_clause}'
-
-        converted_query = re.sub(join_pattern, fix_join_syntax, converted_query, flags=re.MULTILINE | re.DOTALL)
-
-        # Handle parameters for IN clauses
-        # The rewrite modules pass parameters as a single list/tuple for IN clauses
-        if 'IN (' in converted_query and params and len(params) == 1 and isinstance(params[0], (list, tuple)):
-            # This handles the case where SQLite rewrite code does:
-            # execute("... WHERE type IN ({})...".format(",".join("?" * len(types))), types)
-            # which becomes execute("... WHERE type IN (%s,%s)...", ['$adds', '$muls'])
-            params = tuple(params[0])  # Flatten the parameter list
-
-        return converted_query, params
-
-    def execute(self, query: str, params=None):
-        """Execute a query and return cursor with SQLite compatibility"""
-        # Convert SQLite syntax to PostgreSQL
-        converted_query, converted_params = self._convert_sqlite_to_postgres(query, params or ())
-
-        # Debug output disabled for cleaner output
-        # Uncomment for troubleshooting:
-        # if 'type' in query and ('IN (' in query or 'JOIN' in query):
-        #     print(f"DEBUG - Original query: {query}")
-        #     print(f"DEBUG - Original params: {params}")
-        #     print(f"DEBUG - Converted query: {converted_query}")
-        #     print(f"DEBUG - Converted params: {converted_params}")
-        #     print("-" * 80)
-
-        cur = self._connection.cursor()
-        cur.execute(converted_query, converted_params)
-        return cur
-
-    def executemany(self, query: str, params_list):
-        """Execute a query multiple times with different parameters with SQLite compatibility"""
-        # Convert SQLite syntax to PostgreSQL
-        converted_query, _ = self._convert_sqlite_to_postgres(query, ())
-        cur = self._connection.cursor()
-        cur.executemany(converted_query, params_list)
-        rowcount = cur.rowcount
-        cur.close()
-        return type('cursor', (), {'rowcount': rowcount})()
-
-    def commit(self):
-        """Commit the current transaction"""
-        self._connection.commit()
-
-    def close(self):
-        """Close the database connection"""
-        self._connection.close()
+        self.create_function("width_of", 1, lambda id: self.width_of(self, id))
 
     def dump_tables(self) -> dict:
-        # get all tables except postgres internal tables
-        cur = self.execute("SELECT tablename FROM pg_tables WHERE schemaname = 'public';")
+        # get all tables except sqlite internal tables
+        cur = self.execute("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%';")
         db = {}
         for (table,) in cur.fetchall():
-            cur2 = self.execute(f"SELECT * FROM {table}")
-            rows = cur2.fetchall()
-            db[table] = [dict(zip([col[0] for col in cur2.description], row)) for row in rows]
-            cur2.close()
-        cur.close()
+            cur.execute(f"SELECT * FROM {table}")
+            rows = cur.fetchall()
+            db[table] = [dict(zip([col[0] for col in cur.description], row)) for row in rows]
         return db
 
     def dump_wirevecs(self) -> dict[int, list[int]]:
@@ -180,18 +72,15 @@ class NetlistDB:
         return wvs
 
     def _get_wirevec(self, id: int) -> list[int]:
-        cur = self.execute("SELECT wire FROM wirevec_members WHERE wirevec = %s ORDER BY idx", (id,))
-        result = [w for (w,) in cur.fetchall()]
-        cur.close()
-        return result
+        cur = self.execute("SELECT wire FROM wirevec_members WHERE wirevec = ? ORDER BY idx", (id,))
+        return [w for (w,) in cur]
 
     def _add_wirevec(self, wv: list[int]) -> int:
         h = self._rhash.hash(wv)
-        cur = self.execute("INSERT INTO wirevecs (hash) VALUES (%s) RETURNING id", (h,))
+        cur = self.execute("INSERT INTO wirevecs (hash) VALUES (?) RETURNING id", (h,))
         id = cur.fetchone()[0]
-        cur.close()
         self.executemany(
-            "INSERT INTO wirevec_members (wirevec, idx, wire) VALUES (%s, %s, %s)",
+            "INSERT INTO wirevec_members (wirevec, idx, wire) VALUES (?, ?, ?)",
             ((id, i, w) for i, w in enumerate(wv))
         )
         self.commit()
@@ -199,18 +88,16 @@ class NetlistDB:
 
     def _create_or_lookup_wirevec(self, wv: list[int]) -> int:
         h = self._rhash.hash(wv)
-        cur = self.execute("SELECT id FROM wirevecs WHERE hash = %s", (h,))
+        cur = self.execute("SELECT id FROM wirevecs WHERE hash = ?", (h,))
         rows = cur.fetchall()
-        cur.close()
         for (id,) in rows:  # lookup
             if self._get_wirevec(id) == wv:
                 return id
         # not found, insert
-        cur = self.execute("INSERT INTO wirevecs (hash) VALUES (%s) RETURNING id", (h,))
+        cur.execute("INSERT INTO wirevecs (hash) VALUES (?) RETURNING id", (h,))
         id = cur.fetchone()[0]
-        cur.close()
         self.executemany(
-            "INSERT INTO wirevec_members (wirevec, idx, wire) VALUES (%s, %s, %s)",
+            "INSERT INTO wirevec_members (wirevec, idx, wire) VALUES (?, ?, ?)",
             ((id, i, w) for i, w in enumerate(wv))
         )
         self.commit()
@@ -218,56 +105,46 @@ class NetlistDB:
 
     def _add_input(self, name: str, source: list[int]):
         ws = self._create_or_lookup_wirevec(source)
-        cur = self.execute("INSERT INTO from_inputs (source, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (ws, name))
-        cur.close()
+        self.execute("INSERT INTO from_inputs (source, name) VALUES (?, ?)", (ws, name))
         self.commit()
 
     def _add_output(self, name: str, sink: list[int]):
         ws = self._create_or_lookup_wirevec(sink)
-        cur = self.execute("INSERT INTO as_outputs (sink, name) VALUES (%s, %s) ON CONFLICT DO NOTHING", (ws, name))
-        cur.close()
+        self.execute("INSERT INTO as_outputs (sink, name) VALUES (?, ?)", (ws, name))
         self.commit()
 
     def _add_dff(self, d: list[int], q: list[int]):
         wvd = self._create_or_lookup_wirevec(d)
         wvq = self._create_or_lookup_wirevec(q)
-        cur = self.execute("INSERT INTO dffs (d, q) VALUES (%s, %s) ON CONFLICT DO NOTHING", (wvd, wvq))
-        cur.close()
+        self.execute("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", (wvd, wvq))
         self.commit()
 
     def _add_ay_cell(self, type_: str, a: list[int], y: list[int]):
         wva, wvy = self._create_or_lookup_wirevec(a), self._create_or_lookup_wirevec(y)
-        cur = self.execute("INSERT INTO ay_cells (type, a, y) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING", (type_, wva, wvy))
-        cur.close()
+        self.execute("INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)", (type_, wva, wvy))
         self.commit()
 
     def _add_aby_cell(self, type_: str, a: list[int], b: list[int], y: list[int]):
         wva, wvb, wvy = self._create_or_lookup_wirevec(a), self._create_or_lookup_wirevec(b), self._create_or_lookup_wirevec(y)
-        cur = self.execute("INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING", (type_, wva, wvb, wvy))
-        cur.close()
+        self.execute("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", (type_, wva, wvb, wvy))
         self.commit()
 
     def _add_absy_cell(self, type_: str, a: list[int], b: list[int], s: list[int], y: list[int]):
         wva, wvb, wvs, wvy = self._create_or_lookup_wirevec(a), self._create_or_lookup_wirevec(b), self._create_or_lookup_wirevec(s), self._create_or_lookup_wirevec(y)
-        cur = self.execute("INSERT INTO absy_cells (type, a, b, s, y) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING", (type_, wva, wvb, wvs, wvy))
-        cur.close()
+        self.execute("INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)", (type_, wva, wvb, wvs, wvy))
         self.commit()
 
     def _add_blackbox_cell(self, name: str, module: str, params: dict[str, Any], signals: list[tuple[str, list[int]]]):
-        cur = self.execute("INSERT INTO instances (name, params, module) VALUES (%s, %s, %s)", (name, json.dumps(params), module))
-        cur.close()
-        self.executemany("INSERT INTO instance_ports (instance, port, signal) VALUES (%s, %s, %s)", ((name, port, self._create_or_lookup_wirevec(signal)) for port, signal in signals))
+        self.execute("INSERT INTO instances (name, params, module) VALUES (?, ?, ?)", (name, json.dumps(params), module))
+        self.executemany("INSERT INTO instance_ports (instance, port, signal) VALUES (?, ?, ?)", ((name, port, self._create_or_lookup_wirevec(signal)) for port, signal in signals))
         self.commit()
 
     def build_from_json_cpp(self, mod: dict[str, Any], clk: str = "clk"):
-        # PostgreSQL doesn't have in-memory databases like SQLite, so we check the database name instead
-        if self._db_config.get('database') == 'nextmap_temp':
-            raise RuntimeError("Cannot call build_from_json_cpp() on temporary database")
+        if self._db_file == ":memory:":
+            raise RuntimeError("Cannot call build_from_json_cpp() on in-memory database")
         try:
             from .emapcc.build import emapcc
-            # Note: emapcc might need to be updated to work with PostgreSQL connection info
-            db_file_equivalent = f"postgresql://{self._db_config.get('user')}@{self._db_config.get('host')}:{self._db_config.get('port')}/{self._db_config.get('database')}"
-            self._clk, self._cnt = emapcc.build_from_json(db_file_equivalent, mod, clk, self._rhash._POWER_B[1], self._rhash._M)
+            self._clk, self._cnt = emapcc.build_from_json(self._db_file, mod, clk, self._rhash._POWER_B[1], self._rhash._M)
         except ImportError:
             raise RuntimeError("Module emapcc is not available. Please build emapcc to use build_from_json_cpp()")
         except Exception as e:
@@ -295,8 +172,7 @@ class NetlistDB:
 
         # build memories
         for name, mem in memories.items():
-            cur = self.execute("INSERT INTO memories (name, width, size) VALUES (%s, %s, %s)", (name, mem["width"], mem["size"]))
-            cur.close()
+            self.execute("INSERT INTO memories (name, width, size) VALUES (?, ?, ?)", (name, mem["width"], mem["size"]))
 
         # build cells
         print(f"Found {len(cells)} cells")
@@ -360,16 +236,14 @@ class NetlistDB:
                 re = [self.bit_to_int(bit) for bit in conns["EN"]]
                 assert len(rclk) == 1 and rclk[0] == -1 # no clk
                 assert len(re) == 1 and re[0] == -1 # no re
-                cur = self.execute("INSERT INTO memrds (memory, raddr, rdata) VALUES (%s, %s, %s)", (params["MEMID"][1:], self._create_or_lookup_wirevec(raddr), self._create_or_lookup_wirevec(rdata)))
-                cur.close()
+                self.execute("INSERT INTO memrds (memory, raddr, rdata) VALUES (?, ?, ?)", (params["MEMID"][1:], self._create_or_lookup_wirevec(raddr), self._create_or_lookup_wirevec(rdata)))
             elif type_ == "$memwr_v2":
                 waddr = [self.bit_to_int(bit) for bit in conns["ADDR"]]
                 wclk = [self.bit_to_int(bit) for bit in conns["CLK"]]
                 wdata = [self.bit_to_int(bit) for bit in conns["DATA"]]
                 we = [self.bit_to_int(bit) for bit in conns["EN"]]
                 assert len(wclk) == 1 and wclk[0] == self._clk
-                cur = self.execute("INSERT INTO memwrs (memory, waddr, wdata, we) VALUES (%s, %s, %s, %s)", (params["MEMID"][1:], self._create_or_lookup_wirevec(waddr), self._create_or_lookup_wirevec(wdata), self._create_or_lookup_wirevec(we)))
-                cur.close()
+                self.execute("INSERT INTO memwrs (memory, waddr, wdata, we) VALUES (?, ?, ?, ?)", (params["MEMID"][1:], self._create_or_lookup_wirevec(waddr), self._create_or_lookup_wirevec(wdata), self._create_or_lookup_wirevec(we)))
             else:
                 attrs = cell["attributes"]
                 if "module_not_derived" in attrs and self.param_to_int(attrs["module_not_derived"]): # blackbox cell
@@ -379,9 +253,7 @@ class NetlistDB:
 
         self.commit()
         # set cnt
-        cur = self.execute("SELECT MAX(wire) FROM wirevec_members")
-        self._cnt = cur.fetchone()[0] or 1
-        cur.close()
+        self._cnt = self.execute("SELECT MAX(wire) FROM wirevec_members").fetchone()[0] or 1
         print(f"Database built with {self._cnt} wires and global clock {self._clk}")
 
     def _merge_cells(self) -> utils.DisjointSetUnion:
@@ -392,7 +264,7 @@ class NetlistDB:
         dsu = utils.DisjointSetUnion()
         cur = self.execute("SELECT type, a, b, y FROM aby_cells")
         wires: dict[tuple[str, int, int], list[int]] = {}
-        for type_, a, b, y in cur.fetchall():
+        for type_, a, b, y in cur:
             if (type_, a, b) not in wires:
                 wires[(type_, a, b)] = []
             wires[(type_, a, b)].append(y)
@@ -404,8 +276,7 @@ class NetlistDB:
                 wvs = [self._get_wirevec(y) for y in ys]
                 wv0 = max(wvs, key=len)
                 y0 = ys[wvs.index(wv0)]
-                cur2 = self.execute("DELETE FROM aby_cells WHERE type = %s AND a = %s AND b = %s AND y != %s", (type_, a, b, y0))
-                cur2.close()
+                cur.execute("DELETE FROM aby_cells WHERE type = ? AND a = ? AND b = ? AND y != ?", (type_, a, b, y0))
                 for y in ys:
                     if y == y0:
                         continue
@@ -413,7 +284,6 @@ class NetlistDB:
                     # assert len(wv0) == len(wv)
                     for w0, w in zip(wv0, wv):
                         dsu.union(w0, w)
-        cur.close()
 
         cur = self.execute("SELECT d, q FROM dffs")
         wires = {}
@@ -424,40 +294,34 @@ class NetlistDB:
         for d, qs in wires.items():
             if len(qs) > 1:
                 # remove duplicates
-                cur2 = self.execute("DELETE FROM dffs WHERE d = %s AND q != %s", (d, qs[0]))
-                cur2.close()
+                cur.execute("DELETE FROM dffs WHERE d = ? AND q != ?", (d, qs[0]))
                 wv0 = self._get_wirevec(qs[0])
                 for q in qs[1:]:
                     wv = self._get_wirevec(q)
                     assert len(wv0) == len(wv)
                     for w0, w in zip(wv0, wv):
                         dsu.union(w0, w)
-        cur.close()
         self.commit()
         return dsu
 
     def _merge_wires(self, wires_to_merge: utils.DisjointSetUnion):
         for w in wires_to_merge.parents:
-            cur = self.execute("SELECT wirevec, idx FROM wirevec_members WHERE wire = %s", (w,))
+            cur = self.execute("SELECT wirevec, idx FROM wirevec_members WHERE wire = ?", (w,))
             for wv, idx in cur.fetchall():
-                cur2 = self.execute("SELECT hash FROM wirevecs WHERE id = %s", (wv,))
-                old_h = cur2.fetchone()[0]
-                cur2.close()
+                cur.execute("SELECT hash FROM wirevecs WHERE id = ?", (wv,))
+                old_h = cur.fetchone()[0]
                 new_w = wires_to_merge.find(w)
                 # update wirevec member
-                cur3 = self.execute("UPDATE wirevec_members SET wire = %s WHERE wirevec = %s AND idx = %s", (new_w, wv, idx))
-                cur3.close()
+                cur.execute("UPDATE wirevec_members SET wire = ? WHERE wirevec = ? AND idx = ?", (new_w, wv, idx))
                 # update hash
-                cur4 = self.execute("UPDATE wirevecs SET hash = %s WHERE id = %s", (self._rhash.update(old_h, idx, w, new_w), wv))
-                cur4.close()
-            cur.close()
+                cur.execute("UPDATE wirevecs SET hash = ? WHERE id = ?", (self._rhash.update(old_h, idx, w, new_w), wv))
         self.commit()
 
     def _merge_wirevecs(self):
         dsu = utils.DisjointSetUnion()
         cur = self.execute("SELECT id, hash FROM wirevecs")
         wirevecs: dict[int, list[int]] = {}
-        for id, h in cur.fetchall():
+        for id, h in cur:
             if h not in wirevecs:
                 wirevecs[h] = []
             wirevecs[h].append(id)
@@ -474,14 +338,9 @@ class NetlistDB:
                     if len(wvids) > 1:
                         for wvid in range(1, len(wvids)):
                             dsu.union(wvids[0], wvids[wvid])
-        cur.close()
 
-        cur2 = self._connection.cursor()
-        cur2.executemany("DELETE FROM wirevecs WHERE id = %s", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))
-        cur2.close()
-        cur3 = self._connection.cursor()
-        cur3.executemany("DELETE FROM wirevec_members WHERE wirevec = %s", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))   # TODO: it seems that PostgreSQL supports ON DELETE CASCADE, but delete manually for compatibility
-        cur3.close()
+        cur.executemany("DELETE FROM wirevecs WHERE id = ?", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))
+        cur.executemany("DELETE FROM wirevec_members WHERE wirevec = ?", ((wv,) for wv in dsu.parents if dsu.find(wv) != wv))   # TODO: it seems that SQLite does not support ON DELETE CASCADE, delete manually
         self.commit()
         return dsu
 
@@ -491,140 +350,94 @@ class NetlistDB:
             leader = dsu.find(wv)
             if leader != wv:
                 # update aby_cells
-                cur = self.execute("SELECT type, b, y FROM aby_cells WHERE a = %s", (wv,))
+                cur = self.execute("SELECT type, b, y FROM aby_cells WHERE a = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM aby_cells WHERE a = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM aby_cells WHERE a = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
                     ((type_, leader, b, y) for type_, b, y in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT type, a, y FROM aby_cells WHERE b = %s", (wv,))
+                cur = self.execute("SELECT type, a, y FROM aby_cells WHERE b = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM aby_cells WHERE b = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM aby_cells WHERE b = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
                     ((type_, a, leader, y) for type_, a, y in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT type, a, b FROM aby_cells WHERE y = %s", (wv,))
+                cur = self.execute("SELECT type, a, b FROM aby_cells WHERE y = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM aby_cells WHERE y = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM aby_cells WHERE y = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO aby_cells (type, a, b, y) VALUES (%s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)",
                     ((type_, a, b, leader) for type_, a, b in rows)
                 )
-                cur.close()
 
                 # update dffs
-                cur = self.execute("SELECT d, q FROM dffs WHERE d = %s", (wv,))
+                cur = self.execute("SELECT d, q FROM dffs WHERE d = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM dffs WHERE d = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM dffs WHERE d = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO dffs (d, q) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)",
                     ((leader, q) for _, q in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT d, q FROM dffs WHERE q = %s", (wv,))
+                cur = self.execute("SELECT d, q FROM dffs WHERE q = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM dffs WHERE q = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM dffs WHERE q = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO dffs (d, q) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)",
                     ((d, leader) for d, _ in rows)
                 )
-                cur.close()
 
                 # update ay_cells
-                cur = self.execute("SELECT type, y FROM ay_cells WHERE a = %s", (wv,))
+                cur = self.execute("SELECT type, y FROM ay_cells WHERE a = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM ay_cells WHERE a = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM ay_cells WHERE a = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO ay_cells (type, a, y) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)",
                     ((type_, leader, y) for type_, y in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT type, a FROM ay_cells WHERE y = %s", (wv,))
+                cur = self.execute("SELECT type, a FROM ay_cells WHERE y = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM ay_cells WHERE y = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM ay_cells WHERE y = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO ay_cells (type, a, y) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO ay_cells (type, a, y) VALUES (?, ?, ?)",
                     ((type_, a, leader) for type_, a in rows)
                 )
-                cur.close()
 
                 # update absy_cells
-                cur = self.execute("SELECT type, b, s, y FROM absy_cells WHERE a = %s", (wv,))
+                cur = self.execute("SELECT type, b, s, y FROM absy_cells WHERE a = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM absy_cells WHERE a = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM absy_cells WHERE a = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO absy_cells (type, a, b, s, y) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, leader, b, s, y) for type_, b, s, y in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT type, a, s, y FROM absy_cells WHERE b = %s", (wv,))
+                cur = self.execute("SELECT type, a, s, y FROM absy_cells WHERE b = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM absy_cells WHERE b = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM absy_cells WHERE b = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO absy_cells (type, a, b, s, y) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, a, leader, s, y) for type_, a, s, y in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT type, a, b, y FROM absy_cells WHERE s = %s", (wv,))
+                cur = self.execute("SELECT type, a, b, y FROM absy_cells WHERE s = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM absy_cells WHERE s = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM absy_cells WHERE s = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO absy_cells (type, a, b, s, y) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, a, b, leader, y) for type_, a, b, y in rows)
                 )
-                cur.close()
-                cur = self.execute("SELECT type, a, b, s FROM absy_cells WHERE y = %s", (wv,))
+                cur = self.execute("SELECT type, a, b, s FROM absy_cells WHERE y = ?", (wv,))
                 rows = cur.fetchall()
-                cur.close()
-                cur = self.execute("DELETE FROM absy_cells WHERE y = %s", (wv,))
-                cur.close()
-                cur = self._connection.cursor()
+                cur.execute("DELETE FROM absy_cells WHERE y = ?", (wv,))
                 cur.executemany(
-                    "INSERT INTO absy_cells (type, a, b, s, y) VALUES (%s, %s, %s, %s, %s) ON CONFLICT DO NOTHING",
+                    "INSERT OR IGNORE INTO absy_cells (type, a, b, s, y) VALUES (?, ?, ?, ?, ?)",
                     ((type_, a, b, s, leader) for type_, a, b, s in rows)
                 )
-                cur.close()
 
                 # update from_inputs
-                cur = self.execute("UPDATE from_inputs SET source = %s WHERE source = %s", (leader, wv))
-                cur.close()
+                self.execute("UPDATE from_inputs SET source = ? WHERE source = ?", (leader, wv))
                 # update as_outputs
-                cur = self.execute("UPDATE as_outputs SET sink = %s WHERE sink = %s", (leader, wv))
-                cur.close()
+                self.execute("UPDATE as_outputs SET sink = ? WHERE sink = ?", (leader, wv))
                 # TODO: update instance_ports
         self.commit()
 

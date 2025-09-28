@@ -25,7 +25,7 @@ def apply_word_dff_split(db: NetlistDB, matches: Iterable[tuple[int, int]]) -> i
         assert len(dwv) == len(qwv)
         modified = False
         for dw, qw in zip(dwv, qwv):
-            cur = db.execute("INSERT INTO dffs (d, q) VALUES (%s, %s) ON CONFLICT DO NOTHING", (db._create_or_lookup_wirevec([dw]), db._create_or_lookup_wirevec([qw])))
+            cur = db.execute("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", (db._create_or_lookup_wirevec([dw]), db._create_or_lookup_wirevec([qw])))
             modified |= cur.rowcount > 0
         cnt += modified
 
@@ -40,7 +40,7 @@ def ematch_wide_dff(db: NetlistDB, width_threshold: int = 16) -> Iterable[tuple[
     cur = db.execute("""
         SELECT dff.d, dff.q
         FROM dffs AS dff
-        WHERE (SELECT COUNT(*) FROM wirevec_members WHERE wirevec = dff.d) > %s
+        WHERE (SELECT COUNT(*) FROM wirevec_members WHERE wirevec = dff.d) > ?
     """, (width_threshold,))
     return cur
 
@@ -58,9 +58,9 @@ def apply_wide_dff_split(db: NetlistDB, matches: Iterable[tuple[int, int]], widt
         modified = False
         dwv_lo, dwv_hi = dwv[:width_threshold], dwv[width_threshold:]
         qwv_lo, qwv_hi = qwv[:width_threshold], qwv[width_threshold:]
-        cur = db.execute("INSERT INTO dffs (d, q) VALUES (%s, %s) ON CONFLICT DO NOTHING", (db._create_or_lookup_wirevec(dwv_lo), db._create_or_lookup_wirevec(qwv_lo)))
+        cur = db.execute("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", (db._create_or_lookup_wirevec(dwv_lo), db._create_or_lookup_wirevec(qwv_lo)))
         modified |= cur.rowcount > 0
-        cur = db.execute("INSERT INTO dffs (d, q) VALUES (%s, %s) ON CONFLICT DO NOTHING", (db._create_or_lookup_wirevec(dwv_hi), db._create_or_lookup_wirevec(qwv_hi)))
+        cur = db.execute("INSERT OR IGNORE INTO dffs (d, q) VALUES (?, ?)", (db._create_or_lookup_wirevec(dwv_hi), db._create_or_lookup_wirevec(qwv_hi)))
         modified |= cur.rowcount > 0
         cnt += modified
 

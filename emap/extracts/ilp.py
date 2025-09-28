@@ -14,6 +14,7 @@ def prune_cells(cells: list[dict[str, Any]]):
     """
     try:
         emapcc = importlib.import_module("..emapcc.build.emapcc", package=__package__)
+        print("C++ backend emapcc found")
         removed_indices = emapcc.prune_cells([(
             cell["cost"],
             sorted({w for ws in cell["inputs"].values() for w in ws}),
@@ -56,6 +57,7 @@ def group_wires(bundles: list[set[int]]) -> list[set[int]]:
     """
     try:
         emapcc = importlib.import_module("..emapcc.build.emapcc", package=__package__)
+        print("C++ backend emapcc found")
         cnt = len(set().union(*bundles))
         new_bundles, groups = emapcc.group_wires(bundles)
         for bundle, new_bundle in zip(bundles, new_bundles):    # modify in place
@@ -133,9 +135,6 @@ def extract_no_techmap(db: NetlistDB, cost_model: Callable, solver_type: str = "
     """
     inputs, outputs, cells, dffs = db_to_normalized(db, cost_model)
 
-    # Sort cells by cost for pruning
-    cells.sort(key=lambda x: x["cost"])
-
     # prune cells that are dominated by others
     prune_cells(cells)
 
@@ -208,9 +207,6 @@ def extract_techmap_with_limit(db: NetlistDB, cost_model: Callable, tech_rules: 
     """
     inputs, outputs, cells, dffs = db_to_normalized(db, cost_model)
     cells += db_to_normalized_tech(db, cost_model, tech_rules)
-
-    # Sort cells by cost for pruning
-    cells.sort(key=lambda x: x["cost"])
 
     # prune cells that are dominated by others
     prune_cells(cells)

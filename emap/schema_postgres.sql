@@ -1,6 +1,9 @@
+-- Auto-generated PostgreSQL schema from schema_sqlite.sql
+-- Do not edit manually - run schema_converter.py to regenerate
+
 CREATE TABLE IF NOT EXISTS wirevecs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    hash INTEGER NOT NULL
+    id SERIAL PRIMARY KEY,
+    hash BIGINT NOT NULL
 );
 -- not sure whether we need length field, we can get it from max(idx) + 1 in wirevec_members
 CREATE INDEX IF NOT EXISTS wirevecs_hash ON wirevecs(hash); -- for quick lookup by hash
@@ -10,7 +13,7 @@ CREATE TABLE IF NOT EXISTS wirevec_members (
     idx INTEGER,
     wire INTEGER NOT NULL,
     PRIMARY KEY (wirevec, idx),
-    FOREIGN KEY (wirevec) REFERENCES wirevecs(id) -- ON DELETE CASCADE
+    FOREIGN KEY (wirevec) REFERENCES wirevecs(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS wirevec_members_wire on wirevec_members(wire);   -- for quick lookup by wire
 
@@ -73,7 +76,7 @@ CREATE TABLE IF NOT EXISTS dffs (
 
 CREATE TABLE IF NOT EXISTS instances (
     name VARCHAR(16) PRIMARY KEY,
-    params JSON,    -- no need to process this, just store it
+    params JSONB,    -- PostgreSQL JSONB for better performance
     module VARCHAR(16) NOT NULL
 );
 

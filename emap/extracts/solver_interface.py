@@ -218,6 +218,8 @@ class GurobiInterface(SolverInterface):
             import gurobipy as grb
             self.grb = grb
             self.model = grb.Model(name)
+            # Suppress Gurobi output by default
+            self.model.setParam('OutputFlag', 0)
             self._variables = []  # Keep track of our Variable objects
             # Map our constants to Gurobi's
             self.OPTIMAL = grb.GRB.OPTIMAL
