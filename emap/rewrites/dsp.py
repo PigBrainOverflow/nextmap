@@ -25,12 +25,12 @@ def match_wire_or_reg(db: NetlistDB, w: int) -> list[dict[str, Any]]:
 
 def match_dff_or_sdff(db: NetlistDB, q: int) -> list[dict[str, Any]]:
     matches: list[dict[str, Any]] = []
-    cur = db.execute("SELECT d FROM dffs WHERE q = %s", (q,))
+    cur = db.execute("SELECT d FROM dffs WHERE q = ?", (q,))
     for (d,) in cur.fetchall():
         # case 1: d comes from a wire, so this is a dff
         matches.append({"type": "dff", "inputs": {"D": d}})
         # case 2: d comes from a mux of a wire and constant 0, so this is a sdff
-        cur = db.execute("SELECT a, b, s FROM absy_cells WHERE type = '$mux' AND y = %s", (d,))
+        cur = db.execute("SELECT a, b, s FROM absy_cells WHERE type = '$mux' AND y = ?", (d,))
         for a, b, s in cur:
             bwv = db._get_wirevec(b)
             if all(bit == 0 for bit in bwv):
@@ -42,7 +42,7 @@ def match_dsp_a_pre_mult(db: NetlistDB, a: int) -> list[dict[str, Any]]:
     # case 1: a comes from a wire or reg
     matches.extend(match_wire_or_reg(db, a))
     # case 2: a comes from an add
-    cur = db.execute("SELECT a, b FROM aby_cells WHERE type = '$adds' AND y = %s AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = a) <= 26 AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = b) <= 18", (a,))
+    cur = db.execute("SELECT a, b FROM aby_cells WHERE type = '$adds' AND y = ? AND width_of(a) <= 26 AND width_of(b) <= 18", (a,))
     for add_a, add_b in cur:
         matches.append({
             "type": "add",
@@ -50,7 +50,7 @@ def match_dsp_a_pre_mult(db: NetlistDB, a: int) -> list[dict[str, Any]]:
             "d": match_wire_or_reg(db, add_b)
         })
     # case 3: a comes from a sub
-    cur = db.execute("SELECT a, b FROM aby_cells WHERE type = '$subs' AND y = %s AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = a) <= 26 AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = b) <= 18", (a,))
+    cur = db.execute("SELECT a, b FROM aby_cells WHERE type = '$subs' AND y = ? AND width_of(a) <= 26 AND width_of(b) <= 18", (a,))
     for sub_a, sub_b in cur:
         matches.append({
             "type": "sub",
@@ -64,7 +64,7 @@ def match_dsp_post_mult(db: NetlistDB, y: int) -> list[dict[str, Any]]:
     # case 1: y goes to a wire
     matches.extend(match_dsp_post_mult_op(db, y))
     # case 2: y goes to a dff
-    cur = db.execute("SELECT q FROM dffs WHERE d = %s", (y,))
+    cur = db.execute("SELECT q FROM dffs WHERE d = ?", (y,))
     for (q,) in cur:
         matches.extend(match_dsp_post_mult_op(db, q))
     return matches
@@ -74,7 +74,7 @@ def match_dsp_post_mult_op(db: NetlistDB, w: int) -> list[dict[str, Any]]:
     # case 1: no op
     matches.append({"type": "none", "outputs": {"P": w}})
     # case 2: w goes to an add
-    cur = db.execute("SELECT b, y FROM aby_cells WHERE type = '$adds' AND a = %s AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = b) <= 48", (w,))
+    cur = db.execute("SELECT b, y FROM aby_cells WHERE type = '$adds' AND a = ? AND width_of(b) <= 48", (w,))
     for add_b, add_y in cur:
         matches.append({
             "type": "add",
@@ -82,7 +82,7 @@ def match_dsp_post_mult_op(db: NetlistDB, w: int) -> list[dict[str, Any]]:
             "outputs": {"P": add_y}
         })
     # case 3: w goes to a sub
-    cur = db.execute("SELECT b, y FROM aby_cells WHERE type = '$subs' AND a = %s AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = b) <= 48", (w,))
+    cur = db.execute("SELECT b, y FROM aby_cells WHERE type = '$subs' AND a = ? AND width_of(b) <= 48", (w,))
     for sub_b, sub_y in cur:
         matches.append({
             "type": "sub",
@@ -123,7 +123,7 @@ def techmap_dsp(db: NetlistDB):
     # basis: multiplication
     cur = db.execute("""
         SELECT a, b, y FROM aby_cells
-        WHERE type = '$muls' AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = a) <= 27 AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = b) <= 18 AND (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = y) <= 48
+        WHERE type = '$muls' AND width_of(a) <= 27 AND width_of(b) <= 18 AND width_of(y) <= 48
     """)
     matches = []
     for a, b, y in cur:
@@ -132,7 +132,7 @@ def techmap_dsp(db: NetlistDB):
     # expand matches and insert into db
     for match in matches:
         db.executemany(
-            "INSERT INTO tech_dsp_generic (inputs, outputs) VALUES (%s, %s) ON CONFLICT DO NOTHING",
+            "INSERT OR IGNORE INTO tech_dsp_generic (inputs, outputs) VALUES (?, ?)",
             ((db._create_or_lookup_wirevec(sorted(inputs)), db._create_or_lookup_wirevec(sorted(outputs)))
             for inputs, outputs in expand(db, match))
         )

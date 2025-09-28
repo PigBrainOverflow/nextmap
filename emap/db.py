@@ -70,20 +70,84 @@ class NetlistDB:
             cur.close()
             self._connection.commit()
 
+        # Create width_of function for PostgreSQL
+        cur = self._connection.cursor()
+        cur.execute("""
+            CREATE OR REPLACE FUNCTION width_of(wirevec_id INTEGER)
+            RETURNS INTEGER AS $$
+            BEGIN
+                RETURN (SELECT MAX(idx) + 1 FROM wirevec_members WHERE wirevec = wirevec_id);
+            END;
+            $$ LANGUAGE plpgsql;
+        """)
+        cur.close()
+        self._connection.commit()
+
         self._clk = None
         self._cnt = cnt
         self._rhash = utils.RollingHash()
 
+    def _convert_sqlite_to_postgres(self, query: str, params: tuple) -> tuple[str, tuple]:
+        """Convert SQLite query syntax to PostgreSQL"""
+        import re
+
+        # Replace ? placeholders with %s
+        converted_query = query.replace('?', '%s')
+
+        # Replace INSERT OR IGNORE with INSERT ... ON CONFLICT DO NOTHING
+        converted_query = converted_query.replace('INSERT OR IGNORE INTO', 'INSERT INTO')
+        if 'INSERT INTO' in converted_query and 'ON CONFLICT DO NOTHING' not in converted_query:
+            # Add ON CONFLICT DO NOTHING before any potential RETURNING clause
+            if 'RETURNING' in converted_query:
+                converted_query = converted_query.replace(' RETURNING', ' ON CONFLICT DO NOTHING RETURNING')
+            else:
+                converted_query += ' ON CONFLICT DO NOTHING'
+
+        # Fix JOIN syntax for PostgreSQL
+        # Convert "JOIN table2 JOIN table3 ON condition" to proper PostgreSQL syntax
+        # This is a common pattern in the retiming queries
+        join_pattern = r'(\w+) AS (\w+) JOIN (\w+) AS (\w+) JOIN (\w+) as (\w+) ON (.+?)\s+(WHERE|$)'
+        def fix_join_syntax(match):
+            table1, alias1, table2, alias2, table3, alias3, condition, where_clause = match.groups()
+            # Convert to proper explicit joins
+            return f'{table1} AS {alias1} CROSS JOIN {table2} AS {alias2} JOIN {table3} as {alias3} ON ({condition}) {where_clause}'
+
+        converted_query = re.sub(join_pattern, fix_join_syntax, converted_query, flags=re.MULTILINE | re.DOTALL)
+
+        # Handle parameters for IN clauses
+        # The rewrite modules pass parameters as a single list/tuple for IN clauses
+        if 'IN (' in converted_query and params and len(params) == 1 and isinstance(params[0], (list, tuple)):
+            # This handles the case where SQLite rewrite code does:
+            # execute("... WHERE type IN ({})...".format(",".join("?" * len(types))), types)
+            # which becomes execute("... WHERE type IN (%s,%s)...", ['$adds', '$muls'])
+            params = tuple(params[0])  # Flatten the parameter list
+
+        return converted_query, params
+
     def execute(self, query: str, params=None):
-        """Execute a query and return cursor"""
+        """Execute a query and return cursor with SQLite compatibility"""
+        # Convert SQLite syntax to PostgreSQL
+        converted_query, converted_params = self._convert_sqlite_to_postgres(query, params or ())
+
+        # Debug output disabled for cleaner output
+        # Uncomment for troubleshooting:
+        # if 'type' in query and ('IN (' in query or 'JOIN' in query):
+        #     print(f"DEBUG - Original query: {query}")
+        #     print(f"DEBUG - Original params: {params}")
+        #     print(f"DEBUG - Converted query: {converted_query}")
+        #     print(f"DEBUG - Converted params: {converted_params}")
+        #     print("-" * 80)
+
         cur = self._connection.cursor()
-        cur.execute(query, params)
+        cur.execute(converted_query, converted_params)
         return cur
 
     def executemany(self, query: str, params_list):
-        """Execute a query multiple times with different parameters"""
+        """Execute a query multiple times with different parameters with SQLite compatibility"""
+        # Convert SQLite syntax to PostgreSQL
+        converted_query, _ = self._convert_sqlite_to_postgres(query, ())
         cur = self._connection.cursor()
-        cur.executemany(query, params_list)
+        cur.executemany(converted_query, params_list)
         rowcount = cur.rowcount
         cur.close()
         return type('cursor', (), {'rowcount': rowcount})()
