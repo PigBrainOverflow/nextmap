@@ -1,12 +1,15 @@
 import emap
 import json
+import time
 
-TEST_NAME = "adder_simplified"
-TOP_MODULE = "test_data_beta_runner/original_circuit"
-MAX_ITER = 3
+TEST_NAME = "adder"
+TOP_MODULE = "eval/epfl/adder"
+MAX_ITER = 6
+
+start_time = time.time()
 
 netlist = emap.NetlistDB(schema_file="emap/schema.sql", cnt=100000)
-with open(f"eval/{TEST_NAME}.json") as f:
+with open(f"eval/epfl/{TEST_NAME}.json") as f:
     netlist.build_from_json(json.load(f)["modules"][TOP_MODULE])
 
 wdsu = emap.DisjointSetUnion()
@@ -62,5 +65,8 @@ for i in range(MAX_ITER):
 # with open(f"netlist_after.json", "w") as f:
 #     json.dump(netlist.dump_tables(), f, indent=2)
 
-with open(f"saturated_{TEST_NAME}.json", "w") as f:
+with open(f"eval/out/saturated_{TEST_NAME}_nextmap.json", "w") as f:
     json.dump({"creator": "nextmap", "modules": {"top": netlist.write_json()}}, f, indent=2)
+
+print(f"Current id: {netlist._cnt}")
+print(f"Saturation time: {time.time() - start_time:.2f} seconds")
