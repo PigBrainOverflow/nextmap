@@ -4,6 +4,42 @@ from typing import List, Dict, Any, Optional
 from .db_interface import DatabaseAdapter
 
 
+class PostgreSQLCursor:
+    """Wrapper cursor that handles SQLite to PostgreSQL query translation"""
+
+    def __init__(self, pg_cursor):
+        self._cursor = pg_cursor
+
+    def execute(self, query: str, params=None):
+        """Execute query with automatic SQLite to PostgreSQL translation"""
+        converted_query = self._convert_sqlite_to_postgres(query)
+        return self._cursor.execute(converted_query, params)
+
+    def _convert_sqlite_to_postgres(self, query: str) -> str:
+        """Convert SQLite query syntax to PostgreSQL"""
+        # Replace ? placeholders with %s
+        converted_query = query.replace('?', '%s')
+
+        # Replace INSERT OR IGNORE with INSERT ... ON CONFLICT DO NOTHING
+        converted_query = converted_query.replace('INSERT OR IGNORE INTO', 'INSERT INTO')
+        if 'INSERT INTO' in converted_query and 'ON CONFLICT DO NOTHING' not in converted_query and 'INSERT OR IGNORE' in query:
+            # Add ON CONFLICT DO NOTHING before any potential RETURNING clause
+            if 'RETURNING' in converted_query:
+                converted_query = converted_query.replace(' RETURNING', ' ON CONFLICT DO NOTHING RETURNING')
+            else:
+                converted_query += ' ON CONFLICT DO NOTHING'
+
+        return converted_query
+
+    def __iter__(self):
+        """Make cursor iterable"""
+        return iter(self._cursor)
+
+    def __getattr__(self, name):
+        """Delegate all other attributes to the underlying cursor"""
+        return getattr(self._cursor, name)
+
+
 class PostgreSQLAdapter(DatabaseAdapter):
     """PostgreSQL database adapter"""
 
@@ -29,16 +65,20 @@ class PostgreSQLAdapter(DatabaseAdapter):
         """Execute a query and return cursor"""
         if self.connection is None:
             self.connect()
+        # Convert SQLite ? placeholders to PostgreSQL %s placeholders
+        converted_query = query.replace('?', '%s')
         cur = self.connection.cursor()
-        cur.execute(query, params)
-        return cur
+        cur.execute(converted_query, params)
+        return PostgreSQLCursor(cur)
 
     def executemany(self, query: str, params_list):
         """Execute a query multiple times with different parameters"""
         if self.connection is None:
             self.connect()
+        # Convert SQLite ? placeholders to PostgreSQL %s placeholders
+        converted_query = query.replace('?', '%s')
         cur = self.connection.cursor()
-        cur.executemany(query, params_list)
+        cur.executemany(converted_query, params_list)
         rowcount = cur.rowcount
         cur.close()
         return type('cursor', (), {'rowcount': rowcount})()
@@ -278,7 +318,7 @@ class NetlistDB:
         converted_query, converted_params = self._convert_sqlite_to_postgres(query, params or ())
         cur = self._connection.cursor()
         cur.execute(converted_query, converted_params)
-        return cur
+        return PostgreSQLCursor(cur)
 
     def executemany(self, query: str, params_list):
         """Execute a query multiple times with different parameters with SQLite compatibility"""
