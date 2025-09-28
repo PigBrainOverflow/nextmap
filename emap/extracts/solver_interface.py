@@ -78,6 +78,14 @@ class Variable:
         self.name = name
         self.X = 0.0  # Solution value
 
+    def __hash__(self):
+        return hash(self.name)
+
+    def __eq__(self, other):
+        if isinstance(other, Variable):
+            return self.name == other.name
+        return ("==", self, other)
+
     def __add__(self, other):
         result = LinearExpression()
         result.add_term(1.0, self.name)
@@ -112,9 +120,6 @@ class Variable:
 
     def __le__(self, other):
         return ("<=", self, other)
-
-    def __eq__(self, other):
-        return ("==", self, other)
 
 
 class TupleDict:
@@ -213,6 +218,7 @@ class GurobiInterface(SolverInterface):
             import gurobipy as grb
             self.grb = grb
             self.model = grb.Model(name)
+            self._variables = []  # Keep track of our Variable objects
             # Map our constants to Gurobi's
             self.OPTIMAL = grb.GRB.OPTIMAL
             self.INFEASIBLE = grb.GRB.INFEASIBLE
@@ -228,33 +234,115 @@ class GurobiInterface(SolverInterface):
     def addVar(self, vtype=None, lb=0.0, ub=float('inf'), name="") -> Variable:
         if vtype is None:
             vtype = self.CONTINUOUS
-        grb_var = self.model.addVar(vtype=vtype, lb=lb, ub=ub, name=name)
+
+        # Map our global constants to actual Gurobi constants
+        vtype_map = {
+            SolverInterface.BINARY: self.grb.GRB.BINARY,
+            SolverInterface.INTEGER: self.grb.GRB.INTEGER,
+            SolverInterface.CONTINUOUS: self.grb.GRB.CONTINUOUS
+        }
+        grb_vtype = vtype_map.get(vtype, vtype)
+
+        grb_var = self.model.addVar(vtype=grb_vtype, lb=lb, ub=ub, name=name)
+        # Update model to assign variable names
+        self.model.update()
         var = Variable(grb_var.VarName)
         var._grb_var = grb_var  # Store reference to Gurobi variable
+        self._variables.append(var)  # Register the variable
         return var
 
     def addVars(self, *indices, vtype=None, lb=0.0, ub=float('inf'), name="") -> TupleDict:
         if vtype is None:
             vtype = self.CONTINUOUS
 
+        # Map our global constants to actual Gurobi constants
+        vtype_map = {
+            SolverInterface.BINARY: self.grb.GRB.BINARY,
+            SolverInterface.INTEGER: self.grb.GRB.INTEGER,
+            SolverInterface.CONTINUOUS: self.grb.GRB.CONTINUOUS
+        }
+        grb_vtype = vtype_map.get(vtype, vtype)
+
         if len(indices) == 1 and isinstance(indices[0], int):
-            grb_vars = self.model.addVars(indices[0], vtype=vtype, lb=lb, ub=ub, name=name)
+            grb_vars = self.model.addVars(indices[0], vtype=grb_vtype, lb=lb, ub=ub, name=name if name else None)
         else:
-            grb_vars = self.model.addVars(*indices, vtype=vtype, lb=lb, ub=ub, name=name)
+            grb_vars = self.model.addVars(*indices, vtype=grb_vtype, lb=lb, ub=ub, name=name if name else None)
+
+        # Update model to assign variable names
+        self.model.update()
 
         variables = {}
         for key, grb_var in grb_vars.items():
             var = Variable(grb_var.VarName)
             var._grb_var = grb_var
+            self._variables.append(var)  # Register the variable
             variables[key] = var
 
         return TupleDict(variables)
 
     def addConstr(self, expr, name=""):
+        # Convert our constraint tuple to Gurobi constraint expression
+        if isinstance(expr, tuple) and len(expr) == 3:
+            sense, lhs, rhs = expr
+
+            # Convert LinearExpression to Gurobi expression
+            if isinstance(lhs, LinearExpression):
+                lhs = self._convert_linear_expr_to_gurobi(lhs)
+            elif hasattr(lhs, '_grb_var'):
+                lhs = lhs._grb_var
+
+            if isinstance(rhs, LinearExpression):
+                rhs = self._convert_linear_expr_to_gurobi(rhs)
+            elif hasattr(rhs, '_grb_var'):
+                rhs = rhs._grb_var
+
+            # Create Gurobi constraint expression
+            if sense == ">=":
+                expr = lhs >= rhs
+            elif sense == "<=":
+                expr = lhs <= rhs
+            elif sense == "==":
+                expr = lhs == rhs
+
         self.model.addConstr(expr, name=name)
 
+    def _convert_linear_expr_to_gurobi(self, linear_expr):
+        """Convert LinearExpression to Gurobi expression."""
+        grb_expr = 0
+        for var_name, coeff in linear_expr.terms.items():
+            # Find the Gurobi variable by name
+            for var in self.model.getVars():
+                if var.VarName == var_name:
+                    grb_expr += coeff * var
+                    break
+        grb_expr += linear_expr.constant
+        return grb_expr
+
     def addConstrs(self, generator, name=""):
-        self.model.addConstrs(generator, name=name)
+        # Convert our constraint tuples to Gurobi constraint expressions
+        def convert_constraint(constraint):
+            if isinstance(constraint, tuple) and len(constraint) == 3:
+                sense, lhs, rhs = constraint
+                # Convert our Variable objects to Gurobi variables
+                if hasattr(lhs, '_grb_var'):
+                    lhs = lhs._grb_var
+                if hasattr(rhs, '_grb_var'):
+                    rhs = rhs._grb_var
+
+                # Return Gurobi constraint expression
+                if sense == ">=":
+                    return lhs >= rhs
+                elif sense == "<=":
+                    return lhs <= rhs
+                elif sense == "==":
+                    return lhs == rhs
+            else:
+                # Assume it's already a proper constraint
+                return constraint
+
+        # Convert generator to Gurobi constraints
+        gurobi_generator = (convert_constraint(c) for c in generator)
+        self.model.addConstrs(gurobi_generator, name=name)
 
     def addMConstr(self, A, x, sense, b, name=""):
         self.model.addMConstr(A=A, x=x, sense=sense, b=b, name=name)
@@ -262,7 +350,19 @@ class GurobiInterface(SolverInterface):
     def setObjective(self, expr, sense=None):
         if sense is None:
             sense = self.MINIMIZE
-        self.model.setObjective(expr, sense)
+
+        # Convert LinearExpression to Gurobi expression
+        if isinstance(expr, LinearExpression):
+            expr = self._convert_linear_expr_to_gurobi(expr)
+
+        # Map our constants to Gurobi constants
+        sense_map = {
+            SolverInterface.MINIMIZE: self.grb.GRB.MINIMIZE,
+            SolverInterface.MAXIMIZE: self.grb.GRB.MAXIMIZE
+        }
+        grb_sense = sense_map.get(sense, sense)
+
+        self.model.setObjective(expr, grb_sense)
 
     def setParam(self, param, value):
         self.model.setParam(param, value)
@@ -274,21 +374,14 @@ class GurobiInterface(SolverInterface):
             self.objVal = self.model.objVal
             # Update solution values in our Variable objects
             for var in self.model.getVars():
-                # Find corresponding Variable object and update X
+                # Find corresponding Variable object and update X by comparing variable names
                 for v in self.getVars():
-                    if hasattr(v, '_grb_var') and v._grb_var == var:
+                    if hasattr(v, '_grb_var') and v._grb_var.VarName == var.VarName:
                         v.X = var.X
                         break
 
     def getVars(self) -> List[Variable]:
-        # This is a simplified version - in practice we'd need to track all Variable objects
-        variables = []
-        for grb_var in self.model.getVars():
-            var = Variable(grb_var.VarName)
-            var._grb_var = grb_var
-            var.X = grb_var.X if hasattr(grb_var, 'X') else 0.0
-            variables.append(var)
-        return variables
+        return self._variables
 
     def quicksum(self, items):
         return self.grb.quicksum(items)
@@ -300,11 +393,6 @@ class CBCInterface(SolverInterface):
     def __init__(self, name: str = "cbc_model"):
         super().__init__(name)
         try:
-            # Try to use the venv PuLP if available
-            venv_path = '/home/jbalkind/projects/nextmap/venv/lib/python3.12/site-packages'
-            if venv_path not in sys.path and os.path.exists(venv_path):
-                sys.path.insert(0, venv_path)
-
             import pulp
 
             self.pulp = pulp
