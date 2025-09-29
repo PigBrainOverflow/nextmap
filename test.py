@@ -2,9 +2,9 @@ import emap
 import json
 import time
 
-TEST_NAME = "adder"
-TOP_MODULE = "eval/epfl/adder"
-MAX_ITER = 6
+TEST_NAME = "decoder"
+TOP_MODULE = "dec"
+MAX_ITER = 4
 
 start_time = time.time()
 
