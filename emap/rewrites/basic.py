@@ -103,3 +103,37 @@ def apply_assoc_to_left(db: NetlistDB, matches: Iterable[tuple[str, int, int, in
     cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
     db.commit()
     return cur.rowcount
+
+
+def ematch_distr_fold(db: NetlistDB) -> Iterable[tuple[int, int, int, int]]:
+    """
+    Return a list of tuples (a, b, c, y) for distributive cells that can be rewritten to folded form.
+    E.g. a * b + a * c => a * (b + c)
+    """
+    cur = db.execute("""
+        SELECT mul1.a, mul1.b, mul2.b, add1.y
+        FROM aby_cells AS mul1 JOIN aby_cells AS mul2 JOIN aby_cells AS add1
+        ON mul1.a = mul2.a AND mul1.y = add1.a AND mul2.y = add1.b
+        WHERE mul1.type = '$muls' AND mul2.type = '$muls' AND add1.type = '$adds'
+    """)
+    return cur
+
+def apply_distr_fold(db: NetlistDB, matches: Iterable[tuple[int, int, int, int]]) -> int:
+    newrows = []
+    for a, b, c, y in matches:
+        cur = db.execute("SELECT MAX(idx) FROM wirevec_members WHERE wirevec = ?", (a,))
+        width_a = cur.fetchone()[0] + 1
+        cur.execute(
+            "SELECT y FROM aby_cells WHERE type = '$adds' AND a = ? AND b = ? AND width_of(a) = ? AND width_of(b) = ? AND width_of(y) = ? LIMIT 1",
+            (b, c, width_a, width_a, width_a + 1)
+        )
+        row = cur.fetchone()
+        if row is None:
+            b_add_c = db._add_wirevec([db.auto_id for _ in range(width_a + 1)])
+            cur.execute("INSERT INTO aby_cells (type, a, b, y) VALUES ('$adds', ?, ?, ?)", (b, c, b_add_c))
+        else:
+            b_add_c = row[0]
+        newrows.append(("$muls", a, b_add_c, y))
+    cur = db.executemany("INSERT OR IGNORE INTO aby_cells (type, a, b, y) VALUES (?, ?, ?, ?)", newrows)
+    db.commit()
+    return cur.rowcount

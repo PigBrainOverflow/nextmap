@@ -349,6 +349,7 @@ class NetlistDB(sqlite3.Connection):
         for wv in dsu.parents:
             leader = dsu.find(wv)
             if leader != wv:
+                # print(f"Merging wirevec {wv} into {leader}")
                 # update aby_cells
                 cur = self.execute("SELECT type, b, y FROM aby_cells WHERE a = ?", (wv,))
                 rows = cur.fetchall()

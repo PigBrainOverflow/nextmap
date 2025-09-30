@@ -5,7 +5,8 @@ from .common import (
 from .basic import (
     ematch_comm, apply_comm,
     ematch_assoc_to_right, apply_assoc_to_right,
-    ematch_assoc_to_left, apply_assoc_to_left
+    ematch_assoc_to_left, apply_assoc_to_left,
+    ematch_distr_fold, apply_distr_fold
 )
 
 from .misc import (
