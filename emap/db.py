@@ -203,7 +203,7 @@ class NetlistDB(sqlite3.Connection):
                 rows = cur.fetchall()
                 cur.execute("DELETE FROM invs WHERE a = ?", (w,))
                 cur.executemany("INSERT OR IGNORE INTO invs (a, y) VALUES (?, ?)", ((leader, y) for y in rows))
-                cur = self.execute("SELECT type, a FROM invs WHERE y = ?", (w,))
+                cur = self.execute("SELECT a FROM invs WHERE y = ?", (w,))
                 rows = cur.fetchall()
                 cur.execute("DELETE FROM invs WHERE y = ?", (w,))
                 cur.executemany("INSERT OR IGNORE INTO invs (a, y) VALUES (?, ?)", ((a, leader) for a in rows))

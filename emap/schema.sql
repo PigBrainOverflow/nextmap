@@ -36,7 +36,7 @@ CREATE TABLE IF NOT EXISTS luts (
 CREATE TABLE IF NOT EXISTS as_outputs (
     sink INTEGER,
     name VARCHAR(16) PRIMARY KEY
-)
+);
 
 CREATE TABLE IF NOT EXISTS from_inputs (
     source INTEGER,

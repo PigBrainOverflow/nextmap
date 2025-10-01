@@ -1,0 +1,5 @@
+__pycache__
+/eval/out
+/*.json
+/*.v
+/*.history
