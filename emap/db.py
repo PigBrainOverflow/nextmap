@@ -31,7 +31,7 @@ class NetlistDB(sqlite3.Connection):
     #     return param if isinstance(param, int) else int(param, base=2)
 
     def _get_wireset(self, id: int) -> set[int]:
-        cur = self.execute("SELECT wire FROM wiresets_members WHERE wireset_id = ?", (id,))
+        cur = self.execute("SELECT wire_id FROM wireset_members WHERE wireset_id = ?", (id,))
         return {w for (w,) in cur}
 
     def _add_wireset(self, ws: set[int]) -> int:
@@ -39,11 +39,18 @@ class NetlistDB(sqlite3.Connection):
         cur = self.execute("INSERT INTO wiresets (hash) VALUES (?) RETURNING id", (h,))
         id = cur.fetchone()[0]
         self.executemany(
-            "INSERT INTO wiresets_members (wireset_id, wire) VALUES (?, ?)",
+            "INSERT INTO wireset_members (wireset_id, wire_id) VALUES (?, ?)",
             ((id, w) for w in ws)
         )
         self.commit()
         return id
+
+    def fanout_of(self, w: int) -> int:
+        cur = self.execute("SELECT COUNT(*) FROM ands WHERE a = ? OR b = ?", (w, w))
+        fanout = cur.fetchone()[0]
+        cur = self.execute("SELECT COUNT(*) FROM invs WHERE a = ?", (w,))
+        fanout += cur.fetchone()[0]
+        return fanout
 
     def _create_or_lookup_wireset(self, ws: set[int]) -> int:
         h = self._xhash.hash(ws)
@@ -56,7 +63,7 @@ class NetlistDB(sqlite3.Connection):
         cur.execute("INSERT INTO wiresets (hash) VALUES (?) RETURNING id", (h,))
         id = cur.fetchone()[0]
         self.executemany(
-            "INSERT INTO wiresets_members (wireset_id, wire) VALUES (?, ?)",
+            "INSERT INTO wireset_members (wireset_id, wire_id) VALUES (?, ?)",
             ((id, w) for w in ws)
         )
         self.commit()
@@ -302,6 +309,23 @@ class NetlistDB(sqlite3.Connection):
                     "A": [self.int_to_bit(a)],
                     "B": [self.int_to_bit(b)],
                     "Y": [self.int_to_bit(y)]
+                }
+            }
+            cnt += 1
+
+        # build luts
+        cur = self.execute("SELECT ins, out FROM luts")
+        for ins, out in cur.fetchall():
+            ins_ws = self._get_wireset(ins)
+            cells[f"cell{cnt}"] = { # TODO: fill in parameters
+                "type": "$lut",
+                "port_directions": {
+                    "A": "input",
+                    "Y": "output"
+                },
+                "connections": {
+                    "A": [self.int_to_bit(w) for w in ins_ws],
+                    "Y": [self.int_to_bit(out)]
                 }
             }
             cnt += 1
