@@ -1,10 +1,11 @@
 import emap
 import json
 import time
+import os
 
-TEST_NAME = "decoder"
-TOP_MODULE = "dec"
-MAX_ITER = 4
+TEST_NAME = "adder"
+TOP_MODULE = "eval/epfl/adder"
+MAX_ITER = 6
 
 start_time = time.time()
 
@@ -65,6 +66,7 @@ for i in range(MAX_ITER):
 # with open(f"netlist_after.json", "w") as f:
 #     json.dump(netlist.dump_tables(), f, indent=2)
 
+os.makedirs("eval/out", exist_ok=True)
 with open(f"eval/out/saturated_{TEST_NAME}_nextmap.json", "w") as f:
     json.dump({"creator": "nextmap", "modules": {"top": netlist.write_json()}}, f, indent=2)
 
